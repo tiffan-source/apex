@@ -1,0 +1,50 @@
+<header>
+  <div class="objective-header__title">
+    <h1>{{ objectiveData()?.title }}</h1>
+    <p>{{ objectiveData()?.description }}</p>
+  </div>
+</header>
+
+<main class="objective-main">
+  <div>
+    <div class="objective-main-header">
+      <h3>Sous-objectifs</h3>
+      <p-button size="small" variant="text" (click)="addSubObjective.set(!addSubObjective())">Ajouter</p-button>
+    </div>
+    @if (addSubObjective()) {
+      <app-add-sub-objective [objectiveId]="currentObjectiveId()" (abort)="addSubObjective.set(false)"/>
+    }
+    <p-dataview #dv [value]="objectiveData().subObjectives">
+      <ng-template #list let-items>
+        <ul class="objective-sub-objectives">
+          @for (item of items; track $index) {
+            <li> <p-checkbox/> <span>{{ item.title }}</span></li>
+          }
+        </ul>
+      </ng-template>
+    </p-dataview>
+  </div>
+  <div>
+    <div class="objective-main-header">
+      <h3>Taches</h3>
+      <p-button size="small" variant="text" (click)="addTask.set(!addTask())">Ajouter</p-button>
+    </div>
+    @if (addTask()) {
+      <app-add-task [objectiveId]="currentObjectiveId()" (abort)="addTask.set(false)"/>
+    }
+    <p-dataview #dv [value]="objectiveTasks()">
+      <ng-template #list let-items>
+        <ul class="objective-tasks">
+          @for (item of items; track $index) {
+            <li>
+              <div>
+                <p-checkbox/> <span>{{ item.title }}</span>
+              </div>
+              <p-tag [value]="getTagValue(item.importance, item.urgency)" [severity]="getTagSeverity(item.importance, item.urgency)" [rounded]="true"/>
+            </li>
+          }
+        </ul>
+      </ng-template>
+    </p-dataview>
+  </div>
+</main>

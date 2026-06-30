@@ -15,7 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-     
+      "@org/objective": ["./libs/objective/src/index.ts"],
+      "@org/chore": ["./libs/chore/src/index.ts"],
+      "@org/in-memory-db": ["./libs/in-memory-db/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

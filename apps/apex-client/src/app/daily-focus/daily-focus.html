@@ -1,0 +1,22 @@
+<header>
+  <div>
+    <h1>Focus du jour</h1>
+    <h2>{{ today | date }}</h2>
+  </div>
+</header>
+
+<main>
+ <ul>
+  @for (task of tasks(); track $index) {
+    <li class="daily-todo__item">
+      <div>
+        <p-checkbox/>
+      </div>
+      <div>
+        <p class="daily-todo__item-title">{{ task.title }}</p>
+        <p>{{ task.objectiveTitle }}</p>
+      </div>
+    </li>
+  }
+ </ul>
+</main>

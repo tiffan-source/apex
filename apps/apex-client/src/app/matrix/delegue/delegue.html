@@ -1,0 +1,21 @@
+<div class="matrix-delegue">
+  <p-card>
+    <div class="matrix-delegue__header">
+      <h2>DELEGUER</h2>
+      <p>Urgent mais pas important</p>
+    </div>
+    <ul>
+      @for (item of todoList().delegate; track $index) {
+        <li class="matrix-delegue__item">
+          <div>
+            <p-checkbox/>
+          </div>
+          <div>
+            <p class="matrix-delegue__item-title">{{ item.title }}</p>
+            <p>{{ item.objectiveTitle }}</p>
+          </div>
+        </li>
+      }
+    </ul>
+  </p-card>
+</div>

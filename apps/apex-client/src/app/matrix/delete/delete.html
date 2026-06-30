@@ -1,0 +1,21 @@
+<div class="matrix-delete">
+  <p-card>
+    <div class="matrix-delete__header">
+      <h2>ÉLIMINER</h2>
+      <p>Ni urgent ni important</p>
+    </div>
+    <ul>
+      @for (item of todoList().eliminate; track $index) {
+        <li class="matrix-delete__item">
+          <div>
+            <p-checkbox/>
+          </div>
+          <div>
+            <p class="matrix-delete__item-title">{{ item.title }}</p>
+            <p>{{ item.objectiveTitle }}</p>
+          </div>
+        </li>
+      }
+    </ul>
+  </p-card>
+</div>

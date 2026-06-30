@@ -1,0 +1,31 @@
+.board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.board-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.board-card__icon {
+  font-size: 1.5rem;
+  color: #593bce;
+  padding: 0.5rem;
+  background-color: #eeebfa;
+  border-radius: 0.5rem;
+}
+
+.board-card {
+  width: 25rem;
+}
+
+.board-card__header {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}

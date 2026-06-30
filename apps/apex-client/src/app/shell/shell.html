@@ -1,0 +1,13 @@
+<div class="shell">
+  <header>
+    <span class="pi pi-ethereum" ></span>
+    <h1>Apex</h1>
+  </header>
+  <nav class="navigation">
+    <ul class="navigation-list">
+      @for (item of navigationList; track $index) {
+        <li class="navigation-list__item {{router.url === item.link ? 'navigation-list__item__active' : ''}}" (click)="navigateTo(item.link)"> <span class="{{item.primeIcon}}"></span> <span>{{item.label}}</span></li>
+      }
+    </ul>
+  </nav>
+</div>

@@ -1,0 +1,21 @@
+<div class="matrix-plan">
+  <p-card>
+    <div class="matrix-plan__header">
+      <h2>PLANIFIER</h2>
+      <p>Important mais pas urgent</p>
+    </div>
+    <ul>
+      @for (item of todoList().schedule; track $index) {
+        <li class="matrix-plan__item">
+          <div>
+            <p-checkbox/>
+          </div>
+          <div>
+            <p class="matrix-plan__item-title">{{ item.title }}</p>
+            <p>{{ item.objectiveTitle }}</p>
+          </div>
+        </li>
+      }
+    </ul>
+  </p-card>
+</div>

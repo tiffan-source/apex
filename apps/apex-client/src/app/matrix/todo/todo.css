@@ -1,0 +1,31 @@
+.matrix-todo {
+  height: 100%;
+}
+
+.matrix-todo .p-card {
+  height: 100%;
+  border: 1px solid red;
+  background-color: #f6ebec;
+}
+
+.matrix-todo__header h2{
+  font-size: 1rem;
+  color: red;
+}
+
+.matrix-todo__item-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.matrix-todo__item {
+  width: 100%;
+  padding: 0.5rem;
+  margin: 0.75rem 0;
+  background-color: white;
+  border-radius: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+}

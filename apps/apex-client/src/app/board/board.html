@@ -1,0 +1,31 @@
+<header class="board-header">
+  <div class="board-header__title">
+    <h1>Tableau de bord</h1>
+    <h2>Visualisez et pilotez vos objectifs</h2>
+  </div>
+
+  <div>
+    <p-button (click)="createObjectiveModalOpen.set(true)">Nouvel objectif</p-button>
+  </div>
+</header>
+
+<main class="board-main">
+  @for (objective of getAllObjectives(); track $index) {
+     <p-card class="board-card" (click)="actionCard(objective.id)">
+      <div>
+          <div class="board-card__header">
+            <span class="pi pi-bullseye board-card__icon"></span>
+            <div>
+              <span>{{ objective.title }}</span>
+              <p>{{ objective.dueDate | date }}</p>
+            </div>
+          </div>
+          <p>
+            {{ objective.description }}
+          </p>
+      </div>
+    </p-card>
+  }
+</main>
+
+<app-create-objective [open]="createObjectiveModalOpen()" (setOpen)="createObjectiveModalOpen.set($event)"></app-create-objective>

@@ -1,0 +1,24 @@
+<p-dialog header="Edit Profile" [visible]="open()" [modal]="true" [style]="{ width: '40rem' }">
+  <form [formGroup]="createObjectiveForm" (ngSubmit)="create()">
+    <div class="modal-objective-form-field">
+        <label for="{{ CreateObjectiveFormField.TITLE }}">Quel est votre objectif ?</label>
+        <input formControlName="{{ CreateObjectiveFormField.TITLE }}" pInputText id="{{ CreateObjectiveFormField.TITLE }}" />
+    </div>
+    <div class="modal-objective-form-field">
+        <label for="{{ CreateObjectiveFormField.DESCRIPTION }}">Description</label>
+        <textarea formControlName="{{ CreateObjectiveFormField.DESCRIPTION }}" pTextarea id="{{ CreateObjectiveFormField.DESCRIPTION }}"></textarea>
+    </div>
+    <div class="modal-objective-form-field">
+        <label for="{{ CreateObjectiveFormField.WHY }}">Pourquoi cet objectif est important pour vous ?</label>
+        <textarea formControlName="{{ CreateObjectiveFormField.WHY }}" rows="5" pTextarea id="{{ CreateObjectiveFormField.WHY }}"></textarea>
+    </div>
+    <div class="modal-objective-form-field">
+        <label for="{{ CreateObjectiveFormField.DUE_DATE }}">Date cible</label>
+        <input type="date" formControlName="{{ CreateObjectiveFormField.DUE_DATE }}" pInputText id="{{ CreateObjectiveFormField.DUE_DATE }}" />
+    </div>
+    <div>
+        <p-button label="Cancel" severity="secondary" (click)="setOpen.emit(false)" />
+        <p-button [loading]="createObjectiveService.isCreating()" label="Save" type="submit" />
+    </div>
+  </form>
+</p-dialog>

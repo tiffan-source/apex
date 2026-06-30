@@ -1,0 +1,21 @@
+<div class="matrix-todo">
+  <p-card>
+    <div class="matrix-todo__header">
+      <h2>FAIRE</h2>
+      <p>Urgent & Important</p>
+    </div>
+    <ul>
+      @for (item of todoList().todo; track $index) {
+        <li class="matrix-todo__item">
+          <div>
+            <p-checkbox/>
+          </div>
+          <div>
+            <p class="matrix-todo__item-title">{{ item.title }}</p>
+            <p>{{ item.objectiveTitle }}</p>
+          </div>
+        </li>
+      }
+    </ul>
+  </p-card>
+</div>
