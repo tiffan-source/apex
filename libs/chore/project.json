@@ -1,0 +1,9 @@
+{
+  "name": "chore",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/chore/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project chore --web",
+  "targets": {}
+}
