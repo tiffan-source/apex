@@ -33,12 +33,10 @@ export class AddTask implements OnInit {
   AddTaskFormField = AddTaskFormField
 
   addTask = async () => {
-    console.log('add task', this.form.value);
     let { title, important, urgent, objective } = this.form.value;
 
     if(title && important && urgent && objective)
       await this.addTaskServices.addTask(
-        this.objectiveId(),
         objective,
         title,
         important,

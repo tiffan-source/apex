@@ -11,6 +11,7 @@ export class AddSubObjectiveServices {
   addSubObjective = async (objectiveId: string, subObjectiveTitle: string) => {
     this.isAdding.set(true);
     let result = await this.addSubObjectiveUsecase.execute(objectiveId, subObjectiveTitle);
+    console.log('result', result);
     if(result.success) {
       this.objectiveStore.addSubObjective(objectiveId, {
         id: result.data.id,

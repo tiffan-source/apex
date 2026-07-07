@@ -6,10 +6,11 @@ import { DataViewModule } from 'primeng/dataview';
 import { Button } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TagModule } from 'primeng/tag';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-objective-overview',
-  imports: [AddSubObjective, AddTask, DataViewModule, Button, CheckboxModule, TagModule],
+  imports: [AddSubObjective, AddTask, DataViewModule, Button, CheckboxModule, TagModule, FormsModule],
   providers: [ObjectiveOverviewServices],
   templateUrl: './objective-overview.html',
   styleUrl: './objective-overview.css',
@@ -22,8 +23,13 @@ export class ObjectiveOverview {
   addTask = signal(false);
 
   objectiveData = this.services.objectiveData;
+  subObjectives = this.services.subObjectives;
   objectiveTasks = this.services.objectiveTasks;
   currentObjectiveId = this.services.currentObjectiveId;
+
+  checkTaskDone = async (taskId: string, event: boolean) => {
+    await this.services.toogleTaskDone(taskId, event);
+  }
 
   getTagValue = (importance: number, urgency: number) => {
     if (importance >= 3 && urgency >= 3) {

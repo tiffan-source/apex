@@ -1,8 +1,10 @@
 import { IdGenerator, Result, runWithResult } from "@org/chore";
-import { ObjectiveRepository } from "../protocols/objective.repository";
+import { MainObjectiveRepository, ObjectiveRepository } from "../protocols/objective.repository";
 import { Task } from "../models/task";
 import { ObjectiveNotFoundError } from "../errors/objective-not-found.error";
 import { FailToSaveObjectiveError } from "../errors/fail-to-save-objective.error";
+import { MainObjective } from "../models/objective";
+import { TaskRepository } from "../protocols/task.repository";
 
 export interface AddTaskToObjectiveInput {
   title: string;
@@ -13,42 +15,33 @@ export interface AddTaskToObjectiveInput {
 export interface AddTaskToObjectiveOutput {
   id: string;
   title: string;
-  importance?: number;
-  urgency?: number;
+  importance: number;
+  urgency: number;
 }
 
 export class AddTaskToObjectiveUsecase {
   constructor(
     private readonly repository: ObjectiveRepository,
+    private readonly taskRepository: TaskRepository,
     private readonly idGenerator: IdGenerator,
   ) {}
 
-  async execute(objectiveId: string, subObjectiveId: string, task: AddTaskToObjectiveInput): Promise<Result<AddTaskToObjectiveOutput>> {
+  async execute(subObjectiveId: string, task: AddTaskToObjectiveInput): Promise<Result<AddTaskToObjectiveOutput>> {
     return runWithResult<AddTaskToObjectiveOutput>(
       async () => {
-        let objective = await this.repository.findById(objectiveId);
+        let objective = await this.repository.findById(subObjectiveId);
 
         if (!objective) {
-          throw new ObjectiveNotFoundError(objectiveId);
+          throw new ObjectiveNotFoundError(subObjectiveId);
         }
 
         let taskId = this.idGenerator.generateId();
-        let newTask = new Task(taskId, task.title);
+        let newTask = new Task(taskId, task.title, task.importance, task.urgency);
 
-        newTask.setImportance(task.importance);
-        newTask.setUrgency(task.urgency);
+        objective.addTask(newTask);
 
-        objective.subObjectives.forEach((subObjective) => {
-          if (subObjective.id === subObjectiveId) {
-            subObjective.addTask(newTask);
-          }
-        });
-
-        let result = await this.repository.save(objective);
-
-        if (!result) {
-          throw new FailToSaveObjectiveError(objectiveId);
-        }
+        await this.repository.save(objective);
+        await this.taskRepository.save(newTask);
 
         return {
           id: newTask.id,
@@ -61,4 +54,5 @@ export class AddTaskToObjectiveUsecase {
       'Failed to add task to objective'
     );
   }
+
 }

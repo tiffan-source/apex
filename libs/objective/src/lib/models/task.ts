@@ -1,27 +1,21 @@
-export class Task {
-  private readonly _id: string;
-  private _title: string;
-  private _importance?: number;
-  private _urgency?: number;
+import { TodoBase } from "./todo-base";
 
-  constructor(id: string, title: string) {
-    this._id = id;
-    this._title = title;
+export class Task extends TodoBase {
+
+  private _importance: number;
+  private _urgency: number;
+
+  constructor(id: string, title: string, importance: number, urgency: number) {
+    super(id, title);
+    this._importance = importance;
+    this._urgency = urgency;
   }
 
-  get id(): string {
-    return this._id;
-  }
-
-  get title(): string {
-    return this._title;
-  }
-
-  get importance(): number | undefined {
+  get importance(): number {
     return this._importance;
   }
 
-  get urgency(): number | undefined {
+  get urgency(): number {
     return this._urgency;
   }
 

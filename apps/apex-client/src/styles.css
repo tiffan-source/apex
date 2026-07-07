@@ -1,5 +1,9 @@
 @import "primeicons/primeicons.css";
 
+:root {
+  --p-progressbar-height : 0.35rem !important;
+}
+
 /* Global Styles */
 * {
   margin: 0;

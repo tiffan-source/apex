@@ -1,30 +1,21 @@
 import { computed, inject, Injectable } from "@angular/core";
 import { ObjectiveStore } from "../../chore/stores/objective.store";
+import { TaskStore } from "../../chore/stores/task.store";
 
 @Injectable({
   providedIn: 'root'
 })
 export class DailyServices {
   private readonly objectiveStore = inject(ObjectiveStore);
+  private readonly taskStore = inject(TaskStore);
 
   mostimportantTaskOftheDay = computed(() => {
-    let tasks : { id: string, title: string, objectiveTitle: string, important: number, urgent: number}[] = [];
+    let tasks = this.taskStore.tasks().map((task) => ({
+      ...task,
+      objectiveTitle: this.objectiveStore.subObjectives().find((objective) => objective.id === task.id)?.title ?? ''
+    }));
 
-    this.objectiveStore.objectives().forEach((objective) => {
-      objective.subObjectives.forEach((subObjective) => {
-        subObjective.tasks.forEach((task) => {
-          tasks.push({
-            id: task.id,
-            title: task.title,
-            objectiveTitle: subObjective.title,
-            important: task.importance,
-            urgent: task.urgency
-          });
-        });
-      });
-    });
-
-    return tasks.filter((task) => task.important >= 3 && task.urgent >= 3).map((task) => {
+    return tasks.filter((task) => task.importance >= 3 && task.urgency >= 3).map((task) => {
       return {
         id: task.id,
         title: task.title,

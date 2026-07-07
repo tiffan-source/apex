@@ -1,7 +1,7 @@
 <header>
   <div class="objective-header__title">
-    <h1>{{ objectiveData()?.title }}</h1>
-    <p>{{ objectiveData()?.description }}</p>
+    <h1>{{ objectiveData().title }}</h1>
+    <p>{{ objectiveData().description }}</p>
   </div>
 </header>
 
@@ -14,7 +14,7 @@
     @if (addSubObjective()) {
       <app-add-sub-objective [objectiveId]="currentObjectiveId()" (abort)="addSubObjective.set(false)"/>
     }
-    <p-dataview #dv [value]="objectiveData().subObjectives">
+    <p-dataview #dv [value]="subObjectives()">
       <ng-template #list let-items>
         <ul class="objective-sub-objectives">
           @for (item of items; track $index) {
@@ -38,7 +38,7 @@
           @for (item of items; track $index) {
             <li>
               <div>
-                <p-checkbox/> <span>{{ item.title }}</span>
+                <p-checkbox [ngModel]="item.done" [binary]="true" (onChange)="checkTaskDone(item.id, $event.checked)" /> <span>{{ item.title }}</span>
               </div>
               <p-tag [value]="getTagValue(item.importance, item.urgency)" [severity]="getTagSeverity(item.importance, item.urgency)" [rounded]="true"/>
             </li>

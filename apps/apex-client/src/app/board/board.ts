@@ -4,10 +4,11 @@ import { CreateObjective } from './create-objective/create-objective';
 import { BoardServices } from './board.services';
 import { CardModule } from 'primeng/card';
 import { DatePipe } from '@angular/common';
+import { ProgressBarModule } from 'primeng/progressbar';
 
 @Component({
   selector: 'app-board',
-  imports: [Button, CreateObjective, CardModule, DatePipe],
+  imports: [Button, CreateObjective, CardModule, DatePipe, ProgressBarModule],
   templateUrl: './board.html',
   styleUrl: './board.css',
 })

@@ -23,6 +23,15 @@
           <p>
             {{ objective.description }}
           </p>
+          @if (objective.relatedTasks.length > 0) {
+            <div>
+              <div class="board-card__progress">
+                <p>{{ objective.numberOfTaskDone }}/{{ objective.relatedTasks.length }} taches</p>
+                <p>{{ (objective.numberOfTaskDone / objective.relatedTasks.length * 100) }}%</p>
+              </div>
+              <p-progressbar [value]="objective.numberOfTaskDone / objective.relatedTasks.length * 100" showValue="false" />
+            </div>
+          }
       </div>
     </p-card>
   }

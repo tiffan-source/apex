@@ -1,4 +1,5 @@
 import { patchState, signalStore, withMethods, withState } from "@ngrx/signals";
+import { MainObjectiveOutput, SubObjectiveOutput } from "@org/objective";
 
 export type ObjectieViewModel = {
   id: string;
@@ -6,17 +7,13 @@ export type ObjectieViewModel = {
   description: string;
   why: string;
   dueDate: Date | null;
-  subObjectives: ObjectieViewModel[];
-  tasks: {
-    id: string;
-    title: string;
-    importance: number;
-    urgency: number;
-  }[];
+  subObjectives: string[];
+  tasks: string[];
 };
 
 const initialState = {
-  objectives: [] as ObjectieViewModel[]
+  objectives: [] as ObjectieViewModel[],
+  subObjectives: [] as ObjectieViewModel[]
 };
 
 export const ObjectiveStore = signalStore(
@@ -32,36 +29,57 @@ export const ObjectiveStore = signalStore(
           if (objective.id === objectiveId) {
             return {
               ...objective,
-              subObjectives: [...objective.subObjectives, subObjective],
+              subObjectives: [...objective.subObjectives, subObjective.id],
             };
           }
           return objective;
         });
-        return { ...state, objectives: updatedObjectives };
+        return { ...state, objectives: updatedObjectives, subObjectives: [...state.subObjectives, subObjective] };
       });
     },
-    addTaskToSubObjective: (objectiveId: string, subObjectiveId: string, task: { id: string; title: string; importance: number; urgency: number }) => {
+    addTaskToSubObjective: (subObjectiveId: string, taskId: string) => {
       patchState(store, (state) => {
-        const updatedObjectives = state.objectives.map((objective) => {
-          if (objective.id === objectiveId) {
-            const updatedSubObjectives = objective.subObjectives.map((subObjective) => {
-              if (subObjective.id === subObjectiveId) {
-                return {
-                  ...subObjective,
-                  tasks: [...subObjective.tasks, task],
-                };
-              }
-              return subObjective;
-            });
-            return { ...objective, subObjectives: updatedSubObjectives };
+        const updatedObjectives = state.subObjectives.map((objective) => {
+          if (objective.id === subObjectiveId) {
+            return {
+              ...objective,
+              tasks: [...objective.tasks, taskId],
+            };
           }
           return objective;
         });
-        return { ...state, objectives: updatedObjectives };
+        return { ...state, subObjectives: updatedObjectives };
       });
     },
     setObjectives: (objectives: ObjectieViewModel[]) => {
-      patchState(store, () => ({ ...initialState, objectives }));
+      patchState(store, (state) => ({ ...state, objectives }));
+    },
+    setSubObjectives: (subObjectives: ObjectieViewModel[]) => {
+      patchState(store, (state) => ({ ...state, subObjectives }));
     }
   }))
 )
+
+export function fromMainObjectiveDomainToObjectiveViewModel(objective: MainObjectiveOutput ): ObjectieViewModel {
+  return {
+    id: objective.id,
+    title: objective.title,
+    description: objective.description || '',
+    why: objective.why || '',
+    dueDate: objective.dueDate || null,
+    subObjectives: objective.subObjectives || [],
+    tasks: []
+  };
+}
+
+export function fromSubObjectiveDomainToObjectiveViewModel(subObjective: SubObjectiveOutput): ObjectieViewModel {
+  return {
+    id: subObjective.id,
+    title: subObjective.title,
+    description: subObjective.description || '',
+    why: '',
+    dueDate: subObjective.dueDate || null,
+    subObjectives: subObjective.subObjectives || [],
+    tasks: subObjective.tasks || []
+  };
+}

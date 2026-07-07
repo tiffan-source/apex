@@ -1,6 +1,6 @@
 import { IdGenerator, Result, runWithResult } from  "@org/chore";
-import { Objective } from "../models/objective";
-import { ObjectiveRepository } from "../protocols/objective.repository";
+import { MainObjective } from "../models/objective";
+import { MainObjectiveRepository } from "../protocols/objective.repository";
 
 export interface CreateObjectiveInput {
   title: string;
@@ -20,7 +20,7 @@ export interface CreateObjectiveOutput {
 export class CreateObjective {
 
   constructor(
-    private readonly repository: ObjectiveRepository,
+    private readonly repository: MainObjectiveRepository,
     private readonly idGenerator: IdGenerator,
   ) {}
 
@@ -28,7 +28,7 @@ export class CreateObjective {
     return runWithResult<CreateObjectiveOutput>(
       async () => {
         let id = this.idGenerator.generateId();
-        let newObjective = new Objective(id, input.title);
+        let newObjective = new MainObjective(id, input.title);
 
         if (input.description) {
           newObjective.setDescription(input.description);

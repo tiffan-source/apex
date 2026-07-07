@@ -1,11 +1,15 @@
 import { inject, Injectable, signal } from "@angular/core";
-import { GetAllObjectiveUseCase } from "@org/objective";
-import { ObjectiveStore } from "../chore/stores/objective.store";
+import { GetAllObjectiveUseCase, GetAllSubObjectiveUseCase, GetAllTaskUseCase } from "@org/objective";
+import { fromMainObjectiveDomainToObjectiveViewModel, fromSubObjectiveDomainToObjectiveViewModel, ObjectiveStore } from "../chore/stores/objective.store";
+import { fromDomainToTaskViewModel, TaskStore } from "../chore/stores/task.store";
 
 @Injectable({ providedIn: 'root' })
 export class AppServices {
   private readonly getAllObjectiveUseCase = inject(GetAllObjectiveUseCase);
+  private readonly getAllSubObjectiveUseCase = inject(GetAllSubObjectiveUseCase);
+  private readonly getAllTaskUseCase = inject(GetAllTaskUseCase);
   private readonly objectivesStore = inject(ObjectiveStore);
+  private readonly taskStore = inject(TaskStore);
 
   private readonly _isLoading = signal(false);
   readonly isLoading = this._isLoading.asReadonly();
@@ -18,38 +22,20 @@ export class AppServices {
     this.bootstrapPromise = (async () => {
       this._isLoading.set(true);
       try {
-        const result = await this.getAllObjectiveUseCase.execute();
-        console.log('bootstrap result', result);
-        if (result.success) {
-          this.objectivesStore.setObjectives(
-            result.data.map((objective) => ({
-              id: objective.id,
-              title: objective.title,
-              description: objective.description || '',
-              why: objective.why || '',
-              dueDate: objective.dueDate || null,
-              subObjectives: objective.subObjectives.map((subObjective) => ({
-                id: subObjective.id,
-                title: subObjective.title,
-                description: subObjective.description || '',
-                why: subObjective.why || '',
-                dueDate: subObjective.dueDate || null,
-                subObjectives: [] as any[],
-                tasks: subObjective.tasks?.map((task) => ({
-                  id: task.id,
-                  title: task.title,
-                  importance: task.important || 0,
-                  urgency: task.urgent || 0,
-                })) || []
-              })),
-              tasks: objective.tasks?.map((task) => ({
-                id: task.id,
-                title: task.title,
-                importance: task.important || 0,
-                urgency: task.urgent || 0,
-              })) || []
-            }))
-          );
+        const objectivesResult = await this.getAllObjectiveUseCase.execute();
+        const subObjectivesResult = await this.getAllSubObjectiveUseCase.execute();
+        const tasksResult = await this.getAllTaskUseCase.execute();
+
+        if (objectivesResult.success) {
+          this.objectivesStore.setObjectives(objectivesResult.data.map((objective) => fromMainObjectiveDomainToObjectiveViewModel(objective)));
+        }
+
+        if (subObjectivesResult.success) {
+          this.objectivesStore.setSubObjectives(subObjectivesResult.data.map((subObjective) => fromSubObjectiveDomainToObjectiveViewModel(subObjective)));
+        }
+
+        if (tasksResult.success) {
+          this.taskStore.setTasks(tasksResult.data.map((task) => fromDomainToTaskViewModel(task)));
         }
       } finally {
         this._isLoading.set(false);

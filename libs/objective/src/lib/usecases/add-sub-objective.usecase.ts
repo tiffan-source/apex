@@ -1,5 +1,5 @@
 import { IdGenerator, Result, runWithResult } from "@org/chore";
-import { ObjectiveRepository } from "../protocols/objective.repository";
+import { MainObjectiveRepository, ObjectiveRepository } from "../protocols/objective.repository";
 import { Objective } from "../models/objective";
 import { ObjectiveNotFoundError } from "../errors/objective-not-found.error";
 import {FailToSaveObjectiveError} from "../errors/fail-to-save-objective.error";
@@ -11,7 +11,8 @@ export interface AddSubObjectiveOutput {
 
 export class AddSubObjectiveUsecase {
   constructor(
-    private readonly repository: ObjectiveRepository,
+    private readonly mainRepository: MainObjectiveRepository,
+    private readonly subRepository: ObjectiveRepository,
     private readonly idGenerator: IdGenerator,
   ) {}
 
@@ -19,7 +20,7 @@ export class AddSubObjectiveUsecase {
   async execute(parentObjectiveId: string, title: string): Promise<Result<AddSubObjectiveOutput>> {
     return runWithResult<AddSubObjectiveOutput>(
       async () => {
-        let parentObjective = await this.repository.findById(parentObjectiveId);
+        let parentObjective = await this.mainRepository.findById(parentObjectiveId);
 
         if (!parentObjective) {
           throw new ObjectiveNotFoundError(parentObjectiveId);
@@ -30,11 +31,8 @@ export class AddSubObjectiveUsecase {
 
         parentObjective.addSubObjective(subObjective);
 
-        let result = await this.repository.save(parentObjective);
-
-        if (!result) {
-          throw new FailToSaveObjectiveError(parentObjectiveId);
-        }
+        await this.subRepository.save(subObjective);
+        await this.mainRepository.save(parentObjective);
 
         return {
           id: subObjective.id,
