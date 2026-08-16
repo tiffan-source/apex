@@ -5,7 +5,7 @@
       <p>Urgent mais pas important</p>
     </div>
     <ul>
-      @for (item of todoList().delegate; track $index) {
+      @for (item of todoList(); track $index) {
         <li class="matrix-delegue__item">
           <div>
             <p-checkbox/>

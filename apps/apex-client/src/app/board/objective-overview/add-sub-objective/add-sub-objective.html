@@ -3,7 +3,7 @@
     <input [(ngModel)]="title" pInputText placeholder="Titre du sous-objectif" fluid/>
   </div>
   <ng-template #footer>
-    <p-button [loading]="isAdding()" size="small" (click)="addSubObjective()">Ajouter</p-button>
+    <p-button [loading]="false" size="small" (click)="addSubObjective()">Ajouter</p-button>
     <p-button size="small" severity="secondary" (click)="abort.emit()">Annuler</p-button>
   </ng-template>
 </p-card>

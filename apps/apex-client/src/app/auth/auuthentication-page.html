@@ -1,0 +1,41 @@
+<div class="auth">
+  <p-card>
+    <ng-template #header>
+      <div class="auth-header">
+        <h1>Welcome back</h1>
+        <p>Don't have an account? <p-button label="Create today!" variant="text"  (click)="changeMode()"/></p>
+      </div>
+    </ng-template>
+
+    <form class="auth-form" [formGroup]="mode() === AuthMode.SignIn ? loginForm : createUserForm">
+      <div class="auth-form-group">
+        <label for="{{ AuthFormField.EMAIL }}">Email</label>
+        <input placeholder="john.doe@example.com" pInputText id="{{ AuthFormField.EMAIL }}" formControlName="{{ AuthFormField.EMAIL }}" aria-describedby="username-help"/>
+      </div>
+      <div class="auth-form-group">
+        <label for="{{ AuthFormField.PASSWORD }}">Password</label>
+        <input placeholder="••••••••" pInputText id="{{ AuthFormField.PASSWORD }}" formControlName="{{ AuthFormField.PASSWORD }}" type="password" aria-describedby="password-help"/>
+      </div>
+      @if (mode() === AuthMode.CreateUser) {
+        <div class="auth-form-group">
+          <label for="{{ AuthFormField.CONFIRM_PASSWORD }}">Confirm Password</label>
+          <input placeholder="••••••••" pInputText id="{{ AuthFormField.CONFIRM_PASSWORD }}" formControlName="{{ AuthFormField.CONFIRM_PASSWORD }}" type="password" aria-describedby="confirmPassword-help"/>
+        </div>
+      }
+    </form>
+
+    <ng-template #footer>
+      <div class="">
+        @switch (mode()) {
+          @case (AuthMode.SignIn) {
+            <p-button fluid label="Sign In" class="auth-button" (click)="submitAuthForm()"/>
+          }
+
+          @case (AuthMode.CreateUser) {
+            <p-button fluid label="Create Account" class="auth-button" (click)="submitAuthForm()"/>
+          }
+        }
+      </div>
+    </ng-template>
+  </p-card>
+</div>

@@ -11,7 +11,7 @@
 
 <main class="board-main">
   @for (objective of getAllObjectives(); track $index) {
-     <p-card class="board-card" (click)="actionCard(objective.id)">
+     <p-card class="board-card" (click)="navigateToObjective(objective.id)">
       <div>
           <div class="board-card__header">
             <span class="pi pi-bullseye board-card__icon"></span>
@@ -23,13 +23,13 @@
           <p>
             {{ objective.description }}
           </p>
-          @if (objective.relatedTasks.length > 0) {
+          @if (objective.totalTasks > 0) {
             <div>
               <div class="board-card__progress">
-                <p>{{ objective.numberOfTaskDone }}/{{ objective.relatedTasks.length }} taches</p>
-                <p>{{ (objective.numberOfTaskDone / objective.relatedTasks.length * 100) }}%</p>
+                <p>{{ objective.doneTasks }}/{{ objective.totalTasks }} taches</p>
+                <p>{{ (objective.progress * 100) }}%</p>
               </div>
-              <p-progressbar [value]="objective.numberOfTaskDone / objective.relatedTasks.length * 100" showValue="false" />
+              <p-progressbar [value]="objective.progress * 100" showValue="false" />
             </div>
           }
       </div>

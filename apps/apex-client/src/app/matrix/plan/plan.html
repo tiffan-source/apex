@@ -5,7 +5,7 @@
       <p>Important mais pas urgent</p>
     </div>
     <ul>
-      @for (item of todoList().schedule; track $index) {
+      @for (item of todoList(); track $index) {
         <li class="matrix-plan__item">
           <div>
             <p-checkbox/>

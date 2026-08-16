@@ -1,5 +1,5 @@
 <p-card class="add-task" >
-  <form [formGroup]="form" (submit)="addTask()">
+  <form [formGroup]="form" >
     <div>
       <input pInputText placeholder="Titre de la tâche" [formControlName]="AddTaskFormField.TITLE" fluid/>
     </div>
@@ -7,7 +7,7 @@
       <p-select [options]="optionsObjective()" [formControlName]="AddTaskFormField.OBJECTIVE"/>
       <p-select [options]="optionsImportance" [formControlName]="AddTaskFormField.IMPORTANT"/>
       <p-select [options]="optionUrgerncy" [formControlName]="AddTaskFormField.URGENT"/>
-      <p-button size="small" type="submit">Ajouter</p-button>
+      <p-button size="small" type="submit" (click)="addTask()">Ajouter</p-button>
       <p-button size="small" severity="secondary" (click)="abort.emit()">Annuler</p-button>
     </div>
   </form>

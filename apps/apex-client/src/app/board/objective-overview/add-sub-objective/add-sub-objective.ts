@@ -1,10 +1,10 @@
 import { Component, inject, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { AddSubObjectiveServices } from './add-sub-objective.services';
 
 @Component({
   selector: 'app-add-sub-objective',
@@ -13,15 +13,15 @@ import { AddSubObjectiveServices } from './add-sub-objective.services';
   styleUrl: './add-sub-objective.css',
 })
 export class AddSubObjective {
-  private readonly addSubObjectiveService = inject(AddSubObjectiveServices);
   title: string = '';
 
   objectiveId = input.required<string>();
   abort = output();
 
-  isAdding = this.addSubObjectiveService.isAdding;
+  objectiveStore = inject(ObjectiveStore);
 
-  addSubObjective = async () => {
-    await this.addSubObjectiveService.addSubObjective(this.objectiveId(), this.title);
+  addSubObjective() {
+    this.objectiveStore.addSubObjective({ objectiveId: this.objectiveId(), subObjectiveTitle: this.title });
   }
+
 }

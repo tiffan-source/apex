@@ -1,0 +1,28 @@
+
+.chat-input {
+  display: flex;
+  gap: 1rem;
+}
+
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.chat-message-user {
+  max-width: 60%;
+  min-width: 20%;
+  align-self: flex-end;
+  background-color: #f2f0f0;
+}
+
+.chat-message-user-content {
+  color: #333;
+}
+
+.chat-message-assistant-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

@@ -5,7 +5,7 @@
       <p>Ni urgent ni important</p>
     </div>
     <ul>
-      @for (item of todoList().eliminate; track $index) {
+      @for (item of todoList(); track $index) {
         <li class="matrix-delete__item">
           <div>
             <p-checkbox/>

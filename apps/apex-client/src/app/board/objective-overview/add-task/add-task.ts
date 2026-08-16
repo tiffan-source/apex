@@ -1,11 +1,11 @@
-import { Component, inject, input, OnInit, output, signal, Signal } from '@angular/core';
+import { Component, inject, input, output} from '@angular/core';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { AddTaskFormField, AddTaskFormModel, ImportanceValueOption, UrgencyValueOption } from './add-task.form';
 import { ReactiveFormsModule } from '@angular/forms';
-import { AddTaskServices } from './add-task.services';
+import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
 
 @Component({
   selector: 'app-add-task',
@@ -13,35 +13,40 @@ import { AddTaskServices } from './add-task.services';
   templateUrl: './add-task.html',
   styleUrl: './add-task.css',
 })
-export class AddTask implements OnInit {
+export class AddTask {
+  readonly objectiveStore = inject(ObjectiveStore);
+
   objectiveId = input.required<string>();
   abort = output();
-
-  private readonly addTaskServices = inject(AddTaskServices);
 
   optionsImportance = ImportanceValueOption
   optionUrgerncy = UrgencyValueOption
 
-  optionsObjective: Signal<{ label: string, value: string }[]> = signal([]);
-  form: AddTaskFormModel = new AddTaskFormModel(this.optionsObjective().length > 0 ? this.optionsObjective()[0].value : null);
+  optionsObjective = input.required<{ label: string, value: string }[]>();
 
-  ngOnInit() {
-    this.optionsObjective = this.addTaskServices.subObjective(this.objectiveId);
-    this.form = new AddTaskFormModel(this.optionsObjective().length > 0 ? this.optionsObjective()[0].value : null);
+  form: AddTaskFormModel = new AddTaskFormModel();
+
+  ngOnInit(): void {
+    const defaultObjectiveId = this.optionsObjective().length > 0 ? this.optionsObjective()[0].value : null;
+    this.form = new AddTaskFormModel(defaultObjectiveId);
   }
 
   AddTaskFormField = AddTaskFormField
 
-  addTask = async () => {
-    let { title, important, urgent, objective } = this.form.value;
+  addTask() {
+    if (this.form.valid) {
+      const { objective, title, important, urgent } = this.form.value;
+      if( objective && title && important && urgent)
+        this.objectiveStore.addTaskToObjective({
+          objectiveId: objective,
+          task: {
+            title,
+            importance: important,
+            urgency: urgent
+          }
+        });
+      this.abort.emit();
+    }
 
-    if(title && important && urgent && objective)
-      await this.addTaskServices.addTask(
-        objective,
-        title,
-        important,
-        urgent
-      );
   }
-
 }

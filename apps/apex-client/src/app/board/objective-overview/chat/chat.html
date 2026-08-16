@@ -1,0 +1,30 @@
+<p-drawer
+  [visible]="chatDrawerStore.isOpen()"
+  header="{{ objectifTitle() }}"
+  [style]="{width: '70vw'}"
+  (onHide)="chatDrawerStore.closeDrawer()"
+  position="right"
+>
+    <ng-template #content >
+      <div class="chat-content">
+        @for (item of chatStore.orderLatestMessages(); track item.id) {
+          @if(item.sender === "user") {
+            <p-card class="chat-message-user">
+              <div class="chat-message-user-content" [innerHTML]="item.content | markdown"></div>
+            </p-card>
+          } @else {
+            <div class="chat-message-assistant">
+              <div class="chat-message-assistant-content" [innerHTML]="item.content | markdown"></div>
+            </div>
+          }
+        }
+      </div>
+
+    </ng-template>
+    <ng-template #footer>
+        <div class="chat-input">
+            <input pInputText fluid type="text" placeholder="Type a message" [(ngModel)]="promptMessage" (keydown.enter)="sendMessage()"/>
+            <button pButton type="button" label="Send" (click)="sendMessage()"></button>
+        </div>
+    </ng-template>
+</p-drawer>

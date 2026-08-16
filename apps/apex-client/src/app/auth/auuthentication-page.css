@@ -1,0 +1,36 @@
+.auth {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.auth-header {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.auth-header h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0;
+}
+
+.auth-header  {
+  font-size: 1.2rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.p-card {
+  min-width: 50rem;
+}

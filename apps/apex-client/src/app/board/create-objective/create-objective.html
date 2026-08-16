@@ -1,5 +1,5 @@
-<p-dialog header="Edit Profile" [visible]="open()" [modal]="true" [style]="{ width: '40rem' }">
-  <form [formGroup]="createObjectiveForm" (ngSubmit)="create()">
+<p-dialog header="Create Objective" [visible]="open()" [modal]="true" [style]="{ width: '40rem' }">
+  <form [formGroup]="createObjectiveForm" (submit)="createObjective()">
     <div class="modal-objective-form-field">
         <label for="{{ CreateObjectiveFormField.TITLE }}">Quel est votre objectif ?</label>
         <input formControlName="{{ CreateObjectiveFormField.TITLE }}" pInputText id="{{ CreateObjectiveFormField.TITLE }}" />
@@ -18,7 +18,7 @@
     </div>
     <div>
         <p-button label="Cancel" severity="secondary" (click)="setOpen.emit(false)" />
-        <p-button [loading]="createObjectiveService.isCreating()" label="Save" type="submit" />
+        <p-button [loading]="false" label="Save" type="submit" />
     </div>
   </form>
 </p-dialog>

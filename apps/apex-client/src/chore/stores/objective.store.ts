@@ -1,85 +1,44 @@
-import { patchState, signalStore, withMethods, withState } from "@ngrx/signals";
-import { MainObjectiveOutput, SubObjectiveOutput } from "@org/objective";
+import { effect, inject } from "@angular/core";
+import { signalStore, withHooks, withState } from "@ngrx/signals";
+import { SessionStore } from "./session.store";
+import { ObjectiveViewModel, TaskViewModel } from "../models/objective.viewmodel";
+import { withCreateObjective } from "./features/with-create-objective";
+import { withObjectiveQuery } from "./features/with-objective-query";
+import { withTask } from "./features/with-task-flatten";
+import { withRequestStatus } from "./utils/loading-feature";
+import { withCreateSubObjective } from "./features/with-create-sub-objective";
+import { withAddTaskToObjective } from "./features/with-add-task-to-objective";
+import { withTaskEisenhowerSeparate } from "./features/with-task-eisenhower-separate";
 
-export type ObjectieViewModel = {
-  id: string;
-  title: string;
-  description: string;
-  why: string;
-  dueDate: Date | null;
-  subObjectives: string[];
-  tasks: string[];
+export type ObjectiveState = {
+  objectives: ObjectiveViewModel[];
+  tasks: TaskViewModel[]
 };
 
-const initialState = {
-  objectives: [] as ObjectieViewModel[],
-  subObjectives: [] as ObjectieViewModel[]
+const initialState: ObjectiveState = {
+  objectives: [],
+  tasks: []
 };
 
 export const ObjectiveStore = signalStore(
-  {providedIn: 'root'},
-  withState(initialState),
-  withMethods((store) => ({
-    addObjective: (objective: ObjectieViewModel) => {
-      patchState(store, (state) => ({ ...state, objectives: [...state.objectives, objective] }));
-    },
-    addSubObjective: (objectiveId: string, subObjective: ObjectieViewModel) => {
-      patchState(store, (state) => {
-        const updatedObjectives = state.objectives.map((objective) => {
-          if (objective.id === objectiveId) {
-            return {
-              ...objective,
-              subObjectives: [...objective.subObjectives, subObjective.id],
-            };
-          }
-          return objective;
-        });
-        return { ...state, objectives: updatedObjectives, subObjectives: [...state.subObjectives, subObjective] };
+  withState<ObjectiveState>(initialState),
+  withRequestStatus(),
+  withObjectiveQuery(),
+  withTask(),
+  withCreateObjective(),
+  withCreateSubObjective(),
+  withAddTaskToObjective(),
+  withTaskEisenhowerSeparate(),
+  withHooks((store, session = inject(SessionStore)) =>({
+    onInit() {
+      effect(() => {
+        const userId = session.currentUserId();
+        if (userId) {
+          store.loadObjectives({ ownerId: userId });
+        } else {
+          store.clearObjectives();
+        }
       });
     },
-    addTaskToSubObjective: (subObjectiveId: string, taskId: string) => {
-      patchState(store, (state) => {
-        const updatedObjectives = state.subObjectives.map((objective) => {
-          if (objective.id === subObjectiveId) {
-            return {
-              ...objective,
-              tasks: [...objective.tasks, taskId],
-            };
-          }
-          return objective;
-        });
-        return { ...state, subObjectives: updatedObjectives };
-      });
-    },
-    setObjectives: (objectives: ObjectieViewModel[]) => {
-      patchState(store, (state) => ({ ...state, objectives }));
-    },
-    setSubObjectives: (subObjectives: ObjectieViewModel[]) => {
-      patchState(store, (state) => ({ ...state, subObjectives }));
-    }
   }))
-)
-
-export function fromMainObjectiveDomainToObjectiveViewModel(objective: MainObjectiveOutput ): ObjectieViewModel {
-  return {
-    id: objective.id,
-    title: objective.title,
-    description: objective.description || '',
-    why: objective.why || '',
-    dueDate: objective.dueDate || null,
-    subObjectives: objective.subObjectives || [],
-    tasks: []
-  };
-}
-
-export function fromSubObjectiveDomainToObjectiveViewModel(subObjective: SubObjectiveOutput): ObjectieViewModel {
-  return {
-    id: subObjective.id,
-    title: subObjective.title,
-    description: subObjective.description || '',
-    why: '',
-    dueDate: subObjective.dueDate || null,
-    subObjectives: subObjective.subObjectives || [],
-    tasks: subObjective.tasks || []
-  };
-}
+);

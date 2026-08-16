@@ -1,53 +1,34 @@
 .shell {
-  min-height: 100vh;
-  width: 20rem;
-  background-color: #171a26;
-  color: white;
-}
-
-.shell header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-bottom: 1px solid #b0b0b054;
-}
-
-.shell header span {
-  font-size: 1.8rem;
-  color: #eeebfa;
-  padding: 0.5rem;
-  background-color: #593bce;
-  border-radius: 0.5rem;
-}
-
-.shell header h1 {
-  font-size: 1.2rem;
+  width: fit-content;
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--p-content-background);
+  box-shadow: var(--p-card-shadow);
+  border-radius: 1.5rem;
 }
 
 .navigation {
-  padding: 1rem;
-  margin-top: 1rem;
+  padding: 1.5rem;
+}
+
+.navigation-list {
+  display: flex;
+  gap: 2rem;
 }
 
 .navigation-list__item {
-  margin-bottom: 1rem;
-  padding: 0.8rem 0.5rem;
-  border-radius: 0.5rem;
-
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-
-  cursor: pointer;
 }
 
-.navigation-list__item__active {
-  color: #593bce;
-  background-color: #ffffff16;
+
+.app {
+  width: 100vw;
+  height: 100vh;
 }
 
-.navigation-list__item:hover {
-  background-color: #ffffff16;
+.app__content {
+  padding: 2rem;
+  height: 100%;
+  width: 100%;
 }
-

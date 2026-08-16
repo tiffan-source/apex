@@ -21,6 +21,7 @@
 
 .board-card {
   width: 25rem;
+  cursor: pointer;
 }
 
 .board-card__header {

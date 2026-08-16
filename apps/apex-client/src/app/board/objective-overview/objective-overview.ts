@@ -1,5 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
-import { ObjectiveOverviewServices } from './objective-overview.services';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { AddSubObjective } from './add-sub-objective/add-sub-objective';
 import { AddTask } from './add-task/add-task';
 import { DataViewModule } from 'primeng/dataview';
@@ -7,51 +6,30 @@ import { Button } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TagModule } from 'primeng/tag';
 import { FormsModule } from '@angular/forms';
+import { ObjectiveStore } from "../../../chore/stores/objective.store"
+import { Chat } from './chat/chat';
+import { ChatDrawerStore } from 'apps/apex-client/src/chore/stores/chat-drawer.store';
+
 
 @Component({
   selector: 'app-objective-overview',
-  imports: [AddSubObjective, AddTask, DataViewModule, Button, CheckboxModule, TagModule, FormsModule],
-  providers: [ObjectiveOverviewServices],
+  imports: [AddSubObjective, AddTask, DataViewModule, Button, CheckboxModule, TagModule, FormsModule, Chat],
   templateUrl: './objective-overview.html',
   styleUrl: './objective-overview.css',
 })
 export class ObjectiveOverview {
+  readonly id = input.required<string>();
+  private readonly objectivesStore = inject(ObjectiveStore);
 
-  private readonly services = inject(ObjectiveOverviewServices);
+  readonly objectiveOverview = computed(() => this.objectivesStore.findObjectiveOverViewById(this.id()));
 
-  addSubObjective = signal(false);
-  addTask = signal(false);
+  optionsObjective = computed(() => {
+    return this.objectiveOverview()
+    ?.subObjectives
+    .map((subObjective) => ({ label: subObjective.title, value: subObjective.id }))
+    || [];
+  });
 
-  objectiveData = this.services.objectiveData;
-  subObjectives = this.services.subObjectives;
-  objectiveTasks = this.services.objectiveTasks;
-  currentObjectiveId = this.services.currentObjectiveId;
-
-  checkTaskDone = async (taskId: string, event: boolean) => {
-    await this.services.toogleTaskDone(taskId, event);
-  }
-
-  getTagValue = (importance: number, urgency: number) => {
-    if (importance >= 3 && urgency >= 3) {
-      return "Faire";
-    } else if (importance >= 3) {
-      return "Planifier";
-    } else if (urgency >= 3) {
-      return "Déléguer";
-    } else {
-      return "Supprimer";
-    }
-  }
-
-  getTagSeverity = (importance: number, urgency: number) => {
-    if (importance >= 3 && urgency >= 3) {
-      return "danger";
-    } else if (importance >= 3) {
-      return "warn";
-    } else if (urgency >= 3) {
-      return "info";
-    } else {
-      return "secondary";
-    }
-  }
+  displayAddSubObjective = signal(false);
+  displayAddTask = signal(false);
 }

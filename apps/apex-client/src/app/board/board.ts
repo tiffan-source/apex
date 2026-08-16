@@ -1,10 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { Button } from 'primeng/button';
 import { CreateObjective } from './create-objective/create-objective';
-import { BoardServices } from './board.services';
 import { CardModule } from 'primeng/card';
 import { DatePipe } from '@angular/common';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { ObjectiveStore } from '../../chore/stores/objective.store';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-board',
@@ -14,11 +15,11 @@ import { ProgressBarModule } from 'primeng/progressbar';
 })
 export class Board {
   createObjectiveModalOpen = signal(false);
-  private readonly objectiveServices = inject(BoardServices);
+  private readonly objectiveStore = inject(ObjectiveStore);
+  readonly router = inject(Router);
+  getAllObjectives = this.objectiveStore.mainObjectivesWithProgress;
 
-  getAllObjectives = this.objectiveServices.getAllObjectives;
-
-  actionCard = (id: string) => {
-    this.objectiveServices.consultObjective(id);
+  navigateToObjective(objectiveId: string) {
+    this.router.navigate(['/objective', objectiveId]);
   }
 }

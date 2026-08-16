@@ -1,11 +1,11 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output } from '@angular/core';
 import { Button } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { CreateObjectiveFormField, CreateObjectiveFormModel } from './create-objective.form';
 import { TextareaModule } from 'primeng/textarea';
-import { CreateObjectiveServices } from './create-objective.services';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
 
 @Component({
   selector: 'app-create-objective',
@@ -20,15 +20,30 @@ export class CreateObjective {
   protected CreateObjectiveFormField = CreateObjectiveFormField
   createObjectiveForm = new CreateObjectiveFormModel();
 
-  protected readonly createObjectiveService = inject(CreateObjectiveServices);
+  objectiveStore = inject(ObjectiveStore);
 
-  create = async () => {
-    let {title, description, why, dueDate} = this.createObjectiveForm.value;
-    let result
-    if(title && description && why && dueDate)
-      result = await this.createObjectiveService.createObjectiveService(title, description, why, dueDate);
+  isLoading = computed(()=>this.objectiveStore.isPending())
 
-    if(result)
-      this.setOpen.emit(false);
+  constructor() {
+    effect(() => {
+      if (this.objectiveStore.requestStatus() === 'fulfilled') {
+        this.setOpen.emit(false);
+      }
+    });
   }
+
+  createObjective() {
+    if (this.createObjectiveForm.valid) {
+      const { title, description, why, dueDate } = this.createObjectiveForm.value;
+
+      if (title && description && why && dueDate){
+        let date = new Date(dueDate);
+        this.objectiveStore.createObjective({ title, description, why, dueDate: date });
+      }
+      // Here you would typically call a service to handle the creation of the objective
+    } else {
+      console.error('Form is invalid. Please fill out all required fields.');
+    }
+  }
+
 }

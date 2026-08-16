@@ -1,0 +1,1 @@
+- [] Ameliorer le store de loading

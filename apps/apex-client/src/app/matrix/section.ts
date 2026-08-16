@@ -1,8 +1,6 @@
 import { inject } from "@angular/core";
-import { MatrixServices } from "./matrix.services";
+import { ObjectiveStore } from "../../chore/stores/objective.store";
 
 export class Section {
-  protected readonly matrixService = inject(MatrixServices);
-
-
+  protected readonly objectiveStore = inject(ObjectiveStore);
 }
