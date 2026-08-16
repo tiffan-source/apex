@@ -1,0 +1,9 @@
+{
+  "name": "ai-assistant",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "worklfows/ai-assistant/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project ai-assistant --web",
+  "targets": {}
+}
