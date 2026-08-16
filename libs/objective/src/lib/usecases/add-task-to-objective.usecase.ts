@@ -1,15 +1,14 @@
 import { IdGenerator, Result, runWithResult } from "@org/chore";
-import { MainObjectiveRepository, ObjectiveRepository } from "../protocols/objective.repository";
+import { ObjectiveRepository } from "../protocols/objective.repository";
 import { Task } from "../models/task";
 import { ObjectiveNotFoundError } from "../errors/objective-not-found.error";
 import { FailToSaveObjectiveError } from "../errors/fail-to-save-objective.error";
-import { MainObjective } from "../models/objective";
-import { TaskRepository } from "../protocols/task.repository";
 
 export interface AddTaskToObjectiveInput {
   title: string;
   importance: number;
   urgency: number;
+  ownerId: string;
 }
 
 export interface AddTaskToObjectiveOutput {
@@ -22,7 +21,6 @@ export interface AddTaskToObjectiveOutput {
 export class AddTaskToObjectiveUsecase {
   constructor(
     private readonly repository: ObjectiveRepository,
-    private readonly taskRepository: TaskRepository,
     private readonly idGenerator: IdGenerator,
   ) {}
 
@@ -40,8 +38,7 @@ export class AddTaskToObjectiveUsecase {
 
         objective.addTask(newTask);
 
-        await this.repository.save(objective);
-        await this.taskRepository.save(newTask);
+        await this.repository.save(objective, task.ownerId);
 
         return {
           id: newTask.id,

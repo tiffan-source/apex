@@ -1,12 +1,14 @@
 import { IdGenerator, Result, runWithResult } from  "@org/chore";
-import { MainObjective } from "../models/objective";
-import { MainObjectiveRepository } from "../protocols/objective.repository";
+import { Objective } from "../models/objective";
+import { ObjectiveRepository } from "../protocols/objective.repository";
+import { FailToSaveObjectiveError } from "../errors/fail-to-save-objective.error";
 
 export interface CreateObjectiveInput {
   title: string;
   description?: string;
   why?: string;
   dueDate?: Date;
+  ownerId: string;
 }
 
 export interface CreateObjectiveOutput {
@@ -17,10 +19,10 @@ export interface CreateObjectiveOutput {
   dueDate?: Date;
 }
 
-export class CreateObjective {
+export class CreateObjectiveUsecase {
 
   constructor(
-    private readonly repository: MainObjectiveRepository,
+    private readonly repository: ObjectiveRepository,
     private readonly idGenerator: IdGenerator,
   ) {}
 
@@ -28,7 +30,7 @@ export class CreateObjective {
     return runWithResult<CreateObjectiveOutput>(
       async () => {
         let id = this.idGenerator.generateId();
-        let newObjective = new MainObjective(id, input.title);
+        let newObjective = new Objective(id, input.title);
 
         if (input.description) {
           newObjective.setDescription(input.description);
@@ -42,10 +44,10 @@ export class CreateObjective {
           newObjective.setDueDate(input.dueDate);
         }
 
-        let result = await this.repository.save(newObjective);
+        let result = await this.repository.save(newObjective, input.ownerId);
 
         if (!result) {
-          throw new Error('Failed to save objective');
+          throw new FailToSaveObjectiveError(id);
         }
 
         return {
@@ -56,7 +58,7 @@ export class CreateObjective {
           dueDate: newObjective.dueDate,
         };
       },
-      [],
+      [FailToSaveObjectiveError],
       'Failed to create objective'
     );
    }

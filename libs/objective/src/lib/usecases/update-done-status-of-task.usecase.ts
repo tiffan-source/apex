@@ -3,6 +3,12 @@ import { TaskNotFoundError } from "../errors/task-not-found.error";
 import { TaskRepository } from "../protocols/task.repository";
 import { FailToSaveTaskError } from "../errors/fail-to-save-task.error";
 
+type UpdateDoneStatusOfTaskInput = {
+  taskId: string;
+  done: boolean;
+  ownerId: string;
+};
+
 type UpdateDoneStatusOfTaskOutput = {
   id: string;
   title: string;
@@ -15,21 +21,21 @@ export class UpdateDoneStatusOfTaskUsecase {
     private readonly repository: TaskRepository,
   ) {}
 
-  async execute(taskId: string, done: boolean): Promise<Result<UpdateDoneStatusOfTaskOutput>> {
+  async execute(input: UpdateDoneStatusOfTaskInput): Promise<Result<UpdateDoneStatusOfTaskOutput>> {
     return runWithResult<UpdateDoneStatusOfTaskOutput>(
       async () => {
-        let task = await this.repository.findById(taskId);
+        let task = await this.repository.findById(input.taskId);
 
         if (!task) {
-          throw new TaskNotFoundError(taskId);
+          throw new TaskNotFoundError(input.taskId);
         }
 
-        task.setDone(done);
+        task.setDone(input.done);
 
-        let result = await this.repository.save(task);
+        let result = await this.repository.update(task);
 
         if (!result) {
-          throw new FailToSaveTaskError(taskId);
+          throw new FailToSaveTaskError(input.taskId);
         }
 
         return {
