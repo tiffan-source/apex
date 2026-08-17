@@ -13,3 +13,4 @@
 - [] Ajouter une vue en arborescence pour les sous-objectifs (un graph de preference)
 - [] donner la possibilite a mon ia de creer elle meme des sous-objectifs et des taches
 - [] Editer objectif et tache
+- [] Focus du jour et petite card sur la home page pour les stats

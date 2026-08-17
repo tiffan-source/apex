@@ -1,4 +1,10 @@
-<p-dialog header="Définissons votre objectif" [visible]="open()" [modal]="true" [style]="{ width: '40rem' }">
+<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }">
+  <ng-template #header>
+    <div class="modal-objective-header">
+      <span style="color: #1363bf; font-size: 1.5rem;" class="pi pi-sparkles"></span>
+      <h1>Définissons votre objectif</h1>
+    </div>
+</ng-template>
   <form [formGroup]="createObjectiveForm" (submit)="createObjective()">
     <div class="modal-objective-form-field">
         <label for="{{ CreateObjectiveFormField.TITLE }}">Un titre simple qui le représente</label>

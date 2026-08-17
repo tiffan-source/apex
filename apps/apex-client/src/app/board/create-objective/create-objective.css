@@ -9,3 +9,14 @@
   justify-content: flex-end;
   gap: 1rem;
 }
+
+.modal-objective-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+
+.modal-objective-header h1{
+  font-size: 1.5rem;
+}
