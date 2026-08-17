@@ -39,6 +39,7 @@ export class CreateObjective {
   constructor() {
     effect(() => {
       if (this.objectiveStore.requestStatus() === 'fulfilled') {
+        this.createObjectiveForm.reset();
         this.setOpen.emit(false);
       }
     });

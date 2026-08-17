@@ -21,7 +21,7 @@
           <ng-template #list let-items>
             <ul class="objective-sub-objectives">
               @for (item of items; track $index) {
-                <li> <p-checkbox/> <span>{{ item.title }}</span></li>
+                <li> <p-checkbox [ngModel]="item.done" [readonly]="true" [binary]="true" /> <span>{{ item.title }}</span>  </li>
               }
             </ul>
           </ng-template>
@@ -44,7 +44,7 @@
               @for (item of items; track $index) {
                 <li>
                   <div>
-                    <p-checkbox [ngModel]="item.done" [binary]="true" /> <span>{{ item.title }}</span>
+                    <p-checkbox (click)="toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true"/> <span>{{ item.title }}</span>
                   </div>
                   <p-tag [value]="item.category" [severity]="item.primNgSeverity" [rounded]="true"/>
                 </li>
@@ -56,9 +56,12 @@
           </ng-template>
         </p-dataview>
       </div>
+
+
+    <app-chat [objectiveId]="id()" [objectifTitle]="objectiveOverview().title || 'Objectif inconnu'"/>
+    <app-edit-objective [objectiveOverview]="objectiveOverview()"/>
     </main>
 
-    <app-chat [objectiveId]="id()" [objectifTitle]="objectiveOverview()?.title || 'Objectif inconnu'"/>
 
   </div>
 }

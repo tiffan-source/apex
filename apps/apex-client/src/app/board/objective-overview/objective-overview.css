@@ -28,11 +28,11 @@
 .objective-sub-objectives, .objective-tasks {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
 }
 
 .objective-sub-objectives li, .objective-tasks li {
-  padding: 0.8rem;
+  margin: 0.5rem;
+  padding: 0.3rem;
 }
 
 .objective-sub-objectives li{

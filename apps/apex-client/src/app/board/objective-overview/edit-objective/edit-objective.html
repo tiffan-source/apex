@@ -1,0 +1,35 @@
+<p-drawer
+  [visible]="drawerStore.objectiveEdition.isOpen()"
+  header="{{ form.get(EditObjectiveFormField.TITLE)?.value || objectiveOverview()?.title }}"
+  [style]="{width: '70vw'}"
+  (onHide)="drawerStore.closeObjectiveEditionDrawer()"
+  position="right"
+>
+    <ng-template #content >
+      <form [formGroup]="form" class="edit-objective-form">
+        <div class="edit-objective-form-field">
+            <label for="{{ EditObjectiveFormField.TITLE }}">Un titre simple qui le représente</label>
+            <input placeholder="Monter mon entreprise" formControlName="{{ EditObjectiveFormField.TITLE }}" pInputText id="{{ EditObjectiveFormField.TITLE }}" />
+        </div>
+        <div class="edit-objective-form-field">
+            <label for="{{ EditObjectiveFormField.DESCRIPTION }}">Décrivons le un peu plus en détail</label>
+            <textarea placeholder="Décrivez votre objectif en quelques mots..." formControlName="{{ EditObjectiveFormField.DESCRIPTION }}" pTextarea id="{{ EditObjectiveFormField.DESCRIPTION }}"></textarea>
+        </div>
+        <div class="edit-objective-form-field">
+            <label for="{{ EditObjectiveFormField.WHY }}">Pourquoi cet objectif est important pour vous ?</label>
+            <textarea placeholder="Expliquez pourquoi cet objectif vous tient à cœur..." formControlName="{{ EditObjectiveFormField.WHY }}" rows="5" pTextarea id="{{ EditObjectiveFormField.WHY }}"></textarea>
+        </div>
+        <div class="edit-objective-form-field">
+            <label for="{{ EditObjectiveFormField.DUE_DATE }}">Une date cible ?</label>
+            <input type="date" formControlName="{{ EditObjectiveFormField.DUE_DATE }}" pInputText id="{{ EditObjectiveFormField.DUE_DATE }}" />
+        </div>
+      </form>
+    </ng-template>
+
+    <ng-template #footer>
+        <div class="edit-objective-footer">
+          <button pButton severity="secondary" type="button" label="Annuler" (click)="drawerStore.closeObjectiveEditionDrawer()"></button>
+          <button pButton type="button" label="Sauvegarder" (click)="editObjective()"></button>
+        </div>
+    </ng-template>
+</p-drawer>

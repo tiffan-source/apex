@@ -1,0 +1,18 @@
+.edit-objective-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+}
+
+.edit-objective-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-objective-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}

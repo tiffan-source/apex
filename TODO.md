@@ -3,7 +3,7 @@
 
 ## Features Pool
 - [] Racourcis clavier pour creer un objectif
-- [] Validation pour la creation d'un objectif
+- [x] Validation pour la creation d'un objectif
 - [] Checker une tache avec systeme de delay
 - [] System d'onboarding pour les nouveaux utilisateurs
 - [] Use primeng dock

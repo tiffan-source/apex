@@ -1,8 +1,8 @@
 <p-drawer
-  [visible]="chatDrawerStore.isOpen()"
+  [visible]="drawerStore.chat.isOpen()"
   header="{{ objectifTitle() }}"
   [style]="{width: '70vw'}"
-  (onHide)="chatDrawerStore.closeDrawer()"
+  (onHide)="drawerStore.closeChatDrawer()"
   position="right"
 >
     <ng-template #content >

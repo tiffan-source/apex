@@ -8,7 +8,7 @@
       @for (item of todoList(); track $index) {
         <li class="matrix-todo__item">
           <div>
-            <p-checkbox/>
+            <p-checkbox (click)="toggleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true"/>
           </div>
           <div>
             <p class="matrix-todo__item-title">{{ item.title }}</p>

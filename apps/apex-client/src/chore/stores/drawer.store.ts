@@ -1,19 +1,29 @@
 import { computed, inject } from "@angular/core";
-import { ActivatedRoute, NavigationEnd, Router } from "@angular/router";
+import { NavigationEnd, Router } from "@angular/router";
 import { patchState, signalStore, withComputed, withMethods, withState } from "@ngrx/signals";
 import { toSignal } from "@angular/core/rxjs-interop"
 import { filter } from "rxjs";
 
-export type ChatDrawerState = {
-  isOpen: boolean;
+export type DrawerState = {
+  chat : {
+    isOpen: boolean;
+  }
+  objectiveEdition : {
+    isOpen: boolean;
+  }
 };
 
-const initialState: ChatDrawerState = {
-  isOpen: false,
+const initialState: DrawerState = {
+  chat: {
+    isOpen: false
+  },
+  objectiveEdition: {
+    isOpen: false
+  }
 };
 
-export const ChatDrawerStore = signalStore(
-  withState<ChatDrawerState>(initialState),
+export const DrawerStore = signalStore(
+  withState<DrawerState>(initialState),
   withComputed(() => {
     const router = inject(Router);
 
@@ -37,15 +47,22 @@ export const ChatDrawerStore = signalStore(
           segments[1].length > 0
         );
       }),
+
     };
   }),
 
   withMethods((state) => ({
-    openDrawer() {
-      patchState(state, { isOpen: true });
+    openChatDrawer() {
+      patchState(state, { chat: { isOpen: true } });
     },
-    closeDrawer() {
-      patchState(state, { isOpen: false });
-    }
+    closeChatDrawer() {
+      patchState(state, { chat: { isOpen: false } });
+    },
+    openObjectiveEditionDrawer() {
+      patchState(state, { objectiveEdition: { isOpen: true } });
+    },
+    closeObjectiveEditionDrawer() {
+      patchState(state, { objectiveEdition: { isOpen: false } });
+    },
   }))
 );

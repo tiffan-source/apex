@@ -9,6 +9,8 @@ import { withRequestStatus } from "./utils/loading-feature";
 import { withCreateSubObjective } from "./features/with-create-sub-objective";
 import { withAddTaskToObjective } from "./features/with-add-task-to-objective";
 import { withTaskEisenhowerSeparate } from "./features/with-task-eisenhower-separate";
+import { withUpdateTaskDone } from "./features/with-update-task-done";
+import { withEditObjective } from "./features/with-edit-objective";
 
 export type ObjectiveState = {
   objectives: ObjectiveViewModel[];
@@ -29,6 +31,8 @@ export const ObjectiveStore = signalStore(
   withCreateSubObjective(),
   withAddTaskToObjective(),
   withTaskEisenhowerSeparate(),
+  withEditObjective(),
+  withUpdateTaskDone(),
   withHooks((store, session = inject(SessionStore)) =>({
     onInit() {
       effect(() => {

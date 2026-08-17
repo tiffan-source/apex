@@ -6,8 +6,9 @@
           <li class="navigation-list__item {{router.url === item.link ? 'navigation-list__item__active' : ''}}" (click)="navigateTo(item.link)"> <span style="font-size: 1.2rem" class="{{item.primeIcon}}"></span></li>
         }
 
-        @if(chatDrawerStore.canBeActivated()){
-          <li (click)="chatDrawerStore.openDrawer()"><span style="font-size: 1.2rem" class="pi pi-comments"></span></li>
+        @if(drawerStore.canBeActivated()){
+          <li (click)="drawerStore.openChatDrawer()"><span style="font-size: 1.2rem" class="pi pi-comments"></span></li>
+          <li (click)="drawerStore.openObjectiveEditionDrawer()"><span style="font-size: 1.2rem" class="pi pi-pencil"></span></li>
         }
       </ul>
     </nav>

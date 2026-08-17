@@ -8,20 +8,24 @@ import { TagModule } from 'primeng/tag';
 import { FormsModule } from '@angular/forms';
 import { ObjectiveStore } from "../../../chore/stores/objective.store"
 import { Chat } from './chat/chat';
-import { ChatDrawerStore } from 'apps/apex-client/src/chore/stores/chat-drawer.store';
-
+import { EditObjective } from "./edit-objective/edit-objective";
+import { Router } from '@angular/router';
+import { ObjectiveOverviewViewModel } from 'apps/apex-client/src/chore/models/objective.viewmodel';
 
 @Component({
   selector: 'app-objective-overview',
-  imports: [AddSubObjective, AddTask, DataViewModule, Button, CheckboxModule, TagModule, FormsModule, Chat],
+  imports: [AddSubObjective, AddTask, DataViewModule, Button, CheckboxModule, TagModule, FormsModule, Chat, EditObjective],
   templateUrl: './objective-overview.html',
   styleUrl: './objective-overview.css',
 })
 export class ObjectiveOverview {
   readonly id = input.required<string>();
   private readonly objectivesStore = inject(ObjectiveStore);
+  router = inject(Router);
 
-  readonly objectiveOverview = computed(() => this.objectivesStore.findObjectiveOverViewById(this.id()));
+
+
+  objectiveOverview = computed<ObjectiveOverviewViewModel>(() => this.objectivesStore.findObjectiveOverViewById(this.id()) as ObjectiveOverviewViewModel);
 
   optionsObjective = computed(() => {
     return this.objectiveOverview()
@@ -32,4 +36,8 @@ export class ObjectiveOverview {
 
   displayAddSubObjective = signal(false);
   displayAddTask = signal(false);
+
+  toogleTaskDone(taskId: string, done: boolean) {
+    this.objectivesStore.udpateTaskDone({ taskId, done: !done });
+  }
 }

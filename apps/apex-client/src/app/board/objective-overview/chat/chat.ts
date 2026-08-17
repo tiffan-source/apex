@@ -2,7 +2,7 @@ import { Component, effect, ElementRef, inject, input, OnDestroy, viewChild } fr
 import { ChatStore } from './chat.store';
 import { InputTextModule } from 'primeng/inputtext';
 import { SessionStore } from 'apps/apex-client/src/chore/stores/session.store';
-import { ChatDrawerStore } from 'apps/apex-client/src/chore/stores/chat-drawer.store';
+import { DrawerStore } from 'apps/apex-client/src/chore/stores/drawer.store';
 import { ButtonModule } from 'primeng/button';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -22,7 +22,7 @@ export class Chat implements OnDestroy {
   chatStore = inject(ChatStore);
   sessionStore = inject(SessionStore);
   objectiveId = input.required<string>();
-  chatDrawerStore = inject(ChatDrawerStore);
+  drawerStore = inject(DrawerStore);
   objectifTitle = input.required<string>();
 
   chatContainer = viewChild<ElementRef<HTMLDivElement>>('chatContainer');

@@ -6,7 +6,6 @@ import { FailToSaveTaskError } from "../errors/fail-to-save-task.error";
 type UpdateDoneStatusOfTaskInput = {
   taskId: string;
   done: boolean;
-  ownerId: string;
 };
 
 type UpdateDoneStatusOfTaskOutput = {

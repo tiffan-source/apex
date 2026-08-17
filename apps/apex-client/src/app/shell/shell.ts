@@ -2,19 +2,19 @@ import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { RouterModule } from '@angular/router';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
-import { ChatDrawerStore } from '../../chore/stores/chat-drawer.store';
+import { DrawerStore } from '../../chore/stores/drawer.store';
 
 @Component({
   selector: 'app-shell',
   imports: [ RouterModule],
   templateUrl: './shell.html',
   styleUrl: './shell.css',
-  providers: [ObjectiveStore, ChatDrawerStore]
+  providers: [ObjectiveStore, DrawerStore]
 })
 export class Shell {
   router = inject(Router);
-  chatDrawerStore = inject(ChatDrawerStore);
-  
+  drawerStore = inject(DrawerStore);
+
   navigationList = [
     {
       label: 'Board',
