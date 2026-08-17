@@ -17,12 +17,16 @@
             <span class="pi pi-bullseye board-card__icon"></span>
             <div>
               <span>{{ objective.title }}</span>
-              <p>{{ objective.dueDate | date }}</p>
+              @if(objective.dueDate) {
+                <p>{{ objective.dueDate | date }}</p>
+              }
             </div>
           </div>
-          <p>
-            {{ objective.description }}
-          </p>
+          @if (objective.description) {
+            <p>
+              {{ objective.description }}
+            </p>
+          }
           @if (objective.totalTasks > 0) {
             <div>
               <div class="board-card__progress">

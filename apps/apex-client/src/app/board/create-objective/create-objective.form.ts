@@ -1,4 +1,4 @@
-import { FormControl, FormGroup } from "@angular/forms";
+import { FormControl, FormGroup, Validators } from "@angular/forms";
 
 export enum CreateObjectiveFormField {
   TITLE = 'title',
@@ -17,7 +17,7 @@ export type CreateObjectiveForm = {
 export class CreateObjectiveFormModel extends FormGroup<CreateObjectiveForm> {
   constructor() {
     super({
-      [CreateObjectiveFormField.TITLE]: new FormControl('', { nonNullable: true }),
+      [CreateObjectiveFormField.TITLE]: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       [CreateObjectiveFormField.DESCRIPTION]: new FormControl(''),
       [CreateObjectiveFormField.WHY]: new FormControl(''),
       [CreateObjectiveFormField.DUE_DATE]: new FormControl(null),

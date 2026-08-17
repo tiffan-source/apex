@@ -6,7 +6,7 @@
   position="right"
 >
     <ng-template #content >
-      <div class="chat-content">
+      <div #chatContainer class="chat-content">
         @for (item of chatStore.orderLatestMessages(); track item.id) {
           @if(item.sender === "user") {
             <p-card class="chat-message-user">
@@ -18,13 +18,20 @@
             </div>
           }
         }
+        @if(chatStore.isStreaming()){
+          <div class="chat-message-assistant">
+            <p-skeleton class="mb-2" />
+            <p-skeleton width="10rem" class="mb-2" />
+            <p-skeleton width="5rem" class="mb-2" />
+          </div>
+        }
       </div>
-
     </ng-template>
+
     <ng-template #footer>
         <div class="chat-input">
             <input pInputText fluid type="text" placeholder="Type a message" [(ngModel)]="promptMessage" (keydown.enter)="sendMessage()"/>
-            <button pButton type="button" label="Send" (click)="sendMessage()"></button>
+            <button pButton type="button" label="Send" (click)="sendMessage()" [disabled]="chatStore.isStreaming()"></button>
         </div>
     </ng-template>
 </p-drawer>

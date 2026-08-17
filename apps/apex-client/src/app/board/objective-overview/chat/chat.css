@@ -21,6 +21,12 @@
   color: #333;
 }
 
+.chat-message-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .chat-message-assistant-content {
   display: flex;
   flex-direction: column;

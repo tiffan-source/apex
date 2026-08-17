@@ -44,7 +44,7 @@ export class SendMessageToAIWorkflow {
         conversation
       });
 
-      let response = await this.aiProvider.generateMessage(`You are an AI assistant. You will receive a message from a user and you will respond to it. The context of the conversation is: ${context}. The user's message is: ${message}. Please provide a helpful and relevant response.`)
+      let response = await this.aiProvider.generateMessage(` Le contexte de la conversation est: ${context}. Le message de l'utilisateur est: ${message}. Veuillez fournir une réponse utile et pertinente.`)
 
       let resultAi = await this.messageGateway.execute({
         id: this.idGenerator.generateId(),

@@ -21,7 +21,7 @@ export function withCreateObjective() {
       sessionStore = inject(SessionStore),
       messageService = inject(MessageService)
     ) => ({
-      createObjective: rxMethod<{ title: string; description: string; why: string; dueDate: Date }>(
+      createObjective: rxMethod<{ title: string; description?: string; why?: string; dueDate?: Date }>(
         pipe(
           withOwnerId(sessionStore.currentUserId),
           withOptimistiqueId(),
@@ -32,9 +32,9 @@ export function withCreateObjective() {
             const newObjective: ObjectiveViewModel = {
               id: tempId,
               title,
-              description,
-              why,
-              dueDate: dueDate.toISOString(),
+              description: description || "",
+              why: why || "",
+              dueDate: dueDate?.toISOString() || "",
               parentId: null
             };
             patchState(store, { objectives: [...store.objectives(), newObjective] });

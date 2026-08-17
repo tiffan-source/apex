@@ -6,6 +6,8 @@ import { CreateObjectiveFormField, CreateObjectiveFormModel } from './create-obj
 import { TextareaModule } from 'primeng/textarea';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map, startWith } from 'rxjs';
 
 @Component({
   selector: 'app-create-objective',
@@ -24,6 +26,16 @@ export class CreateObjective {
 
   isLoading = computed(()=>this.objectiveStore.isPending())
 
+  private readonly formValidity = toSignal(
+    this.createObjectiveForm.statusChanges.pipe(
+      startWith(this.createObjectiveForm.status),
+      map(() => this.createObjectiveForm.valid)
+    ),
+    { initialValue: this.createObjectiveForm.valid }
+  );
+
+  readonly isFormValid = computed(() => this.formValidity());
+
   constructor() {
     effect(() => {
       if (this.objectiveStore.requestStatus() === 'fulfilled') {
@@ -33,12 +45,12 @@ export class CreateObjective {
   }
 
   createObjective() {
+
     if (this.createObjectiveForm.valid) {
       const { title, description, why, dueDate } = this.createObjectiveForm.value;
 
-      if (title && description && why && dueDate){
-        let date = new Date(dueDate);
-        this.objectiveStore.createObjective({ title, description, why, dueDate: date });
+      if (title){
+        this.objectiveStore.createObjective({ title, description: description || undefined, why: why || undefined, dueDate: dueDate ? new Date(dueDate) : undefined });
       }
       // Here you would typically call a service to handle the creation of the objective
     } else {
