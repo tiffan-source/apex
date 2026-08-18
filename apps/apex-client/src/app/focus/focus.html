@@ -1,0 +1,47 @@
+<header>
+  <div class="focus-header__title">
+    <h1>Focus du jour</h1>
+    <h2>{{ todayDate | date:'fullDate' }}</h2>
+  </div>
+</header>
+
+<main class="focus-main">
+
+  <p-card [style]="{borderColor: '#593bce', border: '1px solid', backgroundColor: '#593bce09'}" >
+    <div class="focus-card__progress">
+      <div class="focus-card__progress__header">
+        <span class="focus-card__progress__header__title">Progression du jour</span>
+        <span class="focus-card__progress__header__value">{{ progression() }} %</span>
+      </div>
+      <div class="focus-card__progress__bar">
+        <p-progressBar  color="#593bce" [value]="progression()" [showValue]="false"></p-progressBar>
+      </div>
+      <div class="focus-card__progress__footer">
+        <p>
+          {{ focusStore.taskDone() }} sur {{ focusStore.taskTotal() }} taches terminees
+        </p>
+      </div>
+    </div>
+  </p-card>
+
+  <p-dataview #dv [value]="focusStore.tasksWithObjective()">
+    <ng-template #list let-items>
+      <ul class="focus-list">
+        @for (item of items; track $index) {
+          <li class="focus-list__item">
+            <div>
+              <p-checkbox (click)="toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true" />
+            </div>
+            <div class="focus-list__item__content">
+              <span class="">{{ item.title }}</span>
+              <p class=""> {{item.objectiveTitle}} </p>
+            </div>
+          </li>
+        }
+      </ul>
+    </ng-template>
+    <ng-template #emptymessage>
+      <p class="">No tasks found.</p>
+    </ng-template>
+  </p-dataview>
+</main>

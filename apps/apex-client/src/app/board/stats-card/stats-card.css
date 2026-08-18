@@ -1,0 +1,32 @@
+.stats-card__header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stats-card__header__content__value {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.stats-card__header__content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-card__header__content__label{
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.stats-card__header__icon {
+  padding: 0.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+}
+

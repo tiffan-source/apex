@@ -6,4 +6,6 @@ export abstract class TaskRepository {
 
   abstract update(task: Task): Promise<boolean>;
 
+  abstract getAllUserTasks(userId: string): Promise<Task[]>;
+
 }

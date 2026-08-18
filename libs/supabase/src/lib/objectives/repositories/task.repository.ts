@@ -8,6 +8,23 @@ export class SupabaseTaskRepository implements TaskRepository {
     private readonly supabaseClient: SupabaseClientDataAccess,
   ) {}
 
+  async getAllUserTasks(userId: string): Promise<Task[]> {
+    let { data: tasksData, error } = await this.supabaseClient.clientInstance
+      .from("tasks")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) {
+      throw new Error(`Erreur récupération tâches: ${error.message}`);
+    }
+
+    if (!tasksData) {
+      return [];
+    }
+
+    return tasksData.map((taskData) => TaskMapper.toDomain(taskData));
+  }
+
   async findById(taskId: string): Promise<Task | null> {
     let { data: taskData, error } = await this.supabaseClient.clientInstance
       .from("tasks")

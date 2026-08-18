@@ -1,7 +1,7 @@
 import { Provider } from "@angular/core"
 import { IdGenerator } from "@org/chore"
 import { ObjectiveRepository, TaskRepository, UpdateDoneStatusOfTaskUsecase, GetAllObjectiveAndTaskQuery, EditObjectiveUsecase, EditMyTaskUsecase } from "@org/objective"
-import { AddSubObjectiveUsecase, AddTaskToObjectiveUsecase, CreateObjectiveUsecase } from "@org/objective"
+import { AddSubObjectiveUsecase, AddTaskToObjectiveUsecase, CreateObjectiveUsecase, WhatIsTodayFocusUsecase } from "@org/objective"
 import { SupabaseGetAllObjectiveAndTaskQuery } from "@org/supabase"
 import { SupabaseClientDataAccess, SupabaseObjectiveRepository, SupabaseTaskRepository } from "@org/supabase"
 
@@ -15,6 +15,7 @@ export const ObjectiveProviders: Provider[] = [
   {provide: UpdateDoneStatusOfTaskUsecase, useFactory: (taskRepository: TaskRepository) => new UpdateDoneStatusOfTaskUsecase(taskRepository), deps: [TaskRepository]},
   {provide: EditObjectiveUsecase, useFactory: (objectiveRepository: ObjectiveRepository) => new EditObjectiveUsecase(objectiveRepository), deps: [ObjectiveRepository]},
   {provide: EditMyTaskUsecase, useFactory: (objectiveRepository: ObjectiveRepository) => new EditMyTaskUsecase(objectiveRepository), deps: [ObjectiveRepository]},
+  {provide: WhatIsTodayFocusUsecase, useFactory: (taskRepository: TaskRepository, objectiveRepository: ObjectiveRepository) => new WhatIsTodayFocusUsecase(taskRepository, objectiveRepository), deps: [TaskRepository, ObjectiveRepository]},
 
   {provide: GetAllObjectiveAndTaskQuery, useFactory: (supabaseClient: SupabaseClientDataAccess) => new SupabaseGetAllObjectiveAndTaskQuery(supabaseClient), deps: [SupabaseClientDataAccess]}
 ]

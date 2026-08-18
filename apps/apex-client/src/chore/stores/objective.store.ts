@@ -12,6 +12,7 @@ import { withTaskEisenhowerSeparate } from "./features/with-task-eisenhower-sepa
 import { withUpdateTaskDone } from "./features/with-update-task-done";
 import { withEditObjective } from "./features/with-edit-objective";
 import { withTaskEdit } from "./features/with-task-edit";
+import { withStats } from "./features/with-stats";
 
 export type ObjectiveState = {
   objectives: ObjectiveViewModel[];
@@ -35,6 +36,7 @@ export const ObjectiveStore = signalStore(
   withEditObjective(),
   withUpdateTaskDone(),
   withTaskEdit(),
+  withStats(),
   withHooks((store, session = inject(SessionStore)) =>({
     onInit() {
       effect(() => {

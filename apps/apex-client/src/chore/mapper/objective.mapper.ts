@@ -1,4 +1,4 @@
-import { CreateObjectiveOutput, ObjectiveOutput, TaskOutput, GetAllObjectiveAndTaskOutput } from "@org/objective";
+import { CreateObjectiveOutput, ObjectiveOutput, TaskOutput, GetAllObjectiveAndTaskOutput, WhatIsTodayFocusOutput } from "@org/objective";
 import { ObjectiveOverviewViewModel, ObjectiveViewModel, ObjectiveWithProgressViewModel, TaskViewModel, TaskViewModelWithCategory } from "../models/objective.viewmodel";
 import { ApexLibsMetier, EisenhowerCategory } from "@org/apex-library"
 import { ObjectiveState } from "../stores/objective.store";
@@ -153,6 +153,17 @@ export class ObjectiveMapper {
       child,
       ...ObjectiveMapper.getAllSubObjectives(child.id, allObjectives),
     ]);
+  }
+
+  public static fromFocusOutputToTaskViewModel(output: WhatIsTodayFocusOutput): TaskViewModel[] {
+    return output.map((task) => ({
+      id: task.id,
+      title: task.title,
+      importance: task.important,
+      urgency: task.urgent,
+      done: task.done,
+      objectiveId: task.objectiveId,
+    }));
   }
 }
 

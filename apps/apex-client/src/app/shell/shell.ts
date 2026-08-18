@@ -3,13 +3,14 @@ import { Router } from '@angular/router';
 import { RouterModule } from '@angular/router';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { DrawerStore } from '../../chore/stores/drawer.store';
+import { FocusTaskStore } from '../../chore/stores/focus-task.store';
 
 @Component({
   selector: 'app-shell',
   imports: [ RouterModule],
   templateUrl: './shell.html',
   styleUrl: './shell.css',
-  providers: [ObjectiveStore, DrawerStore]
+  providers: [ObjectiveStore, DrawerStore, FocusTaskStore]
 })
 export class Shell {
   router = inject(Router);
@@ -25,6 +26,11 @@ export class Shell {
       label: 'Matrix',
       link: '/matrix',
       primeIcon: 'pi pi-fw pi-th-large'
+    },
+    {
+      label: 'Focus',
+      link: '/focus',
+      primeIcon: 'pi pi-fw pi-check-square'
     }
   ]
 

@@ -25,7 +25,7 @@
                   <div>
                     <p-checkbox [ngModel]="item.done" [readonly]="true" [binary]="true" />
                   </div>
-                  <div>
+                  <div class="objective-sub-objective-title-and-description">
                     <span (click)="editSubObjective(item.id)" class="objective-sub-objective-title">{{ item.title }}</span>
                     <p class="objective-sub-objective-description"> {{item.description}} </p>
                   </div>

@@ -17,6 +17,10 @@ export const routes: Routes = [
       {
         path: 'matrix',
         loadComponent: () => import('./matrix/matrix').then(m => m.Matrix)
+      },
+      {
+        path: 'focus',
+        loadComponent: () => import('./focus/focus').then(m => m.Focus)
       }
     ],
     canActivate: [authGuard]

@@ -4,9 +4,9 @@
   align-items: center;
 }
 
-.board-main {
-  display: flex;
-  flex-wrap: wrap;
+.board-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   gap: 1rem;
   margin-top: 1rem;
 }
@@ -20,7 +20,6 @@
 }
 
 .board-card {
-  width: 25rem;
   cursor: pointer;
   height: min-content;
 }
@@ -38,4 +37,11 @@
   align-items: center;
   margin: 0.5rem 0;
   font-size: 0.875rem;
+}
+
+.board-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 2rem;
+  margin: 2rem 0;
 }

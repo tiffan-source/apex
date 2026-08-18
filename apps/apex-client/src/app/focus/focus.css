@@ -1,0 +1,41 @@
+.focus-list{
+  display: flex;
+  flex-direction: column;
+}
+
+.focus-list__item {
+  margin: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.focus-main{
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.focus-card__progress{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.focus-card__progress__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.focus-card__progress__header__title{
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.focus-card__progress__header__value {
+  color: #593bce;
+  font-size: 2.5rem;
+  font-weight: bold;
+}
