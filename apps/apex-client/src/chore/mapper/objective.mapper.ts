@@ -127,7 +127,10 @@ export class ObjectiveMapper {
 
     const tasksWithCategory = tasks
       .filter(t => allObjectiveIds.includes(t.objectiveId))
-      .map(ObjectiveMapper.fromTaskViewModelToCategorizedTaskViewModel);
+      .map( (t)=>({
+        ...ObjectiveMapper.fromTaskViewModelToCategorizedTaskViewModel(t),
+        objectiveTitle: objectives.find(o => o.id === t.objectiveId)?.title || 'Objectif inconnu'
+      }));
 
     return {
       id: objective.id,

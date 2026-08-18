@@ -1,0 +1,29 @@
+<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }" (onHide)="abort.emit()">
+  <ng-template #header>
+    <div class="modal-sub-objective-header">
+      <h1>{{ form?.get(EditSubObjectiveFormField.TITLE)?.value || objectiveViewModel()?.title}}</h1>
+    </div>
+  </ng-template>
+  @if(form){
+    <form [formGroup]="form" class="edit-sub-objective">
+      <div class="edit-sub-objective-field">
+        <label for="{{ EditSubObjectiveFormField.TITLE }}">Un titre simple qui le représente</label>
+        <input placeholder="Monter mon entreprise" formControlName="{{ EditSubObjectiveFormField.TITLE }}" pInputText id="{{ EditSubObjectiveFormField.TITLE }}" />
+      </div>
+      <div class="edit-sub-objective-field">
+        <label for="{{ EditSubObjectiveFormField.DESCRIPTION }}">Décrivons le un peu plus en détail</label>
+        <textarea placeholder="Décrivez votre objectif en quelques mots..." formControlName="{{ EditSubObjectiveFormField.DESCRIPTION }}" pTextarea id="{{ EditSubObjectiveFormField.DESCRIPTION }}"></textarea>
+      </div>
+      <div class="edit-sub-objective-field">
+        <label for="{{ EditSubObjectiveFormField.DUE_DATE }}">Une date cible ?</label>
+        <input type="date" formControlName="{{ EditSubObjectiveFormField.DUE_DATE }}" pInputText id="{{ EditSubObjectiveFormField.DUE_DATE }}" />
+      </div>
+    </form>
+  }
+  <ng-template #footer>
+    <div class="edit-sub-objective__footer">
+      <p-button size="small" type="submit" (click)="editObjective()">Editer</p-button>
+      <p-button size="small" severity="secondary" (click)="abort.emit()">Annuler</p-button>
+    </div>
+  </ng-template>
+</p-dialog>

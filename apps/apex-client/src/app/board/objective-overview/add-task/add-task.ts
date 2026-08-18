@@ -3,9 +3,10 @@ import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { AddTaskFormField, AddTaskFormModel, ImportanceValueOption, UrgencyValueOption } from './add-task.form';
+import { AddTaskFormField, AddTaskFormModel} from './add-task.form';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
+import { ImportanceValueOption, UrgencyValueOption } from 'apps/apex-client/src/chore/constants/task.constante';
 
 @Component({
   selector: 'app-add-task',
@@ -45,6 +46,7 @@ export class AddTask {
             urgency: urgent
           }
         });
+      this.form.reset({ objective: this.optionsObjective().length > 0 ? this.optionsObjective()[0].value : null });
       this.abort.emit();
     }
 

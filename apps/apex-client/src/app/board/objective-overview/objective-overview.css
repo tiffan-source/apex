@@ -65,3 +65,29 @@
   font-style: italic;
   padding: 1rem;
 }
+
+.objective-sub-objective-title, .objective-task-title {
+  cursor: pointer;
+}
+
+.objective-task-title-and-checkbox {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.objective-task-title-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 0.8rem;
+}
+
+.objective-task-title {
+  align-self: flex-start;
+}
+
+.objective-task-objective-title {
+  font-size: 0.8rem;
+  align-self: flex-start;
+}

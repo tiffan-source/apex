@@ -1,6 +1,6 @@
 <p-drawer
   [visible]="drawerStore.objectiveEdition.isOpen()"
-  header="{{ form.get(EditObjectiveFormField.TITLE)?.value || objectiveOverview()?.title }}"
+  header="{{ form.get(EditObjectiveFormField.TITLE)?.value || objectiveOverview().title }}"
   [style]="{width: '70vw'}"
   (onHide)="drawerStore.closeObjectiveEditionDrawer()"
   position="right"

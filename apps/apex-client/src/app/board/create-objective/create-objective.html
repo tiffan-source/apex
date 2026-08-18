@@ -1,4 +1,4 @@
-<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }">
+<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }" (onHide)="setOpen.emit(false)">
   <ng-template #header>
     <div class="modal-objective-header">
       <span style="color: #1363bf; font-size: 1.5rem;" class="pi pi-sparkles"></span>

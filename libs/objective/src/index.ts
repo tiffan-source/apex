@@ -4,6 +4,7 @@ export * from './lib/usecases/add-task-to-objective.usecase';
 export * from './lib/usecases/update-done-status-of-task.usecase';
 export * from './lib/usecases/create-objective.usecase';
 export * from './lib/usecases/edit-my-objective.usecase';
+export * from './lib/usecases/edit-my-task.usecase';
 
 export * from './lib/protocols/objective.repository';
 export * from './lib/protocols/task.repository';

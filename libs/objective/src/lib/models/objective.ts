@@ -25,6 +25,14 @@ export class Objective extends TodoBase {
     this._tasks.push(task);
   }
 
+  removeTask(taskId: string): void {
+    this._tasks = this._tasks.filter((task) => task.id !== taskId);
+  }
+
+  getTaskById(taskId: string): Task | undefined {
+    return this._tasks.find((task) => task.id === taskId);
+  }
+
   get subObjectives(): Objective[] {
     return this._subObjectives;
   }

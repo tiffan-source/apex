@@ -53,7 +53,6 @@ export class CreateObjective {
       if (title){
         this.objectiveStore.createObjective({ title, description: description || undefined, why: why || undefined, dueDate: dueDate ? new Date(dueDate) : undefined });
       }
-      // Here you would typically call a service to handle the creation of the objective
     } else {
       console.error('Form is invalid. Please fill out all required fields.');
     }

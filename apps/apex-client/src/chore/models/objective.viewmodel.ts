@@ -39,6 +39,6 @@ export type ObjectiveOverviewViewModel = {
   why: string;
   description: string;
   dueDate: string;
-  tasks: TaskViewModelWithCategory[];
+  tasks: TaskViewModelWithCategoryAndObjectiveTitle[];
   subObjectives: ObjectiveViewModel[];
 }

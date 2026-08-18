@@ -23,7 +23,7 @@ export function withEditObjective() {
         pipe(
           withOwnerId(sessionStore.currentUserId),
           map((data)=>({...data, oldObj: store.objectives().find(obj=>obj.id === data.id) as ObjectiveViewModel})),
-          tap(({title, description, dueDate, why, id})=>{
+          tap(({title, description, dueDate, why, id, oldObj})=>{
             patchState(store, {requestStatus: 'pending'});
 
             const updateObjective: ObjectiveViewModel = {
@@ -32,7 +32,7 @@ export function withEditObjective() {
               description: description || "",
               why: why || "",
               dueDate: dueDate?.toISOString() || "",
-              parentId: null
+              parentId: oldObj.parentId
             };
 
             patchState(store, {objectives: [...store.objectives().map((obj)=>{

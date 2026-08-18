@@ -1,0 +1,30 @@
+<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }" (onHide)="abort.emit()">
+  <ng-template #header>
+    <div class="modal-task-header">
+      <h1>{{ form?.get(EditTaskFormField.TITLE)?.value || taskViewModel()?.title}}</h1>
+    </div>
+  </ng-template>
+  @if(form){
+    <form [formGroup]="form" (submit)="editTask()" class="edit-task">
+      <div>
+        <input pInputText placeholder="Titre de la tâche" [formControlName]="EditTaskFormField.TITLE" fluid/>
+      </div>
+      <div class="edit-task__select">
+        <div>
+          <p-select fluid [options]="optionsObjective()" [formControlName]="EditTaskFormField.OBJECTIVE"/>
+        </div>
+        <div class="edit-task__select__importance-urgency">
+          <p-select [options]="optionsImportance" [formControlName]="EditTaskFormField.IMPORTANT"/>
+          <p-select [options]="optionUrgerncy" [formControlName]="EditTaskFormField.URGENT"/>
+        </div>
+      </div>
+    </form>
+  }
+
+  <ng-template #footer>
+    <div class="edit-task__footer">
+      <p-button size="small" type="submit" (click)="editTask()">Ajouter</p-button>
+      <p-button size="small" severity="secondary" (click)="abort.emit()">Annuler</p-button>
+    </div>
+  </ng-template>
+</p-dialog>

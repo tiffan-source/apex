@@ -21,7 +21,15 @@
           <ng-template #list let-items>
             <ul class="objective-sub-objectives">
               @for (item of items; track $index) {
-                <li> <p-checkbox [ngModel]="item.done" [readonly]="true" [binary]="true" /> <span>{{ item.title }}</span>  </li>
+                <li>
+                  <div>
+                    <p-checkbox [ngModel]="item.done" [readonly]="true" [binary]="true" />
+                  </div>
+                  <div>
+                    <span (click)="editSubObjective(item.id)" class="objective-sub-objective-title">{{ item.title }}</span>
+                    <p class="objective-sub-objective-description"> {{item.description}} </p>
+                  </div>
+                </li>
               }
             </ul>
           </ng-template>
@@ -43,8 +51,14 @@
             <ul class="objective-tasks">
               @for (item of items; track $index) {
                 <li>
-                  <div>
-                    <p-checkbox (click)="toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true"/> <span>{{ item.title }}</span>
+                  <div class="objective-task-title-and-checkbox">
+                    <div>
+                      <p-checkbox (click)="toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true"/>
+                    </div>
+                    <div class="objective-task-title-container">
+                      <span (click)="editTask(item.id)" class="objective-task-title">{{ item.title }}</span>
+                      <p class="objective-task-objective-title"> {{item.objectiveTitle}} </p>
+                    </div>
                   </div>
                   <p-tag [value]="item.category" [severity]="item.primNgSeverity" [rounded]="true"/>
                 </li>
@@ -57,9 +71,11 @@
         </p-dataview>
       </div>
 
+      <app-chat [objectiveId]="id()" [objectifTitle]="objectiveOverview().title || 'Objectif inconnu'"/>
+      <app-edit-objective [objectiveOverview]="objectiveOverview()"/>
+      <app-edit-task [optionsObjective]="optionsObjective()" [taskViewModel]="taskToEdit()" (abort)="closeEditTask()"/>
+      <app-edit-sub-objective [objectiveViewModel]="subObjectiveToEdit()" (abort)="closeEditSubObjective()"/>
 
-    <app-chat [objectiveId]="id()" [objectifTitle]="objectiveOverview().title || 'Objectif inconnu'"/>
-    <app-edit-objective [objectiveOverview]="objectiveOverview()"/>
     </main>
 
 

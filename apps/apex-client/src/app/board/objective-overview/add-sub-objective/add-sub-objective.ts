@@ -22,6 +22,7 @@ export class AddSubObjective {
 
   addSubObjective() {
     this.objectiveStore.addSubObjective({ objectiveId: this.objectiveId(), subObjectiveTitle: this.title });
+    this.title = '';
   }
 
 }

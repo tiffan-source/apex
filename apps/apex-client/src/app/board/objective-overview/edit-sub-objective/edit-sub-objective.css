@@ -1,0 +1,17 @@
+.edit-sub-objective {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem
+}
+
+.edit-sub-objective-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-sub-objective__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}

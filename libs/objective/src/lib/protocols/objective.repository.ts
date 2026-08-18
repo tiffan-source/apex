@@ -11,4 +11,8 @@ export abstract class ObjectiveRepository {
     id: string,
   ): Promise<Objective | null>;
 
+  abstract findObjectiveWithASpecificTaskId(
+    taskId: string,
+  ): Promise<Objective | null>;
+
 }

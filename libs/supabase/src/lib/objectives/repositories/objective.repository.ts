@@ -1,4 +1,4 @@
-import { Objective, ObjectiveRepository } from "@org/objective";
+import { Objective, ObjectiveRepository, Task } from "@org/objective";
 import { SupabaseClientDataAccess } from "../../supabase-client";
 import { ObjectiveMapper } from "../mapper/objective.mapper";
 
@@ -7,6 +7,46 @@ export class SupabaseObjectiveRepository implements ObjectiveRepository {
   constructor(
     private readonly supabaseClient: SupabaseClientDataAccess,
   ) {}
+
+  async findObjectiveWithASpecificTaskId(taskId: string): Promise<Objective | null> {
+    // 1. Récupération de l'objectif contenant la tâche spécifique
+    const { data, error } = await this.supabaseClient.clientInstance
+      .from('tasks')
+      .select(`
+        objectives (
+          *,
+          tasks (*)
+        )
+      `)
+      .eq('id', taskId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Erreur récupération objectif avec tâche spécifique: ${error.message}`);
+    }
+  
+    if (!data || !data.objectives) {
+      return null;
+    }
+
+    // 2. Reconstitution de l'objectif à partir des données récupérées
+    const objectiveData = data.objectives;
+    const taskData = data.objectives.tasks;
+
+    let objective = new Objective(objectiveData.id, objectiveData.title);
+    if (objectiveData.description) objective.setDescription(objectiveData.description);
+    if (objectiveData.due_date) objective.setDueDate(new Date(objectiveData.due_date));
+    if (objectiveData.why) objective.setWhy(objectiveData.why);
+    if (objectiveData.parent_id) objective.setParentId(objectiveData.parent_id);
+    objective.setDone(objectiveData.done);
+
+    for (const task of taskData) {
+      let domainTask = new Task(task.id, task.title, task.importance, task.urgency);
+      objective.addTask(domainTask);
+    }
+
+    return objective;
+  }
 
   async save(
     objective: Objective,
