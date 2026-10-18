@@ -13,5 +13,5 @@ export * from './lib/auth/auth.services';
 
 // chat
 
-export * from './lib/chat/queries/get-all-messages.query';
+export * from './lib/chat/queries/get-conversation.query';
 export * from './lib/chat/commands/add-message.command';
