@@ -4,50 +4,50 @@
 
 .matrix-todo .p-card {
   height: 100%;
-  border: 1px solid var(--app-do);
-  border-top-width: 4px;
-  background-color: var(--app-do-soft);
+  border: var(--ds-border-width-thin) solid var(--ds-color-eisenhower-do);
+  border-top-width: var(--ds-matrix-quadrant-accent-width);
+  background-color: var(--ds-color-eisenhower-do-soft);
 }
 
 .matrix-todo__header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--ds-space-2);
 }
 
 .matrix-todo__header h2 {
-  font-size: 0.95rem;
-  letter-spacing: 0.04em;
-  color: var(--app-do);
+  font-size: var(--ds-font-size-md);
+  letter-spacing: var(--ds-letter-spacing-wide);
+  color: var(--ds-color-eisenhower-do);
 }
 
 .matrix-todo__count {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--app-do);
+  font-size: var(--ds-text-caption-size);
+  font-weight: var(--ds-font-weight-semibold);
+  color: var(--ds-color-eisenhower-do);
 }
 
 .matrix-todo__item-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--app-text);
+  font-size: var(--ds-font-size-md);
+  font-weight: var(--ds-font-weight-semibold);
+  color: var(--ds-color-text);
 }
 
 .matrix-todo__item-title--done {
   text-decoration: line-through;
-  color: var(--app-muted);
+  color: var(--ds-color-text-muted);
 }
 
 .matrix-todo__item {
   width: 100%;
-  padding: 0.6rem 0.75rem;
-  margin: 0.6rem 0 0;
-  background-color: var(--app-surface);
-  border-radius: 0.5rem;
+  padding: var(--ds-space-2-5) var(--ds-space-3);
+  margin: var(--ds-space-2-5) 0 0;
+  background-color: var(--ds-color-surface);
+  border-radius: var(--ds-radius-md);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--ds-space-3);
 }
 
 .matrix-todo__item > div:last-child {
@@ -55,7 +55,7 @@
 }
 
 .matrix-todo__empty {
-  font-size: 0.85rem;
+  font-size: var(--ds-text-small-size);
   font-style: italic;
-  padding: 1rem 0 0.25rem;
+  padding: var(--ds-space-4) 0 var(--ds-space-1);
 }

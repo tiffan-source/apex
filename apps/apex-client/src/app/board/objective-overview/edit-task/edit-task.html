@@ -1,4 +1,4 @@
-<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }" [breakpoints]="{ '640px': '92vw' }" (onHide)="abort.emit()" (keydown.escape)="abort.emit()">
+<p-dialog [visible]="open()" [modal]="true" [style]="{ width: 'var(--ds-dialog-width)' }" [breakpoints]="{ '640px': 'var(--ds-dialog-width-mobile)' }" (onHide)="abort.emit()" (keydown.escape)="abort.emit()">
   <ng-template #header>
     <div class="modal-task-header">
       <h1>Modifier la tâche</h1>

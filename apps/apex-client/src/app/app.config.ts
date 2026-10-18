@@ -7,8 +7,7 @@ import {
   provideZoneChangeDetection,
 } from '@angular/core';
 import { providePrimeNG } from 'primeng/config';
-import Lara from '@primeuix/themes/lara';
-import { definePreset } from '@primeuix/themes';
+import { DesignSystemPreset, designSystemThemeOptions } from '@org/design-tokens';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { ChoreProviders } from '../chore/providers/chore.providers';
@@ -27,22 +26,6 @@ import { WorkflowProvider } from '../chore/providers/workflow.provider';
 
 registerLocaleData(localeFr);
 
-// Vert plus foncé en mode clair : le blanc sur emerald-500 n'atteint pas le contraste AA
-const ApexPreset = definePreset(Lara, {
-  semantic: {
-    colorScheme: {
-      light: {
-        primary: {
-          color: '{primary.700}',
-          contrastColor: '#ffffff',
-          hoverColor: '{primary.800}',
-          activeColor: '{primary.900}'
-        }
-      }
-    }
-  }
-});
-
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAppInitializer(async () => {
@@ -54,10 +37,8 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'fr' },
     providePrimeNG({
       theme: {
-        preset: ApexPreset,
-        options: {
-            darkModeSelector: 'system'
-        }
+        preset: DesignSystemPreset,
+        options: designSystemThemeOptions
       }
     }),
     provideRouter(routes, withComponentInputBinding()),

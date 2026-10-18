@@ -13,25 +13,25 @@
       statLabel="Objectifs actifs"
       [numberStat]="objectiveStore.totalObjectives()"
       primeIcon="pi pi-bullseye"
-      color="var(--app-violet)"
+      color="var(--ds-color-accent)"
     />
     <app-stats-card
       statLabel="Tâches terminées"
       [numberStat]="objectiveStore.totalTaskDone()"
       primeIcon="pi pi-check-circle"
-      color="var(--app-teal)"
+      color="var(--ds-color-success)"
     />
     <app-stats-card
       statLabel="Tâches urgentes"
       [numberStat]="objectiveStore.totalUrgentTask()"
       primeIcon="pi pi-exclamation-circle"
-      color="var(--app-orange)"
+      color="var(--ds-color-warning)"
     />
     <app-stats-card
       statLabel="Focus du jour"
       [numberStat]="focuseStore.taskTotal()"
       primeIcon="pi pi-sun"
-      color="var(--app-pink)"
+      color="var(--ds-color-highlight)"
     />
   </div>
 

@@ -1,4 +1,4 @@
-<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }" [breakpoints]="{ '640px': '92vw' }" (onHide)="setOpen.emit(false)" (keydown.escape)="setOpen.emit(false)">
+<p-dialog [visible]="open()" [modal]="true" [style]="{ width: 'var(--ds-dialog-width)' }" [breakpoints]="{ '640px': 'var(--ds-dialog-width-mobile)' }" (onHide)="setOpen.emit(false)" (keydown.escape)="setOpen.emit(false)">
   <ng-template #header>
     <div class="modal-objective-header">
       <span class="pi pi-sparkles modal-objective-header__icon" aria-hidden="true"></span>

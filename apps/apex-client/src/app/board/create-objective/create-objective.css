@@ -1,31 +1,36 @@
 .modal-objective-form-field {
-  margin-bottom: 1rem;
   display: flex;
   flex-direction: column;
+  gap: var(--ds-space-1-5);
+  margin-bottom: var(--ds-space-4);
+}
+
+.modal-objective-form-field label {
+  font-size: var(--ds-text-small-size);
+  font-weight: var(--ds-font-weight-medium);
 }
 
 .modal-objective-action {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
+  gap: var(--ds-space-2);
 }
 
 .modal-objective-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--ds-space-3);
 }
 
-
-.modal-objective-header h1{
-  font-size: 1.5rem;
+.modal-objective-header h1 {
+  font-size: var(--ds-font-size-2xl);
 }
 
 .modal-objective-header__icon {
-  color: var(--app-violet);
-  font-size: 1.5rem;
+  color: var(--ds-color-accent);
+  font-size: var(--ds-font-size-2xl);
 }
 
 .required {
-  color: var(--app-do);
+  color: var(--ds-color-danger);
 }

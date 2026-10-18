@@ -2,12 +2,7 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 1rem;
-}
-
-.stats-card__header__content__value {
-  font-size: 1.8rem;
-  font-weight: bold;
+  gap: var(--ds-space-4);
 }
 
 .stats-card__header__content {
@@ -15,21 +10,26 @@
   flex-direction: column;
 }
 
-.stats-card__header__content__label{
-  font-size: 0.875rem;
-  color: var(--app-muted);
+.stats-card__header__content__value {
+  font-size: var(--ds-font-size-3xl);
+  font-weight: var(--ds-font-weight-bold);
+  line-height: var(--ds-line-height-tight);
+}
+
+.stats-card__header__content__label {
+  font-size: var(--ds-text-small-size);
+  color: var(--ds-color-text-muted);
 }
 
 .stats-card__header__icon {
-  padding: 0.5rem;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.5rem;
-  font-size: 1.3rem;
+  width: var(--ds-icon-box-size);
+  height: var(--ds-icon-box-size);
+  padding: var(--ds-icon-box-padding);
+  border-radius: var(--ds-icon-box-radius);
+  font-size: var(--ds-font-size-xl);
   color: var(--stat-color);
-  background-color: color-mix(in srgb, var(--stat-color) 16%, transparent);
+  background-color: color-mix(in srgb, var(--stat-color) var(--ds-icon-box-soft-ratio), transparent);
 }
-

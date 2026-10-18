@@ -3,47 +3,47 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 1rem;
+  padding: var(--ds-space-4);
 }
 
 .auth-card {
   width: 100%;
-  max-width: 26rem;
+  max-width: var(--ds-auth-card-width);
 }
 
 .auth-header {
   text-align: center;
-  padding: 2rem 1.5rem 0;
+  padding: var(--ds-space-8) var(--ds-space-6) 0;
 }
 
 .auth-logo {
-  font-size: 1.75rem;
-  color: var(--app-violet);
-  background-color: var(--app-violet-soft);
-  padding: 0.75rem;
-  border-radius: 0.9rem;
-  margin-bottom: 1rem;
+  font-size: var(--ds-font-size-3xl);
+  color: var(--ds-color-accent);
+  background-color: var(--ds-color-accent-soft);
+  padding: var(--ds-space-3);
+  border-radius: var(--ds-radius-xl);
+  margin-bottom: var(--ds-space-4);
 }
 
 .auth-header h1 {
-  font-size: 1.6rem;
-  margin-bottom: 0.25rem;
+  font-size: var(--ds-font-size-2xl);
+  margin-bottom: var(--ds-space-1);
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 0 0.7rem 0.7rem;
+  gap: var(--ds-space-4);
+  padding: 0 var(--ds-space-3) var(--ds-space-3);
 }
 
 .auth-form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: var(--ds-space-1-5);
 }
 
 .auth-form-group label {
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: var(--ds-text-small-size);
+  font-weight: var(--ds-font-weight-medium);
 }

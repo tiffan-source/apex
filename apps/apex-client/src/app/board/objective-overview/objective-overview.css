@@ -1,82 +1,82 @@
 .objective-overview {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--ds-space-5);
 }
 
 .objective-back {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--ds-space-1-5);
   align-self: flex-start;
-  font-size: 0.9rem;
-  color: var(--app-muted);
+  font-size: var(--ds-text-small-size);
+  color: var(--ds-color-text-muted);
 }
 
 .objective-back:hover {
-  color: var(--app-text);
+  color: var(--ds-color-text);
 }
 
 .objective-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 1.5rem;
+  gap: var(--ds-space-6);
   flex-wrap: wrap;
 }
 
 .objective-header__title h1 {
-  font-size: 1.75rem;
-  margin-bottom: 0.25rem;
+  font-size: var(--ds-text-title-size);
+  margin-bottom: var(--ds-space-1);
 }
 
 .objective-header__meta {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  min-width: 16rem;
+  gap: var(--ds-space-2);
+  min-width: var(--ds-layout-grid-min-card);
 }
 
 .objective-header__date {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-  color: var(--app-muted);
+  gap: var(--ds-space-1-5);
+  font-size: var(--ds-text-small-size);
+  color: var(--ds-color-text-muted);
 }
 
 .objective-header__progress-label {
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
-  color: var(--app-muted);
-  margin-bottom: 0.35rem;
+  font-size: var(--ds-text-small-size);
+  color: var(--ds-color-text-muted);
+  margin-bottom: var(--ds-space-1-5);
 }
 
 .objective-header__progress-label strong {
-  color: var(--app-text);
+  color: var(--ds-color-text);
 }
 
 .objective-why {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--ds-space-2-5);
   align-items: flex-start;
-  padding: 0.75rem 1rem;
-  border-left: 3px solid var(--app-violet);
-  border-radius: 0.5rem;
-  background-color: var(--app-violet-soft);
-  font-size: 0.9rem;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-left: var(--ds-border-width-thick) solid var(--ds-color-accent);
+  border-radius: var(--ds-radius-md);
+  background-color: var(--ds-color-accent-soft);
+  font-size: var(--ds-text-small-size);
 }
 
 .objective-why .pi {
-  color: var(--app-violet);
-  margin-top: 0.15rem;
+  color: var(--ds-color-accent);
+  margin-top: var(--ds-space-0-5);
 }
 
 .objective-main {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(var(--ds-layout-grid-min-panel), 1fr));
+  gap: var(--ds-space-6);
   align-items: start;
 }
 
@@ -88,43 +88,43 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--ds-space-3);
 }
 
 .objective-main-header h3 {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.05rem;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-text-heading-size);
 }
 
 .objective-count {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.1rem 0.5rem;
-  border-radius: 1rem;
-  background-color: var(--p-content-hover-background);
-  color: var(--app-muted);
+  font-size: var(--ds-text-caption-size);
+  font-weight: var(--ds-font-weight-semibold);
+  padding: var(--ds-space-0-5) var(--ds-space-2);
+  border-radius: var(--ds-radius-full);
+  background-color: var(--ds-color-surface-hover);
+  color: var(--ds-color-text-muted);
 }
 
 .objective-list {
   display: flex;
   flex-direction: column;
-  padding: 0.25rem;
+  padding: var(--ds-space-1);
 }
 
 .objective-list li {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.5rem;
+  gap: var(--ds-space-3);
+  padding: var(--ds-list-row-padding-y) var(--ds-list-row-padding-x);
   cursor: pointer;
 }
 
 .objective-item__text {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: var(--ds-space-0-5);
   flex: 1;
   min-width: 0;
 }
@@ -132,35 +132,36 @@
 .objective-item__title {
   all: unset;
   cursor: pointer;
-  color: var(--app-text);
+  color: var(--ds-color-text);
   overflow-wrap: anywhere;
 }
 
 .objective-item__title:focus-visible {
-  outline: 2px solid var(--p-primary-color);
-  outline-offset: 2px;
-  border-radius: 0.25rem;
+  outline: var(--ds-focus-ring-width) solid var(--ds-color-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
+  border-radius: var(--ds-radius-sm);
 }
 
 .objective-item__title--done {
   text-decoration: line-through;
-  color: var(--app-muted);
+  color: var(--ds-color-text-muted);
 }
 
 .objective-item__subtitle {
-  font-size: 0.8rem;
+  font-size: var(--ds-text-caption-size);
 }
 
 .objective-item__chevron {
-  color: var(--app-muted);
+  color: var(--ds-color-text-muted);
 }
 
 .objective-empty {
   text-align: center;
-  padding: 1.5rem 1rem;
+  padding: var(--ds-space-6) var(--ds-space-4);
 }
 
-@media (max-width: 600px) {
+/* --ds-breakpoint-sm */
+@media (max-width: 640px) {
   .objective-header__meta {
     min-width: 0;
     width: 100%;

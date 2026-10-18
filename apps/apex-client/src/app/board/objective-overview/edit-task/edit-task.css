@@ -1,31 +1,30 @@
 .edit-task {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--ds-space-4);
 }
 
 .edit-task__select {
   display: flex;
-  gap: 1rem;
   flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.edit-task__select__importance-urgency {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--ds-layout-grid-min-field), 1fr));
+  gap: var(--ds-space-4);
+}
+
+.edit-task label {
+  display: block;
+  font-size: var(--ds-text-small-size);
+  font-weight: var(--ds-font-weight-medium);
+  margin-bottom: var(--ds-space-1-5);
 }
 
 .edit-task__footer {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-}
-
-
-.edit-task__select__importance-urgency {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 1rem;
-}
-
-.edit-task label {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-bottom: 0.4rem;
+  gap: var(--ds-space-2);
 }

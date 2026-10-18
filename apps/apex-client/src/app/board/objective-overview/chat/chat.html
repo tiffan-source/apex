@@ -1,7 +1,7 @@
 <p-drawer
   [visible]="drawerStore.chat.isOpen()"
   header="{{ objectifTitle() }}"
-  [style]="{width: 'min(48rem, 100vw)'}"
+  [style]="{ width: 'min(var(--ds-drawer-width-wide), 100vw)' }"
   (onHide)="drawerStore.closeChatDrawer()"
   position="right"
 >

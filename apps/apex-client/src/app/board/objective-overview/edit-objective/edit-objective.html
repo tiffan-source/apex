@@ -1,7 +1,7 @@
 <p-drawer
   [visible]="drawerStore.objectiveEdition.isOpen()"
   header="Modifier l'objectif"
-  [style]="{width: 'min(40rem, 100vw)'}"
+  [style]="{ width: 'min(var(--ds-drawer-width), 100vw)' }"
   (onHide)="drawerStore.closeObjectiveEditionDrawer()"
   position="right"
 >

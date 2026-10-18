@@ -1,22 +1,22 @@
 .add-task {
   display: block;
-  margin: 0 0 1rem;
+  margin: 0 0 var(--ds-space-4);
 }
 
 .add-task__form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--ds-space-3);
 }
 
 .add-task__select {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(var(--ds-layout-grid-min-field), 1fr));
+  gap: var(--ds-space-3);
 }
 
 .add-task__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: var(--ds-space-2);
 }
