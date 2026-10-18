@@ -1,13 +1,13 @@
-<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }" (onHide)="setOpen.emit(false)">
+<p-dialog [visible]="open()" [modal]="true" [style]="{ width: '40rem' }" [breakpoints]="{ '640px': '92vw' }" (onHide)="setOpen.emit(false)" (keydown.escape)="setOpen.emit(false)">
   <ng-template #header>
     <div class="modal-objective-header">
-      <span style="color: #1363bf; font-size: 1.5rem;" class="pi pi-sparkles"></span>
+      <span class="pi pi-sparkles modal-objective-header__icon" aria-hidden="true"></span>
       <h1>Définissons votre objectif</h1>
     </div>
 </ng-template>
   <form [formGroup]="createObjectiveForm" (submit)="createObjective()">
     <div class="modal-objective-form-field">
-        <label for="{{ CreateObjectiveFormField.TITLE }}">Un titre simple qui le représente</label>
+        <label for="{{ CreateObjectiveFormField.TITLE }}">Un titre simple qui le représente <span class="required" aria-hidden="true">*</span></label>
         <input placeholder="Monter mon entreprise" formControlName="{{ CreateObjectiveFormField.TITLE }}" pInputText id="{{ CreateObjectiveFormField.TITLE }}" />
     </div>
     <div class="modal-objective-form-field">
@@ -23,8 +23,8 @@
         <input type="date" formControlName="{{ CreateObjectiveFormField.DUE_DATE }}" pInputText id="{{ CreateObjectiveFormField.DUE_DATE }}" />
     </div>
     <div class="modal-objective-action">
-        <p-button label="Annuler" severity="secondary" (click)="setOpen.emit(false)" />
-        <p-button [loading]="false" label="Creer" type="submit" [disabled]="!isFormValid()" />
+        <p-button label="Annuler" severity="secondary" variant="text" (click)="setOpen.emit(false)" />
+        <p-button [loading]="isLoading()" label="Créer l'objectif" type="submit" [disabled]="!isFormValid()" />
     </div>
   </form>
 </p-dialog>

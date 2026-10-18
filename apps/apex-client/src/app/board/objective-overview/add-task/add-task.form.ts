@@ -1,4 +1,4 @@
-import { FormControl, FormGroup } from "@angular/forms";
+import { FormControl, FormGroup, Validators } from "@angular/forms";
 
 
 export enum AddTaskFormField {
@@ -18,7 +18,7 @@ export type AddTaskForm = {
 export class AddTaskFormModel extends FormGroup<AddTaskForm> {
   constructor(defaultObjectiveId: string | null = null) {
     super({
-      [AddTaskFormField.TITLE]: new FormControl('', { nonNullable: true }),
+      [AddTaskFormField.TITLE]: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] }),
       [AddTaskFormField.OBJECTIVE]: new FormControl(defaultObjectiveId, { nonNullable: true }),
       [AddTaskFormField.IMPORTANT]: new FormControl(1, { nonNullable: true }),
       [AddTaskFormField.URGENT]: new FormControl(1, { nonNullable: true }),

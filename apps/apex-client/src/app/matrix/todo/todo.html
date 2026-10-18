@@ -1,8 +1,11 @@
 <div class="matrix-todo">
   <p-card>
     <div class="matrix-todo__header">
-      <h2>FAIRE</h2>
-      <p>Urgent & Important</p>
+      <div>
+        <h2>FAIRE</h2>
+        <p>Urgent et important</p>
+      </div>
+      <span class="matrix-todo__count">{{ todoList().length }}</span>
     </div>
     <ul>
       @for (item of todoList(); track $index) {
@@ -11,10 +14,12 @@
             <p-checkbox (click)="toggleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true"/>
           </div>
           <div>
-            <p class="matrix-todo__item-title">{{ item.title }}</p>
+            <p class="matrix-todo__item-title" [class.matrix-todo__item-title--done]="item.done">{{ item.title }}</p>
             <p>{{ item.objectiveTitle }}</p>
           </div>
         </li>
+      } @empty {
+        <li class="matrix-todo__empty">Rien d'urgent et important. Bien joué !</li>
       }
     </ul>
   </p-card>

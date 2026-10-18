@@ -33,6 +33,27 @@
   gap: 1rem;
 }
 
+.chat-permission {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background-color: #f9fafb;
+}
+
+.chat-permission-label {
+  margin: 0;
+  color: #374151;
+}
+
+.chat-permission-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .chat-status {
   display: flex;
   align-items: center;

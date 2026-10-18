@@ -16,11 +16,16 @@
   gap: 1rem;
 }
 
-.p-select-list-container {
-  background-color: red;
-}
 
 .edit-task__select__importance-urgency {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: 1rem;
+}
+
+.edit-task label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.4rem;
 }

@@ -1,3 +1,16 @@
 .add-sub-objective {
-  margin: 1rem 0
+  display: block;
+  margin: 0 0 1rem;
+}
+
+.add-sub-objective__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.add-sub-objective__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }

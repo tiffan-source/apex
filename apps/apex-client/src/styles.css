@@ -3,6 +3,59 @@
 :root {
   --p-progressbar-height : 0.35rem !important;
   --p-card-body-padding : 0.8rem !important;
+
+  /* Couleurs de l'app (clair) — redéfinies plus bas pour le mode sombre */
+  --app-bg: #f5f5f7;
+  --app-surface: #ffffff;
+  --app-text: #1f2937;
+  --app-muted: #6b7280;
+  --app-border: #e5e7eb;
+  --app-link: #1d6fb8;
+
+  --app-violet: #593bce;
+  --app-violet-soft: #eeebfa;
+  --app-teal: #1f8a78;
+  --app-orange: #c26a0a;
+  --app-pink: #c2365f;
+
+  /* Quadrants de la matrice d'Eisenhower */
+  --app-do: #c62828;
+  --app-do-soft: #fbeeee;
+  --app-delegate: #a86b00;
+  --app-delegate-soft: #faf5e1;
+  --app-schedule: #a43ba4;
+  --app-schedule-soft: #f8ecf6;
+  --app-delete: #6b7280;
+  --app-delete-soft: #f3f4f6;
+
+  /* Hauteur réservée à la barre de navigation flottante */
+  --app-dock-space: 7rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-bg: #111318;
+    --app-surface: #1b1e25;
+    --app-text: #e5e7eb;
+    --app-muted: #9ca3af;
+    --app-border: #2d323c;
+    --app-link: #7ab8f0;
+
+    --app-violet: #a998f0;
+    --app-violet-soft: #2a2447;
+    --app-teal: #5fd1bc;
+    --app-orange: #f5a54a;
+    --app-pink: #f07aa0;
+
+    --app-do: #f28b82;
+    --app-do-soft: #2e1c1d;
+    --app-delegate: #e8c15a;
+    --app-delegate-soft: #2c2716;
+    --app-schedule: #e09ae0;
+    --app-schedule-soft: #2b1d2b;
+    --app-delete: #9ca3af;
+    --app-delete-soft: #1f232b;
+  }
 }
 
 /* Global Styles */
@@ -15,12 +68,12 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  color: #333;
-  background: #f5f5f5;
+  color: var(--app-text);
+  background: var(--app-bg);
 }
 
 a {
-  color: #3498db;
+  color: var(--app-link);
   text-decoration: none;
 }
 
@@ -48,6 +101,45 @@ ul, li {
 }
 
 p {
-  color: #7e7e7e;
+  color: var(--app-muted);
   font-size: 0.9rem;
+}
+
+h1, h2, h3 {
+  color: var(--app-text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--p-primary-color);
+  outline-offset: 2px;
+}
+
+/* En-tête de page commun (tableau de bord, matrice, focus) */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-header h1 {
+  font-size: 1.75rem;
+}
+
+.page-header h2 {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--app-muted);
+  margin-top: 0.25rem;
+}
+
+/* Ligne cliquable d'une liste (tâches, sous-objectifs) */
+.clickable-row {
+  border-radius: 0.5rem;
+  transition: background-color 0.15s;
+}
+
+.clickable-row:hover {
+  background-color: var(--p-content-hover-background);
 }

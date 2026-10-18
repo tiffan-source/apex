@@ -1,34 +1,83 @@
-.shell {
-  width: fit-content;
-  position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: var(--p-content-background);
-  box-shadow: var(--p-card-shadow);
-  border-radius: 1.5rem;
-}
-
-.navigation {
-  padding: 1.5rem;
-}
-
-.navigation-list {
-  display: flex;
-  gap: 2rem;
-}
-
-.navigation-list__item {
-}
-
-
 .app {
-  width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .app__content {
-  padding: 2rem;
-  height: 100%;
-  width: 100%;
+  padding: 2rem 2rem var(--app-dock-space);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dock {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background-color: var(--p-content-background);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: 1.25rem;
+  padding: 0.4rem;
+}
+
+.dock__list {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dock__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 4.25rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 0.9rem;
+  background: transparent;
+  color: var(--app-muted);
+  font-size: 1.15rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.dock__item:hover {
+  background-color: var(--p-content-hover-background);
+  color: var(--app-text);
+  text-decoration: none;
+}
+
+.dock__item--active {
+  background-color: var(--p-highlight-background);
+  color: var(--p-highlight-color);
+}
+
+.dock__label {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.dock__separator {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.4rem 0.25rem;
+  background-color: var(--app-border);
+}
+
+@media (max-width: 600px) {
+  .app__content {
+    padding: 1rem 1rem var(--app-dock-space);
+  }
+
+  .dock {
+    bottom: 0.75rem;
+  }
+
+  .dock__item {
+    min-width: 3.4rem;
+    padding: 0.45rem 0.4rem;
+  }
 }

@@ -1,12 +1,10 @@
-<header class="board-header">
-  <div class="board-header__title">
+<header class="page-header">
+  <div>
     <h1>Tableau de bord</h1>
     <h2>Visualisez et pilotez vos objectifs</h2>
   </div>
 
-  <div>
-    <p-button (click)="createObjectiveModalOpen.set(true)">Nouvel objectif</p-button>
-  </div>
+  <p-button icon="pi pi-plus" label="Nouvel objectif" (click)="createObjectiveModalOpen.set(true)" />
 </header>
 
 <main class="board-main">
@@ -15,58 +13,68 @@
       statLabel="Objectifs actifs"
       [numberStat]="objectiveStore.totalObjectives()"
       primeIcon="pi pi-bullseye"
-      color="#593bce"
+      color="var(--app-violet)"
     />
     <app-stats-card
-      statLabel="Taches terminees"
+      statLabel="Tâches terminées"
       [numberStat]="objectiveStore.totalTaskDone()"
       primeIcon="pi pi-check-circle"
-      color="#34B29D"
+      color="var(--app-teal)"
     />
     <app-stats-card
-      statLabel="Taches urgentes"
+      statLabel="Tâches urgentes"
       [numberStat]="objectiveStore.totalUrgentTask()"
       primeIcon="pi pi-exclamation-circle"
-      color="#f99925"
+      color="var(--app-orange)"
     />
     <app-stats-card
       statLabel="Focus du jour"
       [numberStat]="focuseStore.taskTotal()"
-      color="#d74273"
+      primeIcon="pi pi-sun"
+      color="var(--app-pink)"
     />
   </div>
-  <div class="board-cards">
-    @for (objective of getAllObjectives(); track $index) {
-      <p-card class="board-card" (click)="navigateToObjective(objective.id)">
-        <div>
-            <div class="board-card__header">
-              <span class="pi pi-bullseye board-card__icon"></span>
-              <div>
-                <span>{{ objective.title }}</span>
-                @if(objective.dueDate) {
-                  <p>{{ objective.dueDate | date }}</p>
-                }
-              </div>
-            </div>
-            @if (objective.description) {
-              <p>
-                {{ objective.description }}
-              </p>
-            }
-            @if (objective.totalTasks > 0) {
-              <div>
-                <div class="board-card__progress">
-                  <p>{{ objective.doneTasks }}/{{ objective.totalTasks }} taches</p>
-                  <p>{{ (objective.progress * 100) }}%</p>
-                </div>
-                <p-progressbar [value]="objective.progress * 100" showValue="false" />
-              </div>
-            }
-        </div>
-      </p-card>
-    }
-  </div>
 
+  <h3 class="board-section-title">Mes objectifs</h3>
+
+  @if (getAllObjectives().length === 0) {
+    <div class="board-empty">
+      <span class="pi pi-bullseye board-empty__icon" aria-hidden="true"></span>
+      <p class="board-empty__title">Aucun objectif pour l'instant</p>
+      <p>Créez votre premier objectif pour commencer à avancer.</p>
+      <p-button icon="pi pi-plus" label="Créer un objectif" (click)="createObjectiveModalOpen.set(true)" />
+    </div>
+  } @else {
+    <div class="board-cards">
+      @for (objective of getAllObjectives(); track objective.id) {
+        <a class="board-card" [routerLink]="['/objective', objective.id]">
+          <div class="board-card__header">
+            <span class="pi pi-bullseye board-card__icon" aria-hidden="true"></span>
+            <div class="board-card__title">
+              <span>{{ objective.title }}</span>
+              @if (objective.dueDate) {
+                <p><span class="pi pi-calendar" aria-hidden="true"></span> {{ objective.dueDate | date:'d MMM y' }}</p>
+              }
+            </div>
+          </div>
+          @if (objective.description) {
+            <p class="board-card__description">{{ objective.description }}</p>
+          }
+          <div class="board-card__footer">
+            @if (objective.totalTasks > 0) {
+              <div class="board-card__progress">
+                <p>{{ objective.doneTasks }}/{{ objective.totalTasks }} tâches</p>
+                <p>{{ objective.progress * 100 | number:'1.0-0' }} %</p>
+              </div>
+              <p-progressbar [value]="objective.progress * 100" [showValue]="false" />
+            } @else {
+              <p class="board-card__no-task">Aucune tâche pour l'instant</p>
+            }
+          </div>
+        </a>
+      }
+    </div>
+  }
 </main>
 
 <app-create-objective [open]="createObjectiveModalOpen()" (setOpen)="createObjectiveModalOpen.set($event)"></app-create-objective>

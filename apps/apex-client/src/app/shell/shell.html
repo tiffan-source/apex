@@ -1,18 +1,38 @@
 <div class="app">
-  <div class="shell">
-    <nav class="navigation">
-      <ul class="navigation-list">
-        @for (item of navigationList; track $index) {
-          <li class="navigation-list__item {{router.url === item.link ? 'navigation-list__item__active' : ''}}" (click)="navigateTo(item.link)"> <span style="font-size: 1.2rem" class="{{item.primeIcon}}"></span></li>
-        }
+  <nav class="dock" aria-label="Navigation principale">
+    <ul class="dock__list">
+      @for (item of navigationList; track item.link) {
+        <li>
+          <a
+            class="dock__item"
+            [routerLink]="item.link"
+            routerLinkActive="dock__item--active"
+            [routerLinkActiveOptions]="{ exact: item.link === '/' }"
+            [attr.aria-label]="item.label"
+          >
+            <span class="{{ item.primeIcon }}" aria-hidden="true"></span>
+            <span class="dock__label">{{ item.label }}</span>
+          </a>
+        </li>
+      }
 
-        @if(drawerStore.canBeActivated()){
-          <li (click)="drawerStore.openChatDrawer()"><span style="font-size: 1.2rem" class="pi pi-comments"></span></li>
-          <li (click)="drawerStore.openObjectiveEditionDrawer()"><span style="font-size: 1.2rem" class="pi pi-pencil"></span></li>
-        }
-      </ul>
-    </nav>
-  </div>
+      @if (drawerStore.canBeActivated()) {
+        <li class="dock__separator" aria-hidden="true"></li>
+        <li>
+          <button type="button" class="dock__item" (click)="drawerStore.openChatDrawer()" aria-label="Assistant IA">
+            <span class="pi pi-comments" aria-hidden="true"></span>
+            <span class="dock__label">Assistant</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="dock__item" (click)="drawerStore.openObjectiveEditionDrawer()" aria-label="Modifier l'objectif">
+            <span class="pi pi-pencil" aria-hidden="true"></span>
+            <span class="dock__label">Modifier</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </nav>
   <div class="app__content">
     <router-outlet></router-outlet>
   </div>

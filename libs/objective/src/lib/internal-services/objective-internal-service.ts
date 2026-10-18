@@ -1,4 +1,6 @@
+import { IdGenerator } from "@org/chore";
 import { Objective } from "../models/objective";
+import { Task } from "../models/task";
 import { ObjectiveRepository } from "../protocols/objective.repository";
 
 type TaskOutput = {
@@ -19,10 +21,30 @@ export type ObjectiveTreeOutput = {
   subObjectives: ObjectiveTreeOutput[];
 };
 
+export type CreatedSubObjectiveOutput = {
+  id: string;
+  title: string;
+};
+
+export type CreatedTaskOutput = {
+  id: string;
+  title: string;
+  importance: number;
+  urgency: number;
+};
+
+/**
+ * Façade « système interne » sur le domaine objectif, destinée aux systèmes
+ * transverses (ex. les outils de l'assistant IA) et non aux actions métier
+ * déclenchées par l'utilisateur — celles-ci passent par les use cases.
+ * Convention : on renvoie une valeur simple ou `null`, et on journalise les
+ * erreurs sans lever (comme une query).
+ */
 export class ObjectiveInternalService {
 
   constructor(
     private readonly objectiveRepository: ObjectiveRepository,
+    private readonly idGenerator: IdGenerator,
   ) {}
 
   async getObjectiveTree(objectiveId: string): Promise<ObjectiveTreeOutput | null> {
@@ -36,6 +58,67 @@ export class ObjectiveInternalService {
       return this.buildTree(objective);
     } catch (error) {
       console.error("Error occurred while retrieving objective tree:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Créer un sous-objectif sous un objectif (ou sous-objectif) parent existant.
+   * Renvoie `null` si le parent est introuvable ou si l'enregistrement échoue.
+   */
+  async createSubObjective(
+    parentObjectiveId: string,
+    title: string,
+    ownerId: string
+  ): Promise<CreatedSubObjectiveOutput | null> {
+    try {
+      const parent = await this.objectiveRepository.findById(parentObjectiveId);
+
+      if (!parent) {
+        return null;
+      }
+
+      const subObjective = new Objective(this.idGenerator.generateId(), title);
+      parent.addSubObjective(subObjective);
+
+      await this.objectiveRepository.save(parent, ownerId);
+
+      return { id: subObjective.id, title: subObjective.title };
+    } catch (error) {
+      console.error("Error occurred while creating sub-objective:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Ajouter une tâche à un objectif (ou sous-objectif) existant.
+   * Renvoie `null` si l'objectif est introuvable ou si l'enregistrement échoue.
+   */
+  async addTask(
+    objectiveId: string,
+    task: { title: string; importance: number; urgency: number },
+    ownerId: string
+  ): Promise<CreatedTaskOutput | null> {
+    try {
+      const objective = await this.objectiveRepository.findById(objectiveId);
+
+      if (!objective) {
+        return null;
+      }
+
+      const newTask = new Task(this.idGenerator.generateId(), task.title, task.importance, task.urgency);
+      objective.addTask(newTask);
+
+      await this.objectiveRepository.save(objective, ownerId);
+
+      return {
+        id: newTask.id,
+        title: newTask.title,
+        importance: newTask.importance,
+        urgency: newTask.urgency,
+      };
+    } catch (error) {
+      console.error("Error occurred while adding task to objective:", error);
       return null;
     }
   }

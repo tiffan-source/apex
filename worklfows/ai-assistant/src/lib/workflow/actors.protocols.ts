@@ -92,6 +92,12 @@ export interface Tool<  TInput extends z.ZodType = z.ZodType, TOutput = unknown>
   readonly name: string;
   readonly description: string;
   readonly inputSchema: TInput;
+  /**
+   * Outil qui modifie les données : son exécution requiert une confirmation
+   * explicite de l'utilisateur (policy `ask-user`). Absent/`false` = lecture,
+   * exécution directe.
+   */
+  readonly requiresPermission?: boolean;
 
   execute(
     context: ToolExecutionContext,

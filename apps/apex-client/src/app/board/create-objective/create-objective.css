@@ -20,3 +20,12 @@
 .modal-objective-header h1{
   font-size: 1.5rem;
 }
+
+.modal-objective-header__icon {
+  color: var(--app-violet);
+  font-size: 1.5rem;
+}
+
+.required {
+  color: var(--app-do);
+}

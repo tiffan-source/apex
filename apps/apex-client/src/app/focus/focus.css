@@ -4,7 +4,8 @@
 }
 
 .focus-list__item {
-  margin: 1rem;
+  margin: 0.25rem 0;
+  padding: 0.75rem;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -35,7 +36,36 @@
 }
 
 .focus-card__progress__header__value {
-  color: #593bce;
+  color: var(--app-violet);
   font-size: 2.5rem;
   font-weight: bold;
+}
+
+.focus-date::first-letter {
+  text-transform: uppercase;
+}
+
+.focus-card {
+  display: block;
+  border: 1px solid var(--app-violet);
+  background-color: var(--app-violet-soft);
+}
+
+.focus-list__item--done {
+  text-decoration: line-through;
+  color: var(--app-muted);
+}
+
+.focus-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.focus-empty .pi {
+  font-size: 1.75rem;
+  color: var(--app-orange);
 }

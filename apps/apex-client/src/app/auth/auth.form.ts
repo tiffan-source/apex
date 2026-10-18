@@ -20,9 +20,9 @@ export type SignInForm = {
 export class CreateUserFormModel extends FormGroup<CreateUserForm> {
   constructor() {
     super({
-      [AuthFormField.EMAIL]: new FormControl('', { nonNullable: true, validators: [Validators.email] }),
-      [AuthFormField.PASSWORD]: new FormControl('', { nonNullable: true, validators: [Validators.minLength(6)] }),
-      [AuthFormField.CONFIRM_PASSWORD]: new FormControl('', { nonNullable: true, validators: [Validators.minLength(6)] }),
+      [AuthFormField.EMAIL]: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
+      [AuthFormField.PASSWORD]: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(6)] }),
+      [AuthFormField.CONFIRM_PASSWORD]: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(6)] }),
     });
   }
 }
@@ -30,8 +30,8 @@ export class CreateUserFormModel extends FormGroup<CreateUserForm> {
 export class SignInFormModel extends FormGroup<SignInForm> {
   constructor() {
     super({
-      [AuthFormField.EMAIL]: new FormControl('', { nonNullable: true, validators: [Validators.email] }),
-      [AuthFormField.PASSWORD]: new FormControl('', { nonNullable: true, validators: [Validators.minLength(6)] }),
+      [AuthFormField.EMAIL]: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
+      [AuthFormField.PASSWORD]: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(6)] }),
     });
   }
 }

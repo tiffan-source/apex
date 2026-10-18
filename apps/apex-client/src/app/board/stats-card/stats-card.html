@@ -1,7 +1,7 @@
-<p-card [style]="{minWidth: '12rem'}" class="stats-card">
-  <div class="stats-card__header">
-    <div class="stats-card__header__icon" [style]="`background-color: ${bgColor()};`">
-      <span class="{{ primeIcon() }}" [style]="`font-size: 1.3rem; color: ${color()};`"></span>
+<p-card class="stats-card">
+  <div class="stats-card__header" [style.--stat-color]="color()">
+    <div class="stats-card__header__icon">
+      <span class="{{ primeIcon() }}" aria-hidden="true"></span>
     </div>
     <div class="stats-card__header__content">
       <span class="stats-card__header__content__value">{{ numberStat() }}</span>

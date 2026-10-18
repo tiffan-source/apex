@@ -1,8 +1,11 @@
 <div class="matrix-delegue">
   <p-card>
     <div class="matrix-delegue__header">
-      <h2>DELEGUER</h2>
-      <p>Urgent mais pas important</p>
+      <div>
+        <h2>DÉLÉGUER</h2>
+        <p>Urgent mais pas important</p>
+      </div>
+      <span class="matrix-delegue__count">{{ todoList().length }}</span>
     </div>
     <ul>
       @for (item of todoList(); track $index) {
@@ -11,10 +14,12 @@
             <p-checkbox (click)="toggleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true"/>
           </div>
           <div>
-            <p class="matrix-delegue__item-title">{{ item.title }}</p>
+            <p class="matrix-delegue__item-title" [class.matrix-delegue__item-title--done]="item.done">{{ item.title }}</p>
             <p>{{ item.objectiveTitle }}</p>
           </div>
         </li>
+      } @empty {
+        <li class="matrix-delegue__empty">Aucune tâche à déléguer.</li>
       }
     </ul>
   </p-card>

@@ -14,10 +14,15 @@ export class ToolPolicy implements IToolExecutionPolicy {
   ): Promise<ToolExecutionDecision> {
     try
     {
-      if (!this.registry.get(tool.name)) {
+      // `get` lève si l'outil n'est pas enregistré (cf. catch ci-dessous).
+      const registered = this.registry.get(tool.name);
+
+      // Les outils d'écriture requièrent l'accord explicite de l'utilisateur
+      // avant exécution ; la machine bascule alors en WaitingForUserPermission.
+      if (registered.requiresPermission) {
         return {
-          type: "deny",
-          reason: `Tool ${tool.name} is not registered`
+          type: "ask-user",
+          reason: `L'outil ${tool.name} modifie tes données et requiert ta confirmation.`
         };
       }
 

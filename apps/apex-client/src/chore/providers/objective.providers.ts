@@ -19,5 +19,5 @@ export const ObjectiveProviders: Provider[] = [
 
   {provide: GetAllObjectiveAndTaskQuery, useFactory: (supabaseClient: SupabaseClientDataAccess) => new SupabaseGetAllObjectiveAndTaskQuery(supabaseClient), deps: [SupabaseClientDataAccess]},
 
-  {provide: ObjectiveInternalService, useFactory: (objectiveRepository: ObjectiveRepository) => new ObjectiveInternalService(objectiveRepository), deps: [ObjectiveRepository]}
+  {provide: ObjectiveInternalService, useFactory: (objectiveRepository: ObjectiveRepository, idGenerator: IdGenerator) => new ObjectiveInternalService(objectiveRepository, idGenerator), deps: [ObjectiveRepository, IdGenerator]}
 ]

@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { DataViewModule } from 'primeng/dataview';
 import { FocusTaskStore } from '../../chore/stores/focus-task.store';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -10,7 +10,7 @@ import { ProgressBar } from 'primeng/progressbar';
 
 @Component({
   selector: 'app-focus',
-  imports: [DatePipe, DataViewModule, CheckboxModule, FormsModule, CardModule, ProgressBar],
+  imports: [DatePipe, DecimalPipe, DataViewModule, CheckboxModule, FormsModule, CardModule, ProgressBar],
   templateUrl: './focus.html',
   styleUrl: './focus.css',
 })

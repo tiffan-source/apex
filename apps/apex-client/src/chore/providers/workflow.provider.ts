@@ -1,6 +1,6 @@
 import { Provider } from "@angular/core";
 import { InteractiveAIProvider } from "@org/ai";
-import { AIService, ChatService, GetObjectiveTreeTool, IAIActor, IChatActor, IToolExecutionPolicy, IToolExecutor, IToolRegistry, IWorkflowStateRepository, SendMessageToAIWorkflow, ToolExecutor, ToolPolicy, ToolRegistry } from "@org/ai-assistant"
+import { AIService, ChatService, CreateSubObjectiveTool, CreateTaskTool, GetObjectiveTreeTool, IAIActor, IChatActor, IToolExecutionPolicy, IToolExecutor, IToolRegistry, IWorkflowStateRepository, SendMessageToAIWorkflow, ToolExecutor, ToolPolicy, ToolRegistry } from "@org/ai-assistant"
 import { AddMessageCommand, GetConversationsQuery } from "@org/chat";
 import { IdGenerator } from "@org/chore";
 import { FirebaseClientDataAccess, FirebaseWorkflowStateRepository } from "@org/firebase";
@@ -33,14 +33,28 @@ export const WorkflowProvider: Provider[] = [
   },
   {
     provide: IToolRegistry, useFactory: (
-      allObjectiveTools: GetObjectiveTreeTool
-    ) => new ToolRegistry([allObjectiveTools]),
-    deps: [GetObjectiveTreeTool]
+      getObjectiveTree: GetObjectiveTreeTool,
+      createSubObjective: CreateSubObjectiveTool,
+      createTask: CreateTaskTool
+    ) => new ToolRegistry([getObjectiveTree, createSubObjective, createTask]),
+    deps: [GetObjectiveTreeTool, CreateSubObjectiveTool, CreateTaskTool]
   },
   {
     provide: GetObjectiveTreeTool, useFactory: (
       objectiveService: ObjectiveInternalService
     ) => new GetObjectiveTreeTool(objectiveService),
+    deps: [ObjectiveInternalService]
+  },
+  {
+    provide: CreateSubObjectiveTool, useFactory: (
+      objectiveService: ObjectiveInternalService
+    ) => new CreateSubObjectiveTool(objectiveService),
+    deps: [ObjectiveInternalService]
+  },
+  {
+    provide: CreateTaskTool, useFactory: (
+      objectiveService: ObjectiveInternalService
+    ) => new CreateTaskTool(objectiveService),
     deps: [ObjectiveInternalService]
   },
   {

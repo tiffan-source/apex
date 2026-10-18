@@ -1,4 +1,4 @@
-import { FormControl, FormGroup } from "@angular/forms";
+import { FormControl, FormGroup, Validators } from "@angular/forms";
 
 export enum EditSubObjectiveFormField {
   TITLE = 'title',
@@ -21,7 +21,7 @@ export type EditSubObjectiveFormInput = {
 export class EditSubObjectiveFormModel extends FormGroup<EditSubObjectiveForm> {
   constructor(input: EditSubObjectiveFormInput) {
     super({
-      [EditSubObjectiveFormField.TITLE]: new FormControl(input.title, { nonNullable: true }),
+      [EditSubObjectiveFormField.TITLE]: new FormControl(input.title, { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] }),
       [EditSubObjectiveFormField.DESCRIPTION]: new FormControl(input.description || '', { nonNullable: true }),
       [EditSubObjectiveFormField.DUE_DATE]: new FormControl(input.dueDate || null, { nonNullable: true }),
     });

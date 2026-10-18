@@ -1,41 +1,46 @@
 <div class="auth">
-  <p-card>
+  <p-card class="auth-card">
     <ng-template #header>
       <div class="auth-header">
-        <h1>Welcome back</h1>
-        <p>Don't have an account? <p-button label="Create today!" variant="text"  (click)="changeMode()"/></p>
-      </div>
-    </ng-template>
-
-    <form class="auth-form" [formGroup]="mode() === AuthMode.SignIn ? loginForm : createUserForm">
-      <div class="auth-form-group">
-        <label for="{{ AuthFormField.EMAIL }}">Email</label>
-        <input placeholder="john.doe@example.com" pInputText id="{{ AuthFormField.EMAIL }}" formControlName="{{ AuthFormField.EMAIL }}" aria-describedby="username-help"/>
-      </div>
-      <div class="auth-form-group">
-        <label for="{{ AuthFormField.PASSWORD }}">Password</label>
-        <input placeholder="••••••••" pInputText id="{{ AuthFormField.PASSWORD }}" formControlName="{{ AuthFormField.PASSWORD }}" type="password" aria-describedby="password-help"/>
-      </div>
-      @if (mode() === AuthMode.CreateUser) {
-        <div class="auth-form-group">
-          <label for="{{ AuthFormField.CONFIRM_PASSWORD }}">Confirm Password</label>
-          <input placeholder="••••••••" pInputText id="{{ AuthFormField.CONFIRM_PASSWORD }}" formControlName="{{ AuthFormField.CONFIRM_PASSWORD }}" type="password" aria-describedby="confirmPassword-help"/>
-        </div>
-      }
-    </form>
-
-    <ng-template #footer>
-      <div class="">
-        @switch (mode()) {
-          @case (AuthMode.SignIn) {
-            <p-button fluid label="Sign In" class="auth-button" (click)="submitAuthForm()"/>
-          }
-
-          @case (AuthMode.CreateUser) {
-            <p-button fluid label="Create Account" class="auth-button" (click)="submitAuthForm()"/>
-          }
+        <span class="auth-logo pi pi-bullseye" aria-hidden="true"></span>
+        @if (mode() === AuthMode.SignIn) {
+          <h1>Bon retour !</h1>
+          <p>Pas encore de compte ? <p-button label="Créer un compte" variant="text" size="small" (click)="changeMode()"/></p>
+        } @else {
+          <h1>Créer votre compte</h1>
+          <p>Déjà inscrit ? <p-button label="Se connecter" variant="text" size="small" (click)="changeMode()"/></p>
         }
       </div>
     </ng-template>
+
+    <form class="auth-form" [formGroup]="mode() === AuthMode.SignIn ? loginForm : createUserForm" (ngSubmit)="submitAuthForm()">
+      <div class="auth-form-group">
+        <label for="{{ AuthFormField.EMAIL }}">Adresse e-mail</label>
+        <input placeholder="jean.dupont@exemple.com" pInputText fluid type="email" autocomplete="email" id="{{ AuthFormField.EMAIL }}" formControlName="{{ AuthFormField.EMAIL }}"/>
+      </div>
+      <div class="auth-form-group">
+        <label for="{{ AuthFormField.PASSWORD }}">Mot de passe</label>
+        <input placeholder="6 caractères minimum" pInputText fluid id="{{ AuthFormField.PASSWORD }}" formControlName="{{ AuthFormField.PASSWORD }}" type="password"
+          [attr.autocomplete]="mode() === AuthMode.SignIn ? 'current-password' : 'new-password'"/>
+      </div>
+      @if (mode() === AuthMode.CreateUser) {
+        <div class="auth-form-group">
+          <label for="{{ AuthFormField.CONFIRM_PASSWORD }}">Confirmer le mot de passe</label>
+          <input placeholder="Retapez votre mot de passe" pInputText fluid id="{{ AuthFormField.CONFIRM_PASSWORD }}" formControlName="{{ AuthFormField.CONFIRM_PASSWORD }}" type="password" autocomplete="new-password"/>
+        </div>
+      }
+
+      @if (errorMessage(); as error) {
+        <p-message severity="error" icon="pi pi-exclamation-circle" role="alert">{{ error }}</p-message>
+      }
+
+      <p-button
+        fluid
+        type="submit"
+        class="auth-button"
+        [label]="mode() === AuthMode.SignIn ? 'Se connecter' : 'Créer mon compte'"
+        [loading]="sessionStore.isPending()"
+      />
+    </form>
   </p-card>
 </div>

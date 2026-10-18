@@ -6,7 +6,8 @@ export function withStats() {
   return signalStoreFeature(
     { state: type<ObjectiveState>() },
     withComputed(({objectives, tasks}) => ({
-      totalObjectives: computed(() => objectives().length),
+      // Seuls les objectifs racines comptent : les sous-objectifs ne sont pas affichés sur le tableau de bord
+      totalObjectives: computed(() => objectives().filter(objective => objective.parentId === null).length),
       totalTaskDone: computed(() => tasks().filter(task => task.done).length),
       totalUrgentTask: computed(() => tasks().filter(task => task.urgency >= 3).length),
     }))

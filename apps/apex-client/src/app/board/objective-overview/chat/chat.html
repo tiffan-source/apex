@@ -1,7 +1,7 @@
 <p-drawer
   [visible]="drawerStore.chat.isOpen()"
   header="{{ objectifTitle() }}"
-  [style]="{width: '70vw'}"
+  [style]="{width: 'min(48rem, 100vw)'}"
   (onHide)="drawerStore.closeChatDrawer()"
   position="right"
 >
@@ -18,7 +18,17 @@
             </div>
           }
         }
-        @if(chatStore.isStreaming()){
+        @if(chatStore.isAwaitingPermission()){
+          <div class="chat-message-assistant">
+            <div class="chat-permission">
+              <p class="chat-permission-label">{{ permissionPrompt() }}</p>
+              <div class="chat-permission-actions">
+                <p-button label="Refuser" severity="secondary" (click)="chatStore.respondToPermission(false)" />
+                <p-button label="Autoriser" (click)="chatStore.respondToPermission(true)" />
+              </div>
+            </div>
+          </div>
+        } @else if(chatStore.isStreaming()){
           <div class="chat-message-assistant">
             <div class="chat-status">
               <span class="chat-status-dots" aria-hidden="true"><span></span><span></span><span></span></span>
@@ -31,8 +41,8 @@
 
     <ng-template #footer>
         <div class="chat-input">
-            <input pInputText fluid type="text" placeholder="Type a message" [(ngModel)]="promptMessage" (keydown.enter)="sendMessage()" [disabled]="!chatStore.canSendMessage()"/>
-            <button pButton type="button" label="Send" (click)="sendMessage()" [disabled]="!chatStore.canSendMessage()"></button>
+            <input pInputText fluid type="text" placeholder="Posez une question sur cet objectif…" [(ngModel)]="promptMessage" (keydown.enter)="sendMessage()" [disabled]="!chatStore.canSendMessage()"/>
+            <button pButton type="button" label="Envoyer" (click)="sendMessage()" [disabled]="!chatStore.canSendMessage()"></button>
         </div>
     </ng-template>
 </p-drawer>

@@ -17,7 +17,7 @@
 
 .stats-card__header__content__label{
   font-size: 0.875rem;
-  color: #6c757d;
+  color: var(--app-muted);
 }
 
 .stats-card__header__icon {
@@ -28,5 +28,8 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.5rem;
+  font-size: 1.3rem;
+  color: var(--stat-color);
+  background-color: color-mix(in srgb, var(--stat-color) 16%, transparent);
 }
 

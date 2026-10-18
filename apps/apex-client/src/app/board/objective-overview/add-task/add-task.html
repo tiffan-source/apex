@@ -1,14 +1,14 @@
-<p-card class="add-task" >
-  <form [formGroup]="form" >
-    <div>
-      <input pInputText placeholder="Titre de la tâche" [formControlName]="AddTaskFormField.TITLE" fluid/>
-    </div>
+<p-card class="add-task">
+  <form [formGroup]="form" (ngSubmit)="addTask()" class="add-task__form">
+    <input pInputText placeholder="Titre de la tâche" [formControlName]="AddTaskFormField.TITLE" fluid autofocus/>
+    <p-select fluid [options]="optionsObjective()" [formControlName]="AddTaskFormField.OBJECTIVE" ariaLabel="Objectif lié"/>
     <div class="add-task__select">
-      <p-select [options]="optionsObjective()" [formControlName]="AddTaskFormField.OBJECTIVE"/>
-      <p-select [options]="optionsImportance" [formControlName]="AddTaskFormField.IMPORTANT"/>
-      <p-select [options]="optionUrgerncy" [formControlName]="AddTaskFormField.URGENT"/>
-      <p-button size="small" type="submit" (click)="addTask()" (keydown.enter)="addTask()">Ajouter</p-button>
-      <p-button size="small" severity="secondary" (click)="abort.emit()">Annuler</p-button>
+      <p-select fluid [options]="optionsImportance" [formControlName]="AddTaskFormField.IMPORTANT" ariaLabel="Importance"/>
+      <p-select fluid [options]="optionUrgerncy" [formControlName]="AddTaskFormField.URGENT" ariaLabel="Urgence"/>
+    </div>
+    <div class="add-task__actions">
+      <p-button size="small" severity="secondary" variant="text" label="Annuler" (click)="abort.emit()" />
+      <p-button size="small" type="submit" label="Ajouter" [disabled]="form.invalid" />
     </div>
   </form>
 </p-card>

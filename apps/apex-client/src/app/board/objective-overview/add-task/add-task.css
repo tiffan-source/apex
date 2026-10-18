@@ -1,10 +1,22 @@
 .add-task {
-  margin: 1rem 0
+  display: block;
+  margin: 0 0 1rem;
+}
+
+.add-task__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .add-task__select {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.add-task__actions {
   display: flex;
-  gap: 1rem;
-  margin: 1rem 0;
-  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }

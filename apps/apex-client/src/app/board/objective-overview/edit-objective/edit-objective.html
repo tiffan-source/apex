@@ -1,7 +1,7 @@
 <p-drawer
   [visible]="drawerStore.objectiveEdition.isOpen()"
-  header="{{ form.get(EditObjectiveFormField.TITLE)?.value || objectiveOverview().title }}"
-  [style]="{width: '70vw'}"
+  header="Modifier l'objectif"
+  [style]="{width: 'min(40rem, 100vw)'}"
   (onHide)="drawerStore.closeObjectiveEditionDrawer()"
   position="right"
 >

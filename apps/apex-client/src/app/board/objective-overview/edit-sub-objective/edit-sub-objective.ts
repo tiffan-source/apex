@@ -27,13 +27,16 @@ export class EditSubObjective {
 
   constructor() {
     effect(() => {
-      let { title, description, dueDate } = this.objectiveViewModel() || {};
-      if(title)
+      const subObjective = this.objectiveViewModel();
+      // On crée aussi le formulaire quand le titre est vide, pour pouvoir le corriger
+      if (subObjective) {
+        const { title, description, dueDate } = subObjective;
         this.form = new EditSubObjectiveFormModel({
-          title: title,
+          title: title ?? '',
           description: description || '',
           dueDate: dueDate ? new Date(dueDate) : undefined,
         });
+      }
     })
 
     effect(() => {

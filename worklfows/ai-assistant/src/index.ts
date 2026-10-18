@@ -7,3 +7,5 @@ export * from './lib/tools/tool-executor';
 export * from './lib/tools/tool-policy';
 export * from './lib/tools/tool-registery';
 export * from './lib/tools/get-objective-tree.tool'
+export * from './lib/tools/create-sub-objective.tool'
+export * from './lib/tools/create-task.tool'

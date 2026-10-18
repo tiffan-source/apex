@@ -21,7 +21,11 @@ export class AddSubObjective {
   objectiveStore = inject(ObjectiveStore);
 
   addSubObjective() {
-    this.objectiveStore.addSubObjective({ objectiveId: this.objectiveId(), subObjectiveTitle: this.title });
+    // Un sous-objectif sans titre est inutilisable dans les listes
+    const title = this.title.trim();
+    if (!title) return;
+
+    this.objectiveStore.addSubObjective({ objectiveId: this.objectiveId(), subObjectiveTitle: title });
     this.title = '';
   }
 

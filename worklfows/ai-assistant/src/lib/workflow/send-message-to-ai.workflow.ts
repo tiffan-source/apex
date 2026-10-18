@@ -99,6 +99,18 @@ export class SendMessageToAIWorkflow {
   }
 
   /**
+   * Répondre à une demande de permission d'exécution d'outil : transmet à la
+   * machine (en attente dans WaitingForUserPermission) la décision de
+   * l'utilisateur. `true` exécute l'outil, `false` l'annule.
+   */
+  respondToPermission(actorId: string, permission: boolean) {
+    this.actors.get(actorId)?.send({
+      type: "user.response",
+      permission
+    });
+  }
+
+  /**
    * Persist the workflow state on every transition, register the actor, then start it.
    */
   private trackAndStart(id: string, actor: Actor<ConversationMachine>) {

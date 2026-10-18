@@ -1,4 +1,4 @@
-import { Component, effect, ElementRef, inject, input, OnDestroy, viewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, input, OnDestroy, viewChild } from '@angular/core';
 import { ChatStore } from './chat.store';
 import { InputTextModule } from 'primeng/inputtext';
 import { SessionStore } from 'apps/apex-client/src/chore/stores/session.store';
@@ -25,6 +25,27 @@ export class Chat implements OnDestroy {
   objectifTitle = input.required<string>();
 
   chatContainer = viewChild<ElementRef<HTMLDivElement>>('chatContainer');
+
+  // Phrase de confirmation présentée à l'utilisateur quand l'IA veut exécuter
+  // un outil d'écriture, construite à partir de l'outil en attente.
+  permissionPrompt = computed(() => {
+    const call = this.chatStore.pendingToolCall();
+    if (!call) {
+      return '';
+    }
+
+    const args = (call.arguments ?? {}) as Record<string, unknown>;
+    const title = String(args['title'] ?? '');
+
+    switch (call.name) {
+      case 'createSubObjective':
+        return `L'assistant souhaite créer le sous-objectif « ${title} ». Autoriser ?`;
+      case 'createTask':
+        return `L'assistant souhaite créer la tâche « ${title} ». Autoriser ?`;
+      default:
+        return `L'assistant souhaite exécuter « ${call.name} ». Autoriser ?`;
+    }
+  });
 
   private isNearBottom = true;
   private mutationObserver!: MutationObserver;

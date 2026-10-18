@@ -1,64 +1,94 @@
 @if (objectiveOverview(); as objective) {
   <div class="objective-overview">
 
-    <header>
+    <a class="objective-back" routerLink="/">
+      <span class="pi pi-arrow-left" aria-hidden="true"></span> Tableau de bord
+    </a>
+
+    <header class="objective-header">
       <div class="objective-header__title">
         <h1>{{ objective.title }}</h1>
-        <p>{{ objective.description }}</p>
+        @if (objective.description) {
+          <p>{{ objective.description }}</p>
+        }
+      </div>
+      <div class="objective-header__meta">
+        @if (objective.dueDate) {
+          <span class="objective-header__date">
+            <span class="pi pi-calendar" aria-hidden="true"></span>
+            Échéance : {{ objective.dueDate | date:'d MMMM y' }}
+          </span>
+        }
+        <div class="objective-header__progress">
+          <div class="objective-header__progress-label">
+            <span>{{ doneTasks() }}/{{ objective.tasks.length }} tâches terminées</span>
+            <strong>{{ progress() | number:'1.0-0' }} %</strong>
+          </div>
+          <p-progressbar [value]="progress()" [showValue]="false" />
+        </div>
       </div>
     </header>
 
+    @if (objective.why) {
+      <blockquote class="objective-why">
+        <span class="pi pi-heart" aria-hidden="true"></span>
+        <span><strong>Pourquoi c'est important :</strong> {{ objective.why }}</span>
+      </blockquote>
+    }
+
     <main class="objective-main">
-      <div class="objective-main-objective">
+      <section class="objective-panel">
         <div class="objective-main-header">
-          <h3>Sous-objectifs</h3>
-          <p-button size="small" variant="text" (click)="displayAddSubObjective.set(!displayAddSubObjective())">Ajouter</p-button>
+          <h3>Sous-objectifs <span class="objective-count">{{ objective.subObjectives.length }}</span></h3>
+          <p-button size="small" variant="text" icon="pi pi-plus" label="Ajouter" (click)="displayAddSubObjective.set(!displayAddSubObjective())" />
         </div>
         @if (displayAddSubObjective()) {
           <app-add-sub-objective [objectiveId]="id()" (abort)="displayAddSubObjective.set(false)"/>
         }
         <p-dataview #dv [value]="objective.subObjectives">
           <ng-template #list let-items>
-            <ul class="objective-sub-objectives">
-              @for (item of items; track $index) {
-                <li>
-                  <div>
-                    <p-checkbox [ngModel]="item.done" [readonly]="true" [binary]="true" />
+            <ul class="objective-list">
+              @for (item of items; track item.id) {
+                <li class="clickable-row" (click)="editSubObjective(item.id)">
+                  <p-checkbox [ngModel]="item.done" [readonly]="true" [binary]="true" />
+                  <div class="objective-item__text">
+                    <button type="button" class="objective-item__title" (click)="$event.stopPropagation(); editSubObjective(item.id)">
+                      {{ item.title || 'Sous-objectif sans titre' }}
+                    </button>
+                    @if (item.description) {
+                      <p class="objective-item__subtitle">{{ item.description }}</p>
+                    }
                   </div>
-                  <div class="objective-sub-objective-title-and-description">
-                    <span (click)="editSubObjective(item.id)" class="objective-sub-objective-title">{{ item.title }}</span>
-                    <p class="objective-sub-objective-description"> {{item.description}} </p>
-                  </div>
+                  <span class="pi pi-angle-right objective-item__chevron" aria-hidden="true"></span>
                 </li>
               }
             </ul>
           </ng-template>
           <ng-template #emptymessage>
-            <p class="objective-sub-objectives-empty">No sub-objectives found.</p>
+            <p class="objective-empty">Aucun sous-objectif. Découpez votre objectif en étapes plus simples.</p>
           </ng-template>
         </p-dataview>
-      </div>
-      <div class="objective-main-tasks">
+      </section>
+
+      <section class="objective-panel">
         <div class="objective-main-header">
-          <h3>Taches</h3>
-          <p-button size="small" variant="text" (click)="displayAddTask.set(!displayAddTask())">Ajouter</p-button>
+          <h3>Tâches <span class="objective-count">{{ objective.tasks.length }}</span></h3>
+          <p-button size="small" variant="text" icon="pi pi-plus" label="Ajouter" (click)="displayAddTask.set(!displayAddTask())" />
         </div>
         @if (displayAddTask()) {
           <app-add-task [objectiveId]="id()" [optionsObjective]="optionsObjective()" (abort)="displayAddTask.set(false)"/>
         }
         <p-dataview #dv [value]="objective.tasks">
           <ng-template #list let-items>
-            <ul class="objective-tasks">
-              @for (item of items; track $index) {
-                <li>
-                  <div class="objective-task-title-and-checkbox">
-                    <div>
-                      <p-checkbox (click)="toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true"/>
-                    </div>
-                    <div class="objective-task-title-container">
-                      <span (click)="editTask(item.id)" class="objective-task-title">{{ item.title }}</span>
-                      <p class="objective-task-objective-title"> {{item.objectiveTitle}} </p>
-                    </div>
+            <ul class="objective-list">
+              @for (item of items; track item.id) {
+                <li class="clickable-row" (click)="editTask(item.id)">
+                  <p-checkbox (click)="$event.stopPropagation(); toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true" [ariaLabel]="'Marquer « ' + item.title + ' » comme terminée'"/>
+                  <div class="objective-item__text">
+                    <button type="button" class="objective-item__title" [class.objective-item__title--done]="item.done" (click)="$event.stopPropagation(); editTask(item.id)">
+                      {{ item.title }}
+                    </button>
+                    <p class="objective-item__subtitle">{{ item.objectiveTitle }}</p>
                   </div>
                   <p-tag [value]="item.category" [severity]="item.primNgSeverity" [rounded]="true"/>
                 </li>
@@ -66,18 +96,15 @@
             </ul>
           </ng-template>
           <ng-template #emptymessage>
-            <p class="objective-tasks-empty">No tasks found.</p>
+            <p class="objective-empty">Aucune tâche. Ajoutez la première action concrète à réaliser.</p>
           </ng-template>
         </p-dataview>
-      </div>
-
-      <app-chat [objectiveId]="id()" [objectifTitle]="objectiveOverview().title || 'Objectif inconnu'"/>
-      <app-edit-objective [objectiveOverview]="objectiveOverview()"/>
-      <app-edit-task [optionsObjective]="optionsObjective()" [taskViewModel]="taskToEdit()" (abort)="closeEditTask()"/>
-      <app-edit-sub-objective [objectiveViewModel]="subObjectiveToEdit()" (abort)="closeEditSubObjective()"/>
-
+      </section>
     </main>
 
-
+    <app-chat [objectiveId]="id()" [objectifTitle]="objectiveOverview().title || 'Objectif inconnu'"/>
+    <app-edit-objective [objectiveOverview]="objectiveOverview()"/>
+    <app-edit-task [optionsObjective]="optionsObjective()" [taskViewModel]="taskToEdit()" (abort)="closeEditTask()"/>
+    <app-edit-sub-objective [objectiveViewModel]="subObjectiveToEdit()" (abort)="closeEditSubObjective()"/>
   </div>
 }

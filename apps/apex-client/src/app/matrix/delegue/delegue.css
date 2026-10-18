@@ -4,28 +4,58 @@
 
 .matrix-delegue .p-card {
   height: 100%;
-  border: 1px solid orange;
-  background-color: #f5f2dd;
+  border: 1px solid var(--app-delegate);
+  border-top-width: 4px;
+  background-color: var(--app-delegate-soft);
 }
 
-.matrix-delegue__header h2{
-  font-size: 1rem;
-  color: orange;
+.matrix-delegue__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.matrix-delegue__header h2 {
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--app-delegate);
+}
+
+.matrix-delegue__count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--app-delegate);
 }
 
 .matrix-delegue__item-title {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #333;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.matrix-delegue__item-title--done {
+  text-decoration: line-through;
+  color: var(--app-muted);
 }
 
 .matrix-delegue__item {
   width: 100%;
-  padding: 0.5rem;
-  margin: 0.75rem 0;
-  background-color: white;
+  padding: 0.6rem 0.75rem;
+  margin: 0.6rem 0 0;
+  background-color: var(--app-surface);
   border-radius: 0.5rem;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+}
+
+.matrix-delegue__item > div:last-child {
+  min-width: 0;
+}
+
+.matrix-delegue__empty {
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 1rem 0 0.25rem;
 }

@@ -1,4 +1,4 @@
-import { FormControl, FormGroup } from "@angular/forms";
+import { FormControl, FormGroup, Validators } from "@angular/forms";
 
 export enum EditTaskFormField {
   TITLE = 'title',
@@ -24,7 +24,7 @@ export type EditTaskFormInput = {
 export class EditTaskFormModel extends FormGroup<EditTaskForm> {
   constructor(input: EditTaskFormInput) {
     super({
-      [EditTaskFormField.TITLE]: new FormControl(input.title, { nonNullable: true }),
+      [EditTaskFormField.TITLE]: new FormControl(input.title, { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] }),
       [EditTaskFormField.OBJECTIVE]: new FormControl(input.objective, { nonNullable: true }),
       [EditTaskFormField.IMPORTANT]: new FormControl(input.important, { nonNullable: true }),
       [EditTaskFormField.URGENT]: new FormControl(input.urgent, { nonNullable: true }),
