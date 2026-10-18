@@ -8,11 +8,10 @@ import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { MarkdownPipe } from './markdown.pipe';
 import { DrawerModule } from 'primeng/drawer';
-import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-chat',
-  imports: [InputTextModule, ButtonModule, FormsModule, DrawerModule, CardModule, MarkdownPipe, SkeletonModule],
+  imports: [InputTextModule, ButtonModule, FormsModule, DrawerModule, CardModule, MarkdownPipe],
   templateUrl: './chat.html',
   styleUrl: './chat.css',
   providers: [ChatStore],
@@ -32,7 +31,11 @@ export class Chat implements OnDestroy {
 
   constructor() {
     effect(() => {
-      this.chatStore.loadChatHistory({objectifId: this.objectiveId()});
+      const objectiveId = this.objectiveId();
+      this.chatStore.loadChatHistory({objectifId: objectiveId});
+      // Wake up (or start) the workflow as soon as the chat opens so a previously
+      // interrupted process resumes, instead of waiting for a new message.
+      this.chatStore.initWorkflow(objectiveId);
     });
 
     effect((onCleanup) => {
@@ -81,7 +84,9 @@ export class Chat implements OnDestroy {
   }
 
   sendMessage() {
-    if (this.promptMessage) {
+    // Only let the user talk to the AI while the workflow is idle and waiting
+    // for a new message; any other state means a turn is still running.
+    if (this.promptMessage && this.chatStore.canSendMessage()) {
       this.chatStore.sendMessageToAi({
         message: this.promptMessage,
         objectiveId: this.objectiveId()

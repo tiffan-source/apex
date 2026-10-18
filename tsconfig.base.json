@@ -22,9 +22,9 @@
       "@org/auth": ["./libs/auth/src/index.ts"],
       "@org/chat": ["./libs/chat/src/index.ts"],
       "@org/supabase": ["./libs/supabase/src/index.ts"],
-      "@org/firebase": ["./libs/firebase/src/index.ts"],
       "@org/ai-assistant": ["./worklfows/ai-assistant/src/index.ts"],
-      "@org/apex-library": ["./apex-library/src/index.ts"]
+      "@org/apex-library": ["./apex-library/src/index.ts"],
+      "@org/firebase": ["./libs/firebase/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

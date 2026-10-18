@@ -56,3 +56,5 @@ vitest.config.*.timestamp*
 .nx/migrate-runs
 
 apps/apex-client/env/env.ts
+
+supabase/functions/.env

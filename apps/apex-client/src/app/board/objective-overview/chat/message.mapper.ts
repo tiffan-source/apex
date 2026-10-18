@@ -1,10 +1,10 @@
-import { GetAllMessagesQueryOutput} from "@org/chat"
+import { GetConversationsQueryOutput } from "@org/chat"
 import { MessageViewModel } from "./chat.models";
 import { MessageOutput } from "@org/ai-assistant";
 
 export class MessageMapper {
-  static fromConversationQueryToMessages(conversation: GetAllMessagesQueryOutput, owner: string): MessageViewModel[] {
-    return conversation.conversation.messages.map<MessageViewModel>(message => ({
+  static fromConversationQueryToMessages(conversation: GetConversationsQueryOutput, owner: string): MessageViewModel[] {
+    return conversation.messages.map<MessageViewModel>(message => ({
       id: message.id,
       sender: message.sender === owner ? "user" : "assistant",
       content: message.content,

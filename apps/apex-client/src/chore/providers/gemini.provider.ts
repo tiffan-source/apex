@@ -1,15 +1,22 @@
-import { InjectionToken, Provider } from "@angular/core";
-import { GeminiRepository } from "@org/gemini";
+import { Provider } from "@angular/core";
+import { AIInteractionResponse } from "@org/ai";
+import { AIProxyTransport, GeminiInteractiveAIProvider } from "@org/gemini";
+import { SupabaseClientDataAccess } from "@org/supabase";
 
-export const GEMINI_APP_CONFIG = new InjectionToken<string>('GEMINI_APP_CONFIG');
-
-export function provideGemini(apiKey: string): Provider[] {
+export function provideGemini(): Provider[] {
   return [
-    { provide: GEMINI_APP_CONFIG, useValue: apiKey },
     {
-      provide: GeminiRepository,
-      useFactory: (apiKey: string) => new GeminiRepository(apiKey),
-      deps: [GEMINI_APP_CONFIG],
+      provide: GeminiInteractiveAIProvider,
+      useFactory: (supabase: SupabaseClientDataAccess) => {
+        const transport: AIProxyTransport = async (body) => {
+          const { data, error } = await supabase.clientInstance.functions
+            .invoke<AIInteractionResponse>("httpGeminiInteractiveAiProvider", { body });
+          if (error) throw error;
+          return data!;
+        };
+        return new GeminiInteractiveAIProvider(transport);
+      },
+      deps: [SupabaseClientDataAccess],
     },
   ]
 }
