@@ -45,7 +45,7 @@ export const getMachine = (
         return aiService.sendToolCallResult(input.interactionId, input.toolCallResult)
       }),
       checkToolPolicy: fromPromise<ToolExecutionDecision, ToolCall & {objectiveId: string; userId: string}>(async({input})=>{
-        return toolPolicy.decide(toolRegistry.get(input.name), {
+        return toolPolicy.decide(input, {
           objectiveId: input.objectiveId,
           userId: input.userId
         }, input.arguments)
@@ -231,8 +231,50 @@ export const getMachine = (
                 target: "WaitingForUserPermission",
                 guard: ({event}) => event.output.type === "ask-user",
                 reenter: true
-              }]
+              }, {
+                // La policy refuse l'outil (ex. outil non enregistré, appel halluciné par l'IA).
+                // On enregistre un résultat explicite pour ce toolCall afin de ne pas re-sélectionner
+                // le même outil en boucle (cf. filtre dans PreparingNextTool), puis on passe au suivant.
+                target: "SavingDeniedToolExecution",
+                guard: ({event}) => event.output.type === "deny",
+                actions: assign({
+                  toolCallResults: ({context, event}) => {
+                    const currentToolCall = context.currentToolCall as ToolCall;
+                    const reason = "reason" in event.output ? event.output.reason : "Tool execution denied";
+                    return [
+                      ...context.toolCallResults,
+                      {
+                        id: currentToolCall.id,
+                        functionName: currentToolCall.name,
+                        result: `Tool execution denied: ${reason}`
+                      }
+                    ];
+                  }
+                })
+              }],
+              // Échec inattendu de la vérification de policy : on trace l'erreur comme résultat
+              // d'outil au lieu de laisser l'exception remonter et planter la machine.
+              onError: {
+                target: "SavingDeniedToolExecution",
+                actions: assign({
+                  toolCallResults: ({context, event}) => {
+                    const currentToolCall = context.currentToolCall as ToolCall;
+                    return [
+                      ...context.toolCallResults,
+                      {
+                        id: currentToolCall.id,
+                        functionName: currentToolCall.name,
+                        result: `Error checking tool policy: ${String(event.error ?? "unknown error")}`
+                      }
+                    ];
+                  }
+                })
+              }
             }
+          },
+
+          "SavingDeniedToolExecution": {
+            always: "PreparingNextTool"
           },
 
           "WaitingForUserPermission": {

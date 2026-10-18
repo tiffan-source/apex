@@ -121,7 +121,7 @@ export type ToolExecutionDecision =
 
 export abstract class IToolExecutionPolicy {
   abstract decide(
-    tool: Tool,
+    tool: ToolCall,
     context: ToolExecutionContext,
     input: unknown
   ): Promise<ToolExecutionDecision>;

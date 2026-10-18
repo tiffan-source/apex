@@ -8,7 +8,7 @@ export class ToolPolicy implements IToolExecutionPolicy {
   }
 
   async decide(
-    tool: Tool,
+    tool: ToolCall,
     context: ToolExecutionContext,
     input: unknown
   ): Promise<ToolExecutionDecision> {
