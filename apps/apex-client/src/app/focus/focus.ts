@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { DataViewModule } from 'primeng/dataview';
+import { AvatarModule } from 'primeng/avatar';
+import { avatarTone } from '@org/design-tokens';
 import { FocusTaskStore } from '../../chore/stores/focus-task.store';
 import { CheckboxModule } from 'primeng/checkbox';
 import { FormsModule } from '@angular/forms';
@@ -10,12 +11,16 @@ import { ProgressBar } from 'primeng/progressbar';
 
 @Component({
   selector: 'app-focus',
-  imports: [DatePipe, DecimalPipe, DataViewModule, CheckboxModule, FormsModule, CardModule, ProgressBar],
+  imports: [DatePipe, DecimalPipe, AvatarModule, CheckboxModule, FormsModule, CardModule, ProgressBar],
   templateUrl: './focus.html',
-  styleUrl: './focus.css',
 })
 export class Focus {
   todayDate = new Date();
+
+  // Carte de progression aux couleurs de la marque
+  readonly progressCardTokens = { root: { background: 'var(--ds-color-accent-soft)', shadow: 'none' } };
+  readonly progressBarTokens = { value: { background: 'var(--ds-color-accent)' } };
+  readonly emptyAvatarTokens = avatarTone.warning;
   focusStore = inject(FocusTaskStore);
   objectivesStore = inject(ObjectiveStore);
 

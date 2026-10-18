@@ -1,30 +1,30 @@
 <p-dialog [visible]="open()" [modal]="true" [style]="{ width: 'var(--ds-dialog-width)' }" [breakpoints]="{ '640px': 'var(--ds-dialog-width-mobile)' }" (onHide)="setOpen.emit(false)" (keydown.escape)="setOpen.emit(false)">
   <ng-template #header>
-    <div class="modal-objective-header">
-      <span class="pi pi-sparkles modal-objective-header__icon" aria-hidden="true"></span>
-      <h1>Définissons votre objectif</h1>
+    <div class="ds-row">
+      <p-avatar icon="pi pi-sparkles" aria-hidden="true" />
+      <h2>Définissons votre objectif</h2>
     </div>
-</ng-template>
-  <form [formGroup]="createObjectiveForm" (submit)="createObjective()">
-    <div class="modal-objective-form-field">
-        <label for="{{ CreateObjectiveFormField.TITLE }}">Un titre simple qui le représente <span class="required" aria-hidden="true">*</span></label>
-        <input placeholder="Monter mon entreprise" formControlName="{{ CreateObjectiveFormField.TITLE }}" pInputText id="{{ CreateObjectiveFormField.TITLE }}" />
+  </ng-template>
+  <form class="ds-stack" [formGroup]="createObjectiveForm" (submit)="createObjective()">
+    <div class="ds-stack ds-gap-2">
+      <label for="{{ CreateObjectiveFormField.TITLE }}">Un titre simple qui le représente *</label>
+      <input placeholder="Monter mon entreprise" formControlName="{{ CreateObjectiveFormField.TITLE }}" pInputText fluid id="{{ CreateObjectiveFormField.TITLE }}" />
     </div>
-    <div class="modal-objective-form-field">
-        <label for="{{ CreateObjectiveFormField.DESCRIPTION }}">Décrivons le un peu plus en détail</label>
-        <textarea placeholder="Décrivez votre objectif en quelques mots..." formControlName="{{ CreateObjectiveFormField.DESCRIPTION }}" pTextarea id="{{ CreateObjectiveFormField.DESCRIPTION }}"></textarea>
+    <div class="ds-stack ds-gap-2">
+      <label for="{{ CreateObjectiveFormField.DESCRIPTION }}">Décrivez-le en quelques mots</label>
+      <textarea placeholder="Décrivez votre objectif en quelques mots…" formControlName="{{ CreateObjectiveFormField.DESCRIPTION }}" pTextarea fluid id="{{ CreateObjectiveFormField.DESCRIPTION }}"></textarea>
     </div>
-    <div class="modal-objective-form-field">
-        <label for="{{ CreateObjectiveFormField.WHY }}">Pourquoi cet objectif est important pour vous ?</label>
-        <textarea placeholder="Expliquez pourquoi cet objectif vous tient à cœur..." formControlName="{{ CreateObjectiveFormField.WHY }}" rows="5" pTextarea id="{{ CreateObjectiveFormField.WHY }}"></textarea>
+    <div class="ds-stack ds-gap-2">
+      <label for="{{ CreateObjectiveFormField.WHY }}">Pourquoi cet objectif est important pour vous ?</label>
+      <textarea placeholder="Expliquez pourquoi cet objectif vous tient à cœur…" formControlName="{{ CreateObjectiveFormField.WHY }}" rows="4" pTextarea fluid id="{{ CreateObjectiveFormField.WHY }}"></textarea>
     </div>
-    <div class="modal-objective-form-field">
-        <label for="{{ CreateObjectiveFormField.DUE_DATE }}">Une date cible ?</label>
-        <input type="date" formControlName="{{ CreateObjectiveFormField.DUE_DATE }}" pInputText id="{{ CreateObjectiveFormField.DUE_DATE }}" />
+    <div class="ds-stack ds-gap-2">
+      <label for="{{ CreateObjectiveFormField.DUE_DATE }}">Date cible</label>
+      <p-datepicker inputId="{{ CreateObjectiveFormField.DUE_DATE }}" formControlName="{{ CreateObjectiveFormField.DUE_DATE }}" [showIcon]="true" [minDate]="today" placeholder="jj/mm/aaaa" fluid appendTo="body" />
     </div>
-    <div class="modal-objective-action">
-        <p-button label="Annuler" severity="secondary" variant="text" (click)="setOpen.emit(false)" />
-        <p-button [loading]="isLoading()" label="Créer l'objectif" type="submit" [disabled]="!isFormValid()" />
+    <div class="ds-row ds-end ds-gap-2">
+      <p-button label="Annuler" severity="secondary" variant="text" (click)="setOpen.emit(false)" />
+      <p-button [loading]="isLoading()" label="Créer l'objectif" type="submit" [disabled]="!isFormValid()" />
     </div>
   </form>
 </p-dialog>

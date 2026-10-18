@@ -1,14 +1,12 @@
-<p-card class="add-task">
-  <form [formGroup]="form" (ngSubmit)="addTask()" class="add-task__form">
-    <input pInputText placeholder="Titre de la tâche" [formControlName]="AddTaskFormField.TITLE" fluid autofocus/>
-    <p-select fluid [options]="optionsObjective()" [formControlName]="AddTaskFormField.OBJECTIVE" ariaLabel="Objectif lié"/>
-    <div class="add-task__select">
-      <p-select fluid [options]="optionsImportance" [formControlName]="AddTaskFormField.IMPORTANT" ariaLabel="Importance"/>
-      <p-select fluid [options]="optionUrgerncy" [formControlName]="AddTaskFormField.URGENT" ariaLabel="Urgence"/>
-    </div>
-    <div class="add-task__actions">
-      <p-button size="small" severity="secondary" variant="text" label="Annuler" (click)="abort.emit()" />
-      <p-button size="small" type="submit" label="Ajouter" [disabled]="form.invalid" />
-    </div>
-  </form>
-</p-card>
+<form [formGroup]="form" (ngSubmit)="addTask()" class="ds-stack ds-gap-3">
+  <input pInputText placeholder="Titre de la tâche" [formControlName]="AddTaskFormField.TITLE" fluid autofocus/>
+  <p-select fluid [options]="optionsObjective()" [formControlName]="AddTaskFormField.OBJECTIVE" ariaLabel="Objectif lié" appendTo="body"/>
+  <div class="ds-grid ds-grid-fit ds-grid-field ds-gap-3">
+    <p-select fluid [options]="optionsImportance" [formControlName]="AddTaskFormField.IMPORTANT" ariaLabel="Importance" appendTo="body"/>
+    <p-select fluid [options]="optionUrgerncy" [formControlName]="AddTaskFormField.URGENT" ariaLabel="Urgence" appendTo="body"/>
+  </div>
+  <div class="ds-row ds-end ds-gap-2">
+    <p-button size="small" severity="secondary" variant="text" label="Annuler" (click)="abort.emit()" />
+    <p-button size="small" type="submit" label="Ajouter" [disabled]="form.invalid" />
+  </div>
+</form>

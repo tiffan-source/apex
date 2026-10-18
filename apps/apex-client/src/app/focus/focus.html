@@ -1,50 +1,36 @@
-<header class="page-header">
-  <div>
+<div class="ds-stack ds-gap-8">
+  <header class="ds-stack ds-gap-1">
     <h1>Focus du jour</h1>
-    <h2 class="focus-date">{{ todayDate | date:'fullDate' }}</h2>
-  </div>
-</header>
+    <p class="ds-first-upper">{{ todayDate | date:'fullDate' }}</p>
+  </header>
 
-<main class="focus-main">
-
-  <p-card class="focus-card">
-    <div class="focus-card__progress">
-      <div class="focus-card__progress__header">
-        <span class="focus-card__progress__header__title">Progression du jour</span>
-        <span class="focus-card__progress__header__value">{{ progression() | number:'1.0-0' }} %</span>
+  <p-card [dt]="progressCardTokens">
+    <div class="ds-stack">
+      <div class="ds-row ds-between">
+        <h2>Progression du jour</h2>
+        <span class="ds-figure ds-figure-xl">{{ progression() | number:'1.0-0' }} %</span>
       </div>
-      <div class="focus-card__progress__bar">
-        <p-progressBar color="var(--ds-color-accent)" [value]="progression()" [showValue]="false"></p-progressBar>
-      </div>
-      <div class="focus-card__progress__footer">
-        <p>
-          {{ focusStore.taskDone() }} sur {{ focusStore.taskTotal() }} tâches terminées
-        </p>
-      </div>
+      <p-progressbar [value]="progression()" [showValue]="false" [dt]="progressBarTokens" />
+      <p>{{ focusStore.taskDone() }} sur {{ focusStore.taskTotal() }} tâches terminées</p>
     </div>
   </p-card>
 
-  <p-dataview #dv [value]="focusStore.tasksWithObjective()">
-    <ng-template #list let-items>
-      <ul class="focus-list">
-        @for (item of items; track $index) {
-          <li class="focus-list__item clickable-row">
-            <div>
-              <p-checkbox (click)="toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true" />
-            </div>
-            <div class="focus-list__item__content">
-              <span [class.focus-list__item--done]="item.done">{{ item.title }}</span>
-              <p>{{ item.objectiveTitle }}</p>
-            </div>
-          </li>
-        }
-      </ul>
-    </ng-template>
-    <ng-template #emptymessage>
-      <div class="focus-empty">
-        <span class="pi pi-sun" aria-hidden="true"></span>
-        <p>Aucune tâche au programme aujourd'hui. Profitez-en pour planifier la suite depuis la matrice.</p>
-      </div>
-    </ng-template>
-  </p-dataview>
-</main>
+  <p-card>
+    <ul class="ds-stack ds-gap-0-5">
+      @for (item of focusStore.tasksWithObjective(); track item.id) {
+        <li class="ds-row ds-list-row">
+          <p-checkbox (click)="toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true" [ariaLabel]="'Marquer « ' + item.title + ' » comme terminée'" />
+          <div class="ds-stack ds-gap-0-5 ds-grow">
+            <span class="ds-break" [class.ds-strike]="item.done">{{ item.title }}</span>
+            <span class="ds-text-xs ds-text-muted">{{ item.objectiveTitle }}</span>
+          </div>
+        </li>
+      } @empty {
+        <li class="ds-stack ds-gap-2 ds-items-center ds-text-center">
+          <p-avatar icon="pi pi-sun" [dt]="emptyAvatarTokens" />
+          <p>Aucune tâche au programme aujourd'hui. Profitez-en pour planifier la suite depuis la matrice.</p>
+        </li>
+      }
+    </ul>
+  </p-card>
+</div>

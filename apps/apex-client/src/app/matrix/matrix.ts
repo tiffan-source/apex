@@ -1,13 +1,12 @@
 import { Component } from '@angular/core';
-import { Todo } from './todo/todo';
-import { Delegue } from './delegue/delegue';
-import { Delete } from './delete/delete';
-import { Plan } from './plan/plan';
+import { EisenhowerCategory } from '@org/apex-library';
+import { Quadrant } from './quadrant/quadrant';
 
 @Component({
   selector: 'app-matrix',
-  imports: [Todo, Delegue, Delete, Plan],
+  imports: [Quadrant],
   templateUrl: './matrix.html',
-  styleUrl: './matrix.css',
 })
-export class Matrix {}
+export class Matrix {
+  protected readonly Category = EisenhowerCategory;
+}

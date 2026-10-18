@@ -8,16 +8,19 @@ import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { MarkdownPipe } from './markdown.pipe';
 import { DrawerModule } from 'primeng/drawer';
+import { MessageModule } from 'primeng/message';
 
 @Component({
   selector: 'app-chat',
-  imports: [InputTextModule, ButtonModule, FormsModule, DrawerModule, CardModule, MarkdownPipe],
+  imports: [InputTextModule, ButtonModule, FormsModule, DrawerModule, CardModule, MarkdownPipe, MessageModule],
   templateUrl: './chat.html',
-  styleUrl: './chat.css',
   providers: [ChatStore],
 })
 export class Chat implements OnDestroy {
   promptMessage: string = '';
+
+  // Bulle de l'utilisateur : carte sur fond légèrement teinté
+  readonly userBubbleTokens = { root: { background: 'var(--ds-chat-bubble-background)', shadow: 'none' } };
   chatStore = inject(ChatStore);
   sessionStore = inject(SessionStore);
   objectiveId = input.required<string>();

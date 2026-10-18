@@ -3,7 +3,9 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { AddSubObjective } from './add-sub-objective/add-sub-objective';
 import { AddTask } from './add-task/add-task';
-import { DataViewModule } from 'primeng/dataview';
+import { BadgeModule } from 'primeng/badge';
+import { CardModule } from 'primeng/card';
+import { ButtonDirective } from 'primeng/button';
 import { Button } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TagModule } from 'primeng/tag';
@@ -18,9 +20,8 @@ import { EditSubObjective } from './edit-sub-objective/edit-sub-objective';
 
 @Component({
   selector: 'app-objective-overview',
-  imports: [AddSubObjective, AddTask, DataViewModule, Button, CheckboxModule, TagModule, FormsModule, Chat, EditObjective, EditTask, EditSubObjective, RouterLink, DatePipe, DecimalPipe, ProgressBarModule],
+  imports: [AddSubObjective, AddTask, BadgeModule, CardModule, ButtonDirective, Button, CheckboxModule, TagModule, FormsModule, Chat, EditObjective, EditTask, EditSubObjective, RouterLink, DatePipe, DecimalPipe, ProgressBarModule],
   templateUrl: './objective-overview.html',
-  styleUrl: './objective-overview.css',
 })
 export class ObjectiveOverview {
   readonly id = input.required<string>();
@@ -46,6 +47,9 @@ export class ObjectiveOverview {
       ...objective.subObjectives.map((subObjective) => ({ label: subObjective.title || 'Sous-objectif sans titre', value: subObjective.id })),
     ];
   });
+
+  // Encadré « pourquoi » aux couleurs de la marque
+  readonly whyCardTokens = { root: { background: 'var(--ds-color-accent-soft)', color: 'var(--ds-color-accent)', shadow: 'none' } };
 
   displayAddSubObjective = signal(false);
   displayAddTask = signal(false);

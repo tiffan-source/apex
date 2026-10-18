@@ -1,105 +1,101 @@
 @if (objectiveOverview(); as objective) {
-  <div class="objective-overview">
+  <div class="ds-stack ds-gap-6">
 
-    <a class="objective-back" routerLink="/">
-      <span class="pi pi-arrow-left" aria-hidden="true"></span> Tableau de bord
-    </a>
+    <a pButton routerLink="/" [text]="true" severity="secondary" icon="pi pi-arrow-left" label="Tableau de bord" size="small" class="ds-self-start"></a>
 
-    <header class="objective-header">
-      <div class="objective-header__title">
+    <header class="ds-row ds-between ds-items-end ds-wrap ds-gap-6">
+      <div class="ds-stack ds-gap-1">
         <h1>{{ objective.title }}</h1>
         @if (objective.description) {
           <p>{{ objective.description }}</p>
         }
       </div>
-      <div class="objective-header__meta">
+      <div class="ds-stack ds-gap-2 ds-grow ds-max-panel">
         @if (objective.dueDate) {
-          <span class="objective-header__date">
-            <span class="pi pi-calendar" aria-hidden="true"></span>
-            Échéance : {{ objective.dueDate | date:'d MMMM y' }}
-          </span>
+          <p-tag icon="pi pi-calendar" severity="secondary" [value]="'Échéance : ' + (objective.dueDate | date:'d MMMM y')" class="ds-self-start" />
         }
-        <div class="objective-header__progress">
-          <div class="objective-header__progress-label">
-            <span>{{ doneTasks() }}/{{ objective.tasks.length }} tâches terminées</span>
-            <strong>{{ progress() | number:'1.0-0' }} %</strong>
-          </div>
-          <p-progressbar [value]="progress()" [showValue]="false" />
+        <div class="ds-row ds-between ds-text-sm ds-text-muted">
+          <span>{{ doneTasks() }}/{{ objective.tasks.length }} tâches terminées</span>
+          <span class="ds-text-strong">{{ progress() | number:'1.0-0' }} %</span>
         </div>
+        <p-progressbar [value]="progress()" [showValue]="false" />
       </div>
     </header>
 
     @if (objective.why) {
-      <blockquote class="objective-why">
-        <span class="pi pi-heart" aria-hidden="true"></span>
-        <span><strong>Pourquoi c'est important :</strong> {{ objective.why }}</span>
-      </blockquote>
+      <p-card [dt]="whyCardTokens">
+        <div class="ds-row ds-items-start ds-text-sm">
+          <i class="pi pi-heart" aria-hidden="true"></i>
+          <span><strong>Pourquoi c'est important :</strong> {{ objective.why }}</span>
+        </div>
+      </p-card>
     }
 
-    <main class="objective-main">
-      <section class="objective-panel">
-        <div class="objective-main-header">
-          <h3>Sous-objectifs <span class="objective-count">{{ objective.subObjectives.length }}</span></h3>
-          <p-button size="small" variant="text" icon="pi pi-plus" label="Ajouter" (click)="displayAddSubObjective.set(!displayAddSubObjective())" />
-        </div>
-        @if (displayAddSubObjective()) {
-          <app-add-sub-objective [objectiveId]="id()" (abort)="displayAddSubObjective.set(false)"/>
-        }
-        <p-dataview #dv [value]="objective.subObjectives">
-          <ng-template #list let-items>
-            <ul class="objective-list">
-              @for (item of items; track item.id) {
-                <li class="clickable-row" (click)="editSubObjective(item.id)">
-                  <p-checkbox [ngModel]="item.done" [readonly]="true" [binary]="true" />
-                  <div class="objective-item__text">
-                    <button type="button" class="objective-item__title" (click)="$event.stopPropagation(); editSubObjective(item.id)">
-                      {{ item.title || 'Sous-objectif sans titre' }}
-                    </button>
-                    @if (item.description) {
-                      <p class="objective-item__subtitle">{{ item.description }}</p>
-                    }
-                  </div>
-                  <span class="pi pi-angle-right objective-item__chevron" aria-hidden="true"></span>
-                </li>
-              }
-            </ul>
-          </ng-template>
-          <ng-template #emptymessage>
-            <p class="objective-empty">Aucun sous-objectif. Découpez votre objectif en étapes plus simples.</p>
-          </ng-template>
-        </p-dataview>
-      </section>
+    <main class="ds-grid ds-grid-fit ds-grid-panel ds-gap-6">
+      <p-card>
+        <ng-template #title>
+          <div class="ds-row ds-between">
+            <div class="ds-row ds-gap-2">
+              <h3>Sous-objectifs</h3>
+              <p-badge [value]="objective.subObjectives.length" severity="secondary" />
+            </div>
+            <p-button size="small" variant="text" icon="pi pi-plus" label="Ajouter" (click)="displayAddSubObjective.set(!displayAddSubObjective())" />
+          </div>
+        </ng-template>
 
-      <section class="objective-panel">
-        <div class="objective-main-header">
-          <h3>Tâches <span class="objective-count">{{ objective.tasks.length }}</span></h3>
-          <p-button size="small" variant="text" icon="pi pi-plus" label="Ajouter" (click)="displayAddTask.set(!displayAddTask())" />
+        <div class="ds-stack ds-gap-2">
+          @if (displayAddSubObjective()) {
+            <app-add-sub-objective [objectiveId]="id()" (abort)="displayAddSubObjective.set(false)"/>
+          }
+          <ul class="ds-stack ds-gap-0-5">
+            @for (item of objective.subObjectives; track item.id) {
+              <li class="ds-row ds-list-row" (click)="editSubObjective(item.id)">
+                <i class="pi pi-flag ds-text-muted" aria-hidden="true"></i>
+                <button type="button" class="ds-button-reset ds-grow" (click)="$event.stopPropagation(); editSubObjective(item.id)">
+                  {{ item.title || 'Sous-objectif sans titre' }}
+                </button>
+                <i class="pi pi-angle-right ds-text-muted" aria-hidden="true"></i>
+              </li>
+            } @empty {
+              <li><p class="ds-text-center">Aucun sous-objectif. Découpez votre objectif en étapes plus simples.</p></li>
+            }
+          </ul>
         </div>
-        @if (displayAddTask()) {
-          <app-add-task [objectiveId]="id()" [optionsObjective]="optionsObjective()" (abort)="displayAddTask.set(false)"/>
-        }
-        <p-dataview #dv [value]="objective.tasks">
-          <ng-template #list let-items>
-            <ul class="objective-list">
-              @for (item of items; track item.id) {
-                <li class="clickable-row" (click)="editTask(item.id)">
-                  <p-checkbox (click)="$event.stopPropagation(); toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true" [ariaLabel]="'Marquer « ' + item.title + ' » comme terminée'"/>
-                  <div class="objective-item__text">
-                    <button type="button" class="objective-item__title" [class.objective-item__title--done]="item.done" (click)="$event.stopPropagation(); editTask(item.id)">
-                      {{ item.title }}
-                    </button>
-                    <p class="objective-item__subtitle">{{ item.objectiveTitle }}</p>
-                  </div>
-                  <p-tag [value]="item.category" [severity]="item.primNgSeverity" [rounded]="true"/>
-                </li>
-              }
-            </ul>
-          </ng-template>
-          <ng-template #emptymessage>
-            <p class="objective-empty">Aucune tâche. Ajoutez la première action concrète à réaliser.</p>
-          </ng-template>
-        </p-dataview>
-      </section>
+      </p-card>
+
+      <p-card>
+        <ng-template #title>
+          <div class="ds-row ds-between">
+            <div class="ds-row ds-gap-2">
+              <h3>Tâches</h3>
+              <p-badge [value]="objective.tasks.length" severity="secondary" />
+            </div>
+            <p-button size="small" variant="text" icon="pi pi-plus" label="Ajouter" (click)="displayAddTask.set(!displayAddTask())" />
+          </div>
+        </ng-template>
+
+        <div class="ds-stack ds-gap-2">
+          @if (displayAddTask()) {
+            <app-add-task [objectiveId]="id()" [optionsObjective]="optionsObjective()" (abort)="displayAddTask.set(false)"/>
+          }
+          <ul class="ds-stack ds-gap-0-5">
+            @for (item of objective.tasks; track item.id) {
+              <li class="ds-row ds-list-row" (click)="editTask(item.id)">
+                <p-checkbox (click)="$event.stopPropagation(); toogleTaskDone(item.id, item.done)" [ngModel]="item.done" [readonly]="true" [binary]="true" [ariaLabel]="'Marquer « ' + item.title + ' » comme terminée'"/>
+                <div class="ds-stack ds-gap-0-5 ds-grow">
+                  <button type="button" class="ds-button-reset" [class.ds-strike]="item.done" (click)="$event.stopPropagation(); editTask(item.id)">
+                    {{ item.title }}
+                  </button>
+                  <span class="ds-text-xs ds-text-muted">{{ item.objectiveTitle }}</span>
+                </div>
+                <p-tag [value]="item.category" [severity]="item.primNgSeverity" [rounded]="true"/>
+              </li>
+            } @empty {
+              <li><p class="ds-text-center">Aucune tâche. Ajoutez la première action concrète à réaliser.</p></li>
+            }
+          </ul>
+        </div>
+      </p-card>
     </main>
 
     <app-chat [objectiveId]="id()" [objectifTitle]="objectiveOverview().title || 'Objectif inconnu'"/>

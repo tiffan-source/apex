@@ -7,13 +7,13 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { EditSubObjectiveFormField, EditSubObjectiveFormModel } from './edit-sub-objective.form';
 import { TextareaModule } from 'primeng/textarea';
+import { DatePickerModule } from 'primeng/datepicker';
 import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
 
 @Component({
   selector: 'app-edit-sub-objective',
-  imports: [DialogModule, ReactiveFormsModule, ButtonModule, SelectModule, InputTextModule, TextareaModule],
+  imports: [DialogModule, ReactiveFormsModule, ButtonModule, SelectModule, InputTextModule, TextareaModule, DatePickerModule],
   templateUrl: './edit-sub-objective.html',
-  styleUrl: './edit-sub-objective.css',
 })
 export class EditSubObjective {
   objectiveViewModel = input.required<ObjectiveViewModel | null>()

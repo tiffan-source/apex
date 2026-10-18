@@ -9,13 +9,13 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { DrawerStore } from 'apps/apex-client/src/chore/stores/drawer.store';
 import { EditObjectiveFormField, EditObjectiveFormModel } from './edit-objective.form';
 import { TextareaModule } from 'primeng/textarea';
+import { DatePickerModule } from 'primeng/datepicker';
 import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
 
 @Component({
   selector: 'app-edit-objective',
-  imports: [InputTextModule, ButtonModule, DrawerModule, CardModule, SkeletonModule, ReactiveFormsModule, TextareaModule],
+  imports: [InputTextModule, ButtonModule, DrawerModule, CardModule, SkeletonModule, ReactiveFormsModule, TextareaModule, DatePickerModule],
   templateUrl: './edit-objective.html',
-  styleUrl: './edit-objective.css',
 })
 export class EditObjective {
   objectiveOverview = input.required<ObjectiveOverviewViewModel>()

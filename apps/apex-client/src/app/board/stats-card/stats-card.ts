@@ -1,15 +1,18 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { CardModule } from 'primeng/card';
+import { AvatarModule } from 'primeng/avatar';
+import { avatarTone, AvatarTone } from '@org/design-tokens';
 
 @Component({
   selector: 'app-stats-card',
-  imports: [CardModule],
+  imports: [CardModule, AvatarModule],
   templateUrl: './stats-card.html',
-  styleUrl: './stats-card.css',
 })
 export class StatsCard {
-  // Couleur CSS quelconque (hex ou var(--ds-…)) ; le fond de l'icône en est dérivé
-  color = input<string>('var(--ds-color-accent)');
+  // Tonalité de la pastille, définie par le design system (pas de couleur libre)
+  tone = input<AvatarTone>('accent');
+  toneTokens = computed(() => avatarTone[this.tone()]);
+
   numberStat = input<number>(0);
   statLabel = input<string>('Stat Label');
   primeIcon = input<string>('pi pi-info-circle');

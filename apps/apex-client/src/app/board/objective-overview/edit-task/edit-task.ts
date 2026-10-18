@@ -13,7 +13,6 @@ import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.stor
   selector: 'app-edit-task',
   imports: [DialogModule, ReactiveFormsModule, ButtonModule, SelectModule, InputTextModule],
   templateUrl: './edit-task.html',
-  styleUrl: './edit-task.css',
 })
 export class EditTask {
   taskViewModel = input.required<TaskViewModel | null>()

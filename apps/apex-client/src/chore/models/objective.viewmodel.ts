@@ -24,9 +24,11 @@ export type TaskViewModel = {
   objectiveId: string;
 };
 
+export type EisenhowerSeverity = 'danger' | 'warn' | 'info' | 'secondary';
+
 export type TaskViewModelWithCategory = TaskViewModel & {
   category: EisenhowerCategory;
-  primNgSeverity: 'success' | 'info' | 'warn' | 'danger';
+  primNgSeverity: EisenhowerSeverity;
 };
 
 export type TaskViewModelWithCategoryAndObjectiveTitle = TaskViewModelWithCategory & {

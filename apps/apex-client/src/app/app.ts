@@ -6,7 +6,6 @@ import { MessageService } from 'primeng/api';
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
-  styleUrl: './app.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterModule, ToastModule],
   providers: [MessageService]

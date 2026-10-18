@@ -24,6 +24,11 @@
  *
  *  Pour changer l'identité de toutes les applications, on modifie les
  *  primitifs ; pour changer le rôle d'une couleur, on modifie les sémantiques.
+ *
+ *  Avant toute modification : skill .claude/skills/design-system-evolution
+ *  (niveau, nommage, mode sombre, journal CHANGELOG.md, version).
+ *  Les règles sont vérifiées par `npx nx lint design-tokens`, y compris le
+ *  contraste WCAG AA des couples texte / fond en clair et en sombre.
  */
 
 /* ============================================================================
@@ -37,7 +42,7 @@
   --ds-color-gray-200: #e5e7eb;
   --ds-color-gray-300: #d1d5db;
   --ds-color-gray-400: #9ca3af;
-  --ds-color-gray-500: #6b7280;
+  --ds-color-gray-500: #626977;
   --ds-color-gray-600: #4b5563;
   --ds-color-gray-700: #374151;
   --ds-color-gray-800: #2d323c;
@@ -162,19 +167,20 @@
   --ds-color-sky-950: #082f49;
 
   /* --- Typographie --------------------------------------------------------- */
-  --ds-font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --ds-font-family-base:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 
-  --ds-font-size-2xs: 0.6875rem;  /* 11px */
-  --ds-font-size-xs: 0.75rem;     /* 12px */
-  --ds-font-size-sm: 0.875rem;    /* 14px */
-  --ds-font-size-md: 1rem;        /* 16px */
-  --ds-font-size-lg: 1.125rem;    /* 18px */
-  --ds-font-size-xl: 1.25rem;     /* 20px */
-  --ds-font-size-2xl: 1.5rem;     /* 24px */
-  --ds-font-size-3xl: 1.75rem;    /* 28px */
-  --ds-font-size-4xl: 2rem;       /* 32px */
-  --ds-font-size-5xl: 2.5rem;     /* 40px */
+  --ds-font-size-2xs: 0.6875rem; /* 11px */
+  --ds-font-size-xs: 0.75rem; /* 12px */
+  --ds-font-size-sm: 0.875rem; /* 14px */
+  --ds-font-size-md: 1rem; /* 16px */
+  --ds-font-size-lg: 1.125rem; /* 18px */
+  --ds-font-size-xl: 1.25rem; /* 20px */
+  --ds-font-size-2xl: 1.5rem; /* 24px */
+  --ds-font-size-3xl: 1.75rem; /* 28px */
+  --ds-font-size-4xl: 2rem; /* 32px */
+  --ds-font-size-5xl: 2.5rem; /* 40px */
 
   --ds-font-weight-regular: 400;
   --ds-font-weight-medium: 500;
@@ -190,44 +196,44 @@
 
   /* --- Espacements (base 4px) ---------------------------------------------- */
   --ds-space-0: 0;
-  --ds-space-0-5: 0.125rem;  /* 2px */
-  --ds-space-1: 0.25rem;     /* 4px */
-  --ds-space-1-5: 0.375rem;  /* 6px */
-  --ds-space-2: 0.5rem;      /* 8px */
-  --ds-space-2-5: 0.625rem;  /* 10px */
-  --ds-space-3: 0.75rem;     /* 12px */
-  --ds-space-4: 1rem;        /* 16px */
-  --ds-space-5: 1.25rem;     /* 20px */
-  --ds-space-6: 1.5rem;      /* 24px */
-  --ds-space-8: 2rem;        /* 32px */
-  --ds-space-10: 2.5rem;     /* 40px */
-  --ds-space-12: 3rem;       /* 48px */
-  --ds-space-16: 4rem;       /* 64px */
+  --ds-space-0-5: 0.125rem; /* 2px */
+  --ds-space-1: 0.25rem; /* 4px */
+  --ds-space-1-5: 0.375rem; /* 6px */
+  --ds-space-2: 0.5rem; /* 8px */
+  --ds-space-2-5: 0.625rem; /* 10px */
+  --ds-space-3: 0.75rem; /* 12px */
+  --ds-space-4: 1rem; /* 16px */
+  --ds-space-5: 1.25rem; /* 20px */
+  --ds-space-6: 1.5rem; /* 24px */
+  --ds-space-8: 2rem; /* 32px */
+  --ds-space-10: 2.5rem; /* 40px */
+  --ds-space-12: 3rem; /* 48px */
+  --ds-space-16: 4rem; /* 64px */
 
   /* --- Tailles (largeurs, hauteurs, icônes) -------------------------------- */
-  --ds-size-1-5: 0.375rem;   /* 6px  */
-  --ds-size-2: 0.5rem;       /* 8px  */
-  --ds-size-10: 2.5rem;      /* 40px */
-  --ds-size-14: 3.5rem;      /* 56px */
-  --ds-size-16: 4rem;        /* 64px */
-  --ds-size-28: 7rem;        /* 112px */
-  --ds-size-40: 10rem;       /* 160px */
-  --ds-size-48: 12rem;       /* 192px */
-  --ds-size-64: 16rem;       /* 256px */
-  --ds-size-80: 20rem;       /* 320px */
-  --ds-size-104: 26rem;      /* 416px */
-  --ds-size-160: 40rem;      /* 640px */
-  --ds-size-192: 48rem;      /* 768px */
-  --ds-size-300: 75rem;      /* 1200px */
+  --ds-size-1-5: 0.375rem; /* 6px  */
+  --ds-size-2: 0.5rem; /* 8px  */
+  --ds-size-10: 2.5rem; /* 40px */
+  --ds-size-14: 3.5rem; /* 56px */
+  --ds-size-16: 4rem; /* 64px */
+  --ds-size-28: 7rem; /* 112px */
+  --ds-size-40: 10rem; /* 160px */
+  --ds-size-48: 12rem; /* 192px */
+  --ds-size-64: 16rem; /* 256px */
+  --ds-size-80: 20rem; /* 320px */
+  --ds-size-104: 26rem; /* 416px */
+  --ds-size-160: 40rem; /* 640px */
+  --ds-size-192: 48rem; /* 768px */
+  --ds-size-300: 75rem; /* 1200px */
 
   /* --- Arrondis ------------------------------------------------------------ */
   --ds-radius-none: 0;
-  --ds-radius-xs: 0.125rem;  /* 2px */
-  --ds-radius-sm: 0.25rem;   /* 4px */
-  --ds-radius-md: 0.5rem;    /* 8px */
-  --ds-radius-lg: 0.75rem;   /* 12px */
-  --ds-radius-xl: 1rem;      /* 16px */
-  --ds-radius-2xl: 1.25rem;  /* 20px */
+  --ds-radius-xs: 0.125rem; /* 2px */
+  --ds-radius-sm: 0.25rem; /* 4px */
+  --ds-radius-md: 0.5rem; /* 8px */
+  --ds-radius-lg: 0.75rem; /* 12px */
+  --ds-radius-xl: 1rem; /* 16px */
+  --ds-radius-2xl: 1.25rem; /* 20px */
   --ds-radius-full: 9999px;
 
   /* --- Bordures ------------------------------------------------------------ */
@@ -247,6 +253,15 @@
   --ds-duration-loop: 1200ms;
   --ds-easing-standard: ease;
   --ds-easing-in-out: ease-in-out;
+
+  /* --- Ombres : géométrie et teintes -------------------------------------- */
+  --ds-shadow-geometry-sm: 0 0.125rem 0.25rem;
+  --ds-shadow-geometry-md: 0 0.5rem 1.25rem;
+  --ds-shadow-geometry-lg: 0 0.5rem 1.5rem;
+  --ds-color-black-alpha-8: rgb(0 0 0 / 0.08);
+  --ds-color-black-alpha-12: rgb(0 0 0 / 0.12);
+  --ds-color-black-alpha-35: rgb(0 0 0 / 0.35);
+  --ds-color-black-alpha-50: rgb(0 0 0 / 0.5);
 
   /* --- Profondeur (z-index) ------------------------------------------------ */
   --ds-z-base: 0;
@@ -277,8 +292,8 @@
   --ds-color-surface: var(--ds-color-gray-0);
   --ds-color-surface-muted: var(--ds-color-gray-50);
   --ds-color-surface-hover: var(--ds-color-gray-100);
-  --ds-color-overlay-shadow: rgb(0 0 0 / 0.08);
-  --ds-color-overlay-shadow-strong: rgb(0 0 0 / 0.12);
+  --ds-color-shadow: var(--ds-color-black-alpha-8);
+  --ds-color-shadow-strong: var(--ds-color-black-alpha-12);
 
   /* --- Textes -------------------------------------------------------------- */
   --ds-color-text: var(--ds-color-gray-800);
@@ -306,8 +321,8 @@
   /* --- Statuts ------------------------------------------------------------- */
   --ds-color-success: var(--ds-color-teal-700);
   --ds-color-success-soft: var(--ds-color-teal-50);
-  --ds-color-warning: var(--ds-color-orange-600);
-  --ds-color-warning-soft: var(--ds-color-orange-50);
+  --ds-color-warning: var(--ds-color-yellow-700);
+  --ds-color-warning-soft: var(--ds-color-yellow-50);
   --ds-color-danger: var(--ds-color-red-700);
   --ds-color-danger-soft: var(--ds-color-red-50);
   --ds-color-info: var(--ds-color-sky-700);
@@ -315,15 +330,9 @@
   --ds-color-highlight: var(--ds-color-pink-700);
   --ds-color-highlight-soft: var(--ds-color-pink-50);
 
-  /* --- Matrice d'Eisenhower (commune à toutes les apps de productivité) ---- */
-  --ds-color-eisenhower-do: var(--ds-color-red-700);
-  --ds-color-eisenhower-do-soft: var(--ds-color-red-50);
-  --ds-color-eisenhower-delegate: var(--ds-color-yellow-700);
-  --ds-color-eisenhower-delegate-soft: var(--ds-color-yellow-50);
-  --ds-color-eisenhower-schedule: var(--ds-color-fuchsia-700);
-  --ds-color-eisenhower-schedule-soft: var(--ds-color-fuchsia-50);
-  --ds-color-eisenhower-delete: var(--ds-color-gray-500);
-  --ds-color-eisenhower-delete-soft: var(--ds-color-gray-100);
+  /* Matrice d'Eisenhower : pas de token dédié. Les quadrants et les étiquettes
+   * utilisent les sévérités PrimeNG (Faire = danger, Déléguer = warn,
+   * Planifier = info, Éliminer = secondary), donc les statuts ci-dessus. */
 
   /* --- Typographie sémantique ---------------------------------------------- */
   --ds-text-body-size: var(--ds-font-size-md);
@@ -334,9 +343,10 @@
   --ds-text-subheading-size: var(--ds-font-size-md);
 
   /* --- Ombres -------------------------------------------------------------- */
-  --ds-shadow-sm: 0 0.125rem 0.25rem rgb(0 0 0 / 0.075);
-  --ds-shadow-md: 0 0.5rem 1.25rem var(--ds-color-overlay-shadow);
-  --ds-shadow-lg: 0 0.5rem 1.5rem var(--ds-color-overlay-shadow-strong);
+  /* Le mode sombre n'a qu'à changer les teintes : la géométrie est partagée */
+  --ds-shadow-sm: var(--ds-shadow-geometry-sm) var(--ds-color-shadow);
+  --ds-shadow-md: var(--ds-shadow-geometry-md) var(--ds-color-shadow);
+  --ds-shadow-lg: var(--ds-shadow-geometry-lg) var(--ds-color-shadow-strong);
 }
 
 /* ============================================================================
@@ -351,8 +361,8 @@
     --ds-color-surface: var(--ds-color-gray-900);
     --ds-color-surface-muted: var(--ds-color-gray-950);
     --ds-color-surface-hover: var(--ds-color-gray-800);
-    --ds-color-overlay-shadow: rgb(0 0 0 / 0.35);
-    --ds-color-overlay-shadow-strong: rgb(0 0 0 / 0.5);
+    --ds-color-shadow: var(--ds-color-black-alpha-35);
+    --ds-color-shadow-strong: var(--ds-color-black-alpha-50);
 
     --ds-color-text: var(--ds-color-gray-200);
     --ds-color-text-muted: var(--ds-color-gray-400);
@@ -367,33 +377,46 @@
     --ds-color-primary-hover: var(--ds-color-green-300);
     --ds-color-primary-active: var(--ds-color-green-200);
     --ds-color-primary-contrast: var(--ds-color-gray-950);
-    --ds-color-primary-soft: color-mix(in srgb, var(--ds-color-green-500) 16%, var(--ds-color-gray-900));
+    --ds-color-primary-soft: color-mix(
+      in srgb,
+      var(--ds-color-green-500) 16%,
+      var(--ds-color-gray-900)
+    );
     --ds-color-focus-ring: var(--ds-color-green-400);
 
     --ds-color-accent: var(--ds-color-violet-400);
     --ds-color-accent-soft: var(--ds-color-violet-900);
 
     --ds-color-success: var(--ds-color-teal-300);
-    --ds-color-success-soft: color-mix(in srgb, var(--ds-color-teal-500) 14%, var(--ds-color-gray-900));
-    --ds-color-warning: var(--ds-color-orange-300);
-    --ds-color-warning-soft: color-mix(in srgb, var(--ds-color-orange-500) 14%, var(--ds-color-gray-900));
+    --ds-color-success-soft: color-mix(
+      in srgb,
+      var(--ds-color-teal-500) 14%,
+      var(--ds-color-gray-900)
+    );
+    --ds-color-warning: var(--ds-color-yellow-300);
+    --ds-color-warning-soft: color-mix(
+      in srgb,
+      var(--ds-color-yellow-500) 14%,
+      var(--ds-color-gray-900)
+    );
     --ds-color-danger: var(--ds-color-red-300);
-    --ds-color-danger-soft: color-mix(in srgb, var(--ds-color-red-500) 14%, var(--ds-color-gray-900));
+    --ds-color-danger-soft: color-mix(
+      in srgb,
+      var(--ds-color-red-500) 14%,
+      var(--ds-color-gray-900)
+    );
     --ds-color-info: var(--ds-color-sky-300);
-    --ds-color-info-soft: color-mix(in srgb, var(--ds-color-sky-500) 14%, var(--ds-color-gray-900));
+    --ds-color-info-soft: color-mix(
+      in srgb,
+      var(--ds-color-sky-500) 14%,
+      var(--ds-color-gray-900)
+    );
     --ds-color-highlight: var(--ds-color-pink-300);
-    --ds-color-highlight-soft: color-mix(in srgb, var(--ds-color-pink-500) 14%, var(--ds-color-gray-900));
-
-    --ds-color-eisenhower-do: var(--ds-color-red-300);
-    --ds-color-eisenhower-do-soft: color-mix(in srgb, var(--ds-color-red-500) 12%, var(--ds-color-gray-950));
-    --ds-color-eisenhower-delegate: var(--ds-color-yellow-300);
-    --ds-color-eisenhower-delegate-soft: color-mix(in srgb, var(--ds-color-yellow-500) 12%, var(--ds-color-gray-950));
-    --ds-color-eisenhower-schedule: var(--ds-color-fuchsia-300);
-    --ds-color-eisenhower-schedule-soft: color-mix(in srgb, var(--ds-color-fuchsia-500) 12%, var(--ds-color-gray-950));
-    --ds-color-eisenhower-delete: var(--ds-color-gray-400);
-    --ds-color-eisenhower-delete-soft: var(--ds-color-gray-900);
-
-    --ds-shadow-sm: 0 0.125rem 0.25rem var(--ds-color-overlay-shadow);
+    --ds-color-highlight-soft: color-mix(
+      in srgb,
+      var(--ds-color-pink-500) 14%,
+      var(--ds-color-gray-900)
+    );
   }
 }
 
@@ -405,7 +428,6 @@
   --ds-layout-content-max-width: var(--ds-size-300);
   --ds-layout-page-padding: var(--ds-space-8);
   --ds-layout-page-padding-mobile: var(--ds-space-4);
-  --ds-layout-section-gap: var(--ds-space-8);
   --ds-layout-grid-gap: var(--ds-space-4);
 
   /* Largeurs minimales des colonnes de grilles adaptatives */
@@ -418,14 +440,10 @@
   --ds-card-padding: var(--ds-space-3);
   --ds-card-radius: var(--ds-radius-lg);
   --ds-card-shadow: var(--ds-shadow-sm);
-  --ds-card-shadow-hover: var(--ds-shadow-md);
-  --ds-card-hover-lift: calc(-1 * var(--ds-space-0-5));
 
-  /* --- Pastille d'icône (stats, cartes d'objectif, logo) ------------------- */
+  /* --- Pastille d'icône (p-avatar : stats, cartes d'objectif, logo) -------- */
   --ds-icon-box-size: var(--ds-size-10);
   --ds-icon-box-radius: var(--ds-radius-md);
-  --ds-icon-box-padding: var(--ds-space-2);
-  --ds-icon-box-soft-ratio: 16%;
 
   /* --- Barre de progression ------------------------------------------------ */
   --ds-progress-height: var(--ds-size-1-5);
@@ -440,9 +458,6 @@
   --ds-dock-offset-mobile: var(--ds-space-3);
   --ds-dock-padding: var(--ds-space-1-5);
   --ds-dock-radius: var(--ds-radius-2xl);
-  --ds-dock-item-min-width: var(--ds-size-16);
-  --ds-dock-item-min-width-mobile: var(--ds-size-14);
-  --ds-dock-item-radius: var(--ds-radius-xl);
   --ds-dock-reserved-space: var(--ds-size-28);
   --ds-dock-z-index: var(--ds-z-raised);
 
@@ -461,12 +476,7 @@
   --ds-chat-bubble-max-width: 60%;
   --ds-chat-bubble-min-width: 20%;
   --ds-chat-bubble-background: var(--ds-color-surface-hover);
-  --ds-chat-message-gap: var(--ds-space-8);
-  --ds-chat-typing-dot-size: var(--ds-space-2);
-  --ds-chat-typing-dot-gap: var(--ds-space-1);
-  --ds-chat-typing-bounce: calc(-1 * var(--ds-space-1));
 
   /* --- Quadrants de la matrice --------------------------------------------- */
   --ds-matrix-quadrant-min-height: var(--ds-size-48);
-  --ds-matrix-quadrant-accent-width: var(--ds-border-width-thick);
 }

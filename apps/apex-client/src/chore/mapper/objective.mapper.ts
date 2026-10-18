@@ -1,5 +1,5 @@
 import { CreateObjectiveOutput, ObjectiveOutput, TaskOutput, GetAllObjectiveAndTaskOutput, WhatIsTodayFocusOutput } from "@org/objective";
-import { ObjectiveOverviewViewModel, ObjectiveViewModel, ObjectiveWithProgressViewModel, TaskViewModel, TaskViewModelWithCategory } from "../models/objective.viewmodel";
+import { ObjectiveOverviewViewModel, ObjectiveViewModel, ObjectiveWithProgressViewModel, TaskViewModel, TaskViewModelWithCategory, EisenhowerSeverity } from "../models/objective.viewmodel";
 import { ApexLibsMetier, EisenhowerCategory } from "@org/apex-library"
 import { ObjectiveState } from "../stores/objective.store";
 
@@ -8,16 +8,17 @@ export class ObjectiveMapper {
 
   private static mapCategoryToPrimeNgSeverity(
     category: EisenhowerCategory
-  ): 'success' | 'info' | 'warn' | 'danger' {
+  ): EisenhowerSeverity {
+    // Même sévérité que le quadrant de la matrice : étiquettes et quadrants concordent
     switch (category) {
       case EisenhowerCategory.DO:
         return 'danger';
-      case EisenhowerCategory.SCHEDULE:
-        return 'warn';
       case EisenhowerCategory.DELEGATE:
+        return 'warn';
+      case EisenhowerCategory.SCHEDULE:
         return 'info';
       case EisenhowerCategory.DELETE:
-        return 'success';
+        return 'secondary';
     }
   }
 

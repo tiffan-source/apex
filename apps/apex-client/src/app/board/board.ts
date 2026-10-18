@@ -7,13 +7,14 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { RouterLink } from '@angular/router';
 import { StatsCard } from './stats-card/stats-card';
+import { AvatarModule } from 'primeng/avatar';
+import { TagModule } from 'primeng/tag';
 import { FocusTaskStore } from '../../chore/stores/focus-task.store';
 
 @Component({
   selector: 'app-board',
-  imports: [Button, CreateObjective, CardModule, DatePipe, DecimalPipe, ProgressBarModule, StatsCard, RouterLink],
+  imports: [Button, CreateObjective, CardModule, DatePipe, DecimalPipe, ProgressBarModule, StatsCard, RouterLink, AvatarModule, TagModule],
   templateUrl: './board.html',
-  styleUrl: './board.css',
 })
 export class Board {
   createObjectiveModalOpen = signal(false);

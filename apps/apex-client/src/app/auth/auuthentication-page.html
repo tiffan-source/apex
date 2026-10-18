@@ -1,8 +1,8 @@
-<div class="auth">
-  <p-card class="auth-card">
-    <ng-template #header>
-      <div class="auth-header">
-        <span class="auth-logo pi pi-bullseye" aria-hidden="true"></span>
+<div class="ds-screen-center">
+  <p-card class="ds-narrow" [dt]="cardTokens">
+    <div class="ds-stack ds-gap-6">
+      <div class="ds-stack ds-gap-2 ds-items-center ds-text-center">
+        <p-avatar icon="pi pi-bullseye" size="large" />
         @if (mode() === AuthMode.SignIn) {
           <h1>Bon retour !</h1>
           <p>Pas encore de compte ? <p-button label="Créer un compte" variant="text" size="small" (click)="changeMode()"/></p>
@@ -11,20 +11,19 @@
           <p>Déjà inscrit ? <p-button label="Se connecter" variant="text" size="small" (click)="changeMode()"/></p>
         }
       </div>
-    </ng-template>
 
-    <form class="auth-form" [formGroup]="mode() === AuthMode.SignIn ? loginForm : createUserForm" (ngSubmit)="submitAuthForm()">
-      <div class="auth-form-group">
+    <form class="ds-stack" [formGroup]="mode() === AuthMode.SignIn ? loginForm : createUserForm" (ngSubmit)="submitAuthForm()">
+      <div class="ds-stack ds-gap-2">
         <label for="{{ AuthFormField.EMAIL }}">Adresse e-mail</label>
         <input placeholder="jean.dupont@exemple.com" pInputText fluid type="email" autocomplete="email" id="{{ AuthFormField.EMAIL }}" formControlName="{{ AuthFormField.EMAIL }}"/>
       </div>
-      <div class="auth-form-group">
+      <div class="ds-stack ds-gap-2">
         <label for="{{ AuthFormField.PASSWORD }}">Mot de passe</label>
         <input placeholder="6 caractères minimum" pInputText fluid id="{{ AuthFormField.PASSWORD }}" formControlName="{{ AuthFormField.PASSWORD }}" type="password"
           [attr.autocomplete]="mode() === AuthMode.SignIn ? 'current-password' : 'new-password'"/>
       </div>
       @if (mode() === AuthMode.CreateUser) {
-        <div class="auth-form-group">
+        <div class="ds-stack ds-gap-2">
           <label for="{{ AuthFormField.CONFIRM_PASSWORD }}">Confirmer le mot de passe</label>
           <input placeholder="Retapez votre mot de passe" pInputText fluid id="{{ AuthFormField.CONFIRM_PASSWORD }}" formControlName="{{ AuthFormField.CONFIRM_PASSWORD }}" type="password" autocomplete="new-password"/>
         </div>
@@ -37,10 +36,10 @@
       <p-button
         fluid
         type="submit"
-        class="auth-button"
         [label]="mode() === AuthMode.SignIn ? 'Se connecter' : 'Créer mon compte'"
         [loading]="sessionStore.isPending()"
       />
     </form>
+    </div>
   </p-card>
 </div>

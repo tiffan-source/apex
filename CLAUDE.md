@@ -20,9 +20,10 @@ Apex is a goal/objective-management app (objectives → sub-objectives → tasks
 | Lint | `npx nx lint <project>` |
 | Typecheck | `npx nx typecheck <project>` |
 | Only what changed | `npx nx affected -t vite:test lint typecheck` |
+| Design system check | `npx nx lint design-tokens` |
 
 - The unit test target is `vite:test` (not `test`). Tests are **Vitest + jsdom** via `@analogjs/vite-plugin-angular`; `.spec.ts` files are colocated with sources. E2E is Playwright (`e2e` target) when a project has a Playwright config.
-- Project names: `apex-client`, `objective`, `chat`, `ai`, `gemini`, `supabase`, `firebase`, `chore`, `auth`, `ai-assistant`, `apex-library`.
+- Project names: `apex-client`, `objective`, `chat`, `ai`, `gemini`, `supabase`, `firebase`, `chore`, `auth`, `ai-assistant`, `apex-library`, `design-tokens`.
 - **The workflow package lives under the misspelled directory `worklfows/` — use that exact path.**
 - `nx serve apex-client` declares `dependsOn: ["api:serve"]`, but **no `api` project exists** (stale config, also referenced in `nx.json` `release` and `.vscode/launch.json`). If serve fails on a missing `api` dependency, that is why.
 
@@ -50,6 +51,7 @@ Data crosses three layers, each with its own shape, bridged by **mappers**:
 - **`libs/gemini`** adapts the Google GenAI SDK to the `libs/ai` ports. Nothing outside the composition root may import it.
 - **`libs/supabase` / `libs/firebase`** implement the domain repository/query ports against their SDKs.
 - **`libs/chore`** is the shared kernel: `Result<T>` + `runWithResult`, `CoreError`, `IdGenerator`.
+- **`libs/design-tokens`** is the design system shared by every productivity app: design tokens (`tokens.css`), the PrimeNG preset (`primeng-preset.ts`, `@org/design-tokens`) and layout utilities (`layout.css`). See the next section.
 
 ### Result & error handling
 
@@ -77,8 +79,19 @@ Everything is wired in **`apps/apex-client/src/chore/providers/*.ts`**, aggregat
 
 `eslint.config.mjs` configures `@nx/enforce-module-boundaries` with intended scopes (`scope:shared`, `scope:apex-client`, `scope:api`) and `type:data`. Only `apex-client` currently carries a tag (`scope:apex-client`); if you add tags to libs, respect those constraints.
 
+## Front-end & design system (mandatory)
+
+All productivity apps share one design system, `libs/design-tokens`. **Apps never contain custom CSS**: appearance comes from PrimeNG components themed by the shared preset, layout from the `.ds-*` classes.
+
+- **Before any UI work** (page, component, template, layout, modal, form, responsive, dark mode, visual bug), follow the `frontend-ui` skill (`.claude/skills/frontend-ui/SKILL.md`) and read the sources it lists. Order of preference: PrimeNG component (catalogue in `.claude/skills/frontend-ui/references/catalogue-primeng.md`) → preset change → per-instance `[dt]` with `var(--ds-*)` tokens → `.ds-*` layout classes.
+- **Forbidden in apps**: component stylesheets (`styleUrl`, `styleUrls`, `styles`, `.css`/`.scss` files), `style="…"`, `[ngStyle]`, `[ngClass]`, `::ng-deep`, `!important`, raw colors or lengths (`#hex`, `rgb()`, `'red'`, `px`, `rem`…), classes other than `ds-*` and `pi`/`pi-*`, invented tokens or classes, themes or `definePreset`.
+- **Changing the design system itself** (tokens, PrimeNG preset, `[dt]` variants, `.ds-*` utilities, dark mode, contrast) follows the `design-system-evolution` skill (`.claude/skills/design-system-evolution/SKILL.md`): right token level, naming conventions, `CHANGELOG.md` entry and semver bump, user approval before any change to the visual identity.
+- If a need cannot be met without custom CSS, stop and propose a design-system addition instead of working around it.
+- `npx nx lint design-tokens` enforces these rules (and WCAG AA contrast in light and dark mode). It runs in CI through `run-many -t lint` and must pass before handing work back. Never weaken the check to make a change pass.
+- A Claude Code hook (`.claude/settings.json` → `.claude/hooks/design-system-check.mjs`) runs the same check after every Edit/Write on `apps/**`, `libs/design-tokens/**` or `tools/design-system/**`, and once more at the end of a turn if front-end files changed. When it reports violations, fix them right away.
+
 ## Conventions
 
 - File suffixes signal role: `*.usecase.ts`, `*.repository.ts`, `*.query.ts`, `*.command.ts`, `*.mapper.ts`, `*.provider.ts` (Angular DI providers), `*.store.ts`, `with-*.ts` (store features), `*.viewmodel.ts`, `*.error.ts`, `*.protocols.ts` / `protocols/*.ts` (ports).
-- Angular uses standalone components with the modern flat naming (`chat.ts` / `chat.html` / `chat.store.ts`, not `*.component.ts`); PrimeNG with the Lara theme; TS path aliases are `@org/<lib>` (see `tsconfig.base.json`).
+- Angular uses standalone components with the modern flat naming (`chat.ts` / `chat.html` / `chat.store.ts`, not `*.component.ts`); PrimeNG themed by the shared `DesignSystemPreset` (built on Lara) from `@org/design-tokens`; TS path aliases are `@org/<lib>` (see `tsconfig.base.json`).
 - `TODO.md` (root) and `libs/objective/src/lib/usecases/TODO.md` track the current backlog (French).

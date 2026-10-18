@@ -1,0 +1,383 @@
+/*
+ * ============================================================================
+ *  Base et mise en page — ce que PrimeNG ne fournit pas
+ * ============================================================================
+ *
+ *  PrimeNG habille les composants (via le preset), mais ne gère ni la remise à
+ *  zéro du navigateur, ni la mise en page (lignes, colonnes, grilles).
+ *  Ce fichier couvre uniquement ces deux besoins, avec des classes utilitaires
+ *  préfixées .ds- et construites sur les tokens. Les applications ne devraient
+ *  avoir besoin d'aucune autre feuille de style.
+ *
+ *  Charger après tokens.css. Ajouter une classe : skill
+ *  .claude/skills/design-system-evolution (recette D).
+ */
+
+/* ============================================================================
+ *  Base
+ * ========================================================================== */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--ds-font-family-base);
+  font-size: var(--ds-text-body-size);
+  line-height: var(--ds-line-height-normal);
+  color: var(--ds-color-text);
+  background: var(--ds-color-bg);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--ds-color-text);
+  line-height: var(--ds-line-height-tight);
+}
+
+h1 {
+  font-size: var(--ds-text-title-size);
+}
+h2 {
+  font-size: var(--ds-font-size-xl);
+}
+h3 {
+  font-size: var(--ds-text-heading-size);
+}
+
+p {
+  color: var(--ds-color-text-muted);
+  font-size: var(--ds-text-small-size);
+}
+
+a {
+  color: var(--ds-color-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+label {
+  font-size: var(--ds-text-small-size);
+  font-weight: var(--ds-font-weight-medium);
+}
+
+:focus-visible {
+  outline: var(--ds-focus-ring-width) solid var(--ds-color-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
+}
+
+/* ============================================================================
+ *  Conteneur de page
+ * ========================================================================== */
+.ds-page {
+  max-width: var(--ds-layout-content-max-width);
+  margin: 0 auto;
+  padding: var(--ds-layout-page-padding) var(--ds-layout-page-padding)
+    var(--ds-dock-reserved-space);
+}
+
+/* Écran plein centré (connexion, état vide pleine page) */
+.ds-screen-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: var(--ds-space-4);
+}
+
+/* Bloc étroit centré (formulaire de connexion, carte isolée) */
+.ds-narrow {
+  width: 100%;
+  max-width: var(--ds-auth-card-width);
+}
+
+/* Élément flottant centré en bas de l'écran (barre de navigation) */
+.ds-float-bottom {
+  position: fixed;
+  bottom: var(--ds-dock-offset);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--ds-dock-z-index);
+  box-shadow: var(--ds-shadow-lg);
+  border-radius: var(--ds-dock-radius);
+}
+
+/* ============================================================================
+ *  Empilement vertical et lignes horizontales
+ *  L'espacement se règle avec .ds-gap-* (défaut : --ds-space-4 / --ds-space-3)
+ * ========================================================================== */
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-gap, var(--ds-space-4));
+}
+
+.ds-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap, var(--ds-space-3));
+  min-width: 0;
+}
+
+.ds-wrap {
+  flex-wrap: wrap;
+}
+.ds-between {
+  justify-content: space-between;
+}
+.ds-end {
+  justify-content: flex-end;
+}
+.ds-items-start {
+  align-items: flex-start;
+}
+.ds-items-end {
+  align-items: flex-end;
+}
+.ds-items-baseline {
+  align-items: baseline;
+}
+.ds-items-center {
+  align-items: center;
+}
+.ds-self-start {
+  align-self: flex-start;
+}
+.ds-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Bloc limité à la largeur d'un panneau (méta-données à côté d'un titre) ;
+   déclaré après .ds-grow pour que sa largeur minimale force le retour à la ligne */
+.ds-max-panel {
+  max-width: var(--ds-layout-grid-min-panel);
+  min-width: min(var(--ds-layout-grid-min-card), 100%);
+}
+
+.ds-gap-0-5 {
+  --ds-gap: var(--ds-space-0-5);
+}
+.ds-gap-1 {
+  --ds-gap: var(--ds-space-1);
+}
+.ds-gap-2 {
+  --ds-gap: var(--ds-space-2);
+}
+.ds-gap-3 {
+  --ds-gap: var(--ds-space-3);
+}
+.ds-gap-4 {
+  --ds-gap: var(--ds-space-4);
+}
+.ds-gap-6 {
+  --ds-gap: var(--ds-space-6);
+}
+.ds-gap-8 {
+  --ds-gap: var(--ds-space-8);
+}
+
+/* ============================================================================
+ *  Grilles adaptatives : autant de colonnes que la largeur le permet
+ * ========================================================================== */
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(var(--ds-grid-min, var(--ds-layout-grid-min-card)), 100%), 1fr)
+  );
+  gap: var(--ds-gap, var(--ds-layout-grid-gap));
+  align-items: start;
+}
+
+.ds-grid-fit {
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(var(--ds-grid-min, var(--ds-layout-grid-min-card)), 100%), 1fr)
+  );
+}
+.ds-grid-stretch {
+  align-items: stretch;
+}
+
+/* Enfant de grille qui occupe toute la hauteur de sa cellule (et son contenu PrimeNG aussi) */
+.ds-fill,
+.ds-grid-stretch > * {
+  height: 100%;
+}
+
+.ds-fill > .p-card,
+.ds-grid-stretch > * > .p-card {
+  height: 100%;
+}
+
+.ds-grid-stat {
+  --ds-grid-min: var(--ds-layout-grid-min-stat);
+}
+.ds-grid-card {
+  --ds-grid-min: var(--ds-layout-grid-min-card);
+}
+.ds-grid-panel {
+  --ds-grid-min: var(--ds-layout-grid-min-panel);
+}
+.ds-grid-field {
+  --ds-grid-min: var(--ds-layout-grid-min-field);
+}
+
+/* Deux colonnes, une seule sous --ds-breakpoint-md */
+.ds-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(var(--ds-matrix-quadrant-min-height), auto);
+  gap: var(--ds-gap, var(--ds-layout-grid-gap));
+}
+
+/* --ds-breakpoint-md */
+@media (max-width: 768px) {
+  .ds-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --ds-breakpoint-sm */
+@media (max-width: 640px) {
+  .ds-page {
+    padding: var(--ds-layout-page-padding-mobile)
+      var(--ds-layout-page-padding-mobile) var(--ds-dock-reserved-space);
+  }
+
+  .ds-float-bottom {
+    bottom: var(--ds-dock-offset-mobile);
+  }
+
+  /* Boutons en icône seule sur petit écran (le nom reste donné par aria-label) */
+  .ds-icons-only-mobile .p-button-label {
+    display: none;
+  }
+}
+
+/* ============================================================================
+ *  Texte
+ * ========================================================================== */
+.ds-text-muted {
+  color: var(--ds-color-text-muted);
+}
+.ds-text-sm {
+  font-size: var(--ds-text-small-size);
+}
+.ds-text-xs {
+  font-size: var(--ds-text-caption-size);
+}
+.ds-text-strong {
+  font-weight: var(--ds-font-weight-semibold);
+  color: var(--ds-color-text);
+}
+.ds-text-center {
+  text-align: center;
+}
+.ds-text-italic {
+  font-style: italic;
+}
+.ds-strike {
+  text-decoration: line-through;
+  color: var(--ds-color-text-muted);
+}
+.ds-first-upper::first-letter {
+  text-transform: uppercase;
+}
+.ds-break {
+  overflow-wrap: anywhere;
+}
+
+/* Coupe le texte après deux lignes */
+.ds-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Grand chiffre (statistiques, progression) */
+.ds-figure {
+  font-size: var(--ds-font-size-3xl);
+  font-weight: var(--ds-font-weight-bold);
+  line-height: var(--ds-line-height-tight);
+  color: var(--ds-color-text);
+}
+
+.ds-figure-xl {
+  font-size: var(--ds-font-size-5xl);
+}
+
+/* ============================================================================
+ *  Interaction
+ * ========================================================================== */
+
+/* Ligne de liste cliquable (survol + zone de clic confortable) */
+.ds-list-row {
+  padding: var(--ds-list-row-padding-y) var(--ds-list-row-padding-x);
+  border-radius: var(--ds-list-row-radius);
+  cursor: pointer;
+  transition: background-color var(--ds-duration-fast) var(--ds-easing-standard);
+}
+
+.ds-list-row:hover {
+  background-color: var(--ds-color-surface-hover);
+}
+
+/* Lien qui enveloppe un composant (carte cliquable) sans le styler */
+.ds-link-block {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--ds-card-radius);
+}
+
+.ds-link-block:hover {
+  text-decoration: none;
+}
+
+/* Bouton natif sans apparence (titre cliquable dans une liste) */
+.ds-button-reset {
+  all: unset;
+  cursor: pointer;
+  color: var(--ds-color-text);
+  overflow-wrap: anywhere;
+}
+
+.ds-button-reset:focus-visible {
+  outline: var(--ds-focus-ring-width) solid var(--ds-color-focus-ring);
+  outline-offset: var(--ds-focus-ring-offset);
+  border-radius: var(--ds-radius-sm);
+}
+
+/* Bulle de conversation : largeur bornée */
+.ds-chat-bubble {
+  max-width: var(--ds-chat-bubble-max-width);
+  min-width: var(--ds-chat-bubble-min-width);
+}

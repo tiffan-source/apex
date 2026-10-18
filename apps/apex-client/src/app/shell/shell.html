@@ -1,39 +1,33 @@
-<div class="app">
-  <nav class="dock" aria-label="Navigation principale">
-    <ul class="dock__list">
+<nav class="ds-float-bottom ds-icons-only-mobile" aria-label="Navigation principale">
+  <p-toolbar>
+    <div class="ds-row ds-gap-1">
       @for (item of navigationList; track item.link) {
-        <li>
-          <a
-            class="dock__item"
-            [routerLink]="item.link"
-            routerLinkActive="dock__item--active"
-            [routerLinkActiveOptions]="{ exact: item.link === '/' }"
-            [attr.aria-label]="item.label"
-          >
-            <span class="{{ item.primeIcon }}" aria-hidden="true"></span>
-            <span class="dock__label">{{ item.label }}</span>
-          </a>
-        </li>
+        <a
+          pButton
+          [routerLink]="item.link"
+          routerLinkActive
+          #rla="routerLinkActive"
+          [routerLinkActiveOptions]="{ exact: item.link === '/' }"
+          [text]="!rla.isActive"
+          [severity]="rla.isActive ? 'primary' : 'secondary'"
+          [icon]="item.primeIcon"
+         
+          [label]="item.label"
+          size="small"
+          [attr.aria-label]="item.label"
+          [attr.aria-current]="rla.isActive ? 'page' : null"
+        ></a>
       }
 
       @if (drawerStore.canBeActivated()) {
-        <li class="dock__separator" aria-hidden="true"></li>
-        <li>
-          <button type="button" class="dock__item" (click)="drawerStore.openChatDrawer()" aria-label="Assistant IA">
-            <span class="pi pi-comments" aria-hidden="true"></span>
-            <span class="dock__label">Assistant</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="dock__item" (click)="drawerStore.openObjectiveEditionDrawer()" aria-label="Modifier l'objectif">
-            <span class="pi pi-pencil" aria-hidden="true"></span>
-            <span class="dock__label">Modifier</span>
-          </button>
-        </li>
+        <p-divider layout="vertical" />
+        <p-button text severity="secondary" icon="pi pi-comments" label="Assistant" ariaLabel="Assistant" size="small" (click)="drawerStore.openChatDrawer()" />
+        <p-button text severity="secondary" icon="pi pi-pencil" label="Modifier" ariaLabel="Modifier l'objectif" size="small" (click)="drawerStore.openObjectiveEditionDrawer()" />
       }
-    </ul>
-  </nav>
-  <div class="app__content">
-    <router-outlet></router-outlet>
-  </div>
+    </div>
+  </p-toolbar>
+</nav>
+
+<div class="ds-page">
+  <router-outlet></router-outlet>
 </div>

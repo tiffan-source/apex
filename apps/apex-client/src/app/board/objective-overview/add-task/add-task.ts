@@ -1,6 +1,5 @@
 import { Component, inject, input, output} from '@angular/core';
 import { Button } from 'primeng/button';
-import { Card } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { AddTaskFormField, AddTaskFormModel} from './add-task.form';
@@ -10,9 +9,8 @@ import { ImportanceValueOption, UrgencyValueOption } from 'apps/apex-client/src/
 
 @Component({
   selector: 'app-add-task',
-  imports: [Card, InputTextModule, Button, SelectModule, ReactiveFormsModule],
+  imports: [InputTextModule, Button, SelectModule, ReactiveFormsModule],
   templateUrl: './add-task.html',
-  styleUrl: './add-task.css',
 })
 export class AddTask {
   readonly objectiveStore = inject(ObjectiveStore);

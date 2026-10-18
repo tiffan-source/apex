@@ -1,13 +1,13 @@
-<header class="page-header">
-  <div>
+<div class="ds-stack ds-gap-8">
+  <header class="ds-stack ds-gap-1">
     <h1>Matrice d'Eisenhower</h1>
-    <h2>Priorisez vos tâches par urgence et importance</h2>
-  </div>
-</header>
+    <p>Priorisez vos tâches par urgence et importance</p>
+  </header>
 
-<main class="matrix-main">
-  <app-todo></app-todo>
-  <app-delegue></app-delegue>
-  <app-plan></app-plan>
-  <app-delete></app-delete>
-</main>
+  <main class="ds-grid-2 ds-grid-stretch">
+    <app-quadrant [category]="Category.DO" label="FAIRE" description="Urgent et important" emptyMessage="Rien d'urgent et important. Bien joué !" />
+    <app-quadrant [category]="Category.DELEGATE" label="DÉLÉGUER" description="Urgent mais pas important" emptyMessage="Aucune tâche à déléguer." />
+    <app-quadrant [category]="Category.SCHEDULE" label="PLANIFIER" description="Important mais pas urgent" emptyMessage="Aucune tâche à planifier." />
+    <app-quadrant [category]="Category.DELETE" label="ÉLIMINER" description="Ni urgent ni important" emptyMessage="Aucune tâche à éliminer." />
+  </main>
+</div>

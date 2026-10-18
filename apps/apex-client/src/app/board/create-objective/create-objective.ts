@@ -4,6 +4,8 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { CreateObjectiveFormField, CreateObjectiveFormModel } from './create-objective.form';
 import { TextareaModule } from 'primeng/textarea';
+import { DatePickerModule } from 'primeng/datepicker';
+import { AvatarModule } from 'primeng/avatar';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -11,9 +13,8 @@ import { map, startWith } from 'rxjs';
 
 @Component({
   selector: 'app-create-objective',
-  imports: [DialogModule, Button, InputTextModule, TextareaModule, ReactiveFormsModule],
+  imports: [DialogModule, Button, InputTextModule, TextareaModule, ReactiveFormsModule, DatePickerModule, AvatarModule],
   templateUrl: './create-objective.html',
-  styleUrl: './create-objective.css',
 })
 export class CreateObjective {
   open = input.required<boolean>();
@@ -23,6 +24,8 @@ export class CreateObjective {
   createObjectiveForm = new CreateObjectiveFormModel();
 
   objectiveStore = inject(ObjectiveStore);
+
+  readonly today = new Date();
 
   isLoading = computed(()=>this.objectiveStore.isPending())
 

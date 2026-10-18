@@ -11,7 +11,7 @@ export type EditObjectiveForm = {
   [EditObjectiveFormField.TITLE]: FormControl<string>;
   [EditObjectiveFormField.DESCRIPTION]: FormControl<string | null>;
   [EditObjectiveFormField.WHY]: FormControl<string | null>;
-  [EditObjectiveFormField.DUE_DATE]: FormControl<string | null>;
+  [EditObjectiveFormField.DUE_DATE]: FormControl<Date | null>;
 }
 
 export type EditObjectiveFormModelInput = {
@@ -34,7 +34,7 @@ export class EditObjectiveFormModel extends FormGroup<EditObjectiveForm> {
       [EditObjectiveFormField.TITLE]: new FormControl(input.title, { nonNullable: true, validators: [Validators.required] }),
       [EditObjectiveFormField.DESCRIPTION]: new FormControl(input.description),
       [EditObjectiveFormField.WHY]: new FormControl(input.why),
-      [EditObjectiveFormField.DUE_DATE]: new FormControl(input.due_date ? input.due_date.toISOString().split('T')[0] : null),
+      [EditObjectiveFormField.DUE_DATE]: new FormControl(input.due_date ?? null),
     })
   }
 }

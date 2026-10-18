@@ -1,9 +1,7 @@
-<p-card class="add-sub-objective">
-  <form (ngSubmit)="addSubObjective()" class="add-sub-objective__form">
-    <input [(ngModel)]="title" name="title" pInputText placeholder="Titre du sous-objectif" fluid autofocus/>
-    <div class="add-sub-objective__actions">
-      <p-button size="small" severity="secondary" variant="text" label="Annuler" (click)="abort.emit()" />
-      <p-button size="small" type="submit" label="Ajouter" [disabled]="!title.trim()" />
-    </div>
-  </form>
-</p-card>
+<form (ngSubmit)="addSubObjective()" class="ds-stack ds-gap-3">
+  <input [(ngModel)]="title" name="title" pInputText placeholder="Titre du sous-objectif" fluid autofocus/>
+  <div class="ds-row ds-end ds-gap-2">
+    <p-button size="small" severity="secondary" variant="text" label="Annuler" (click)="abort.emit()" />
+    <p-button size="small" type="submit" label="Ajouter" [disabled]="!title.trim()" />
+  </div>
+</form>

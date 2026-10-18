@@ -4,6 +4,7 @@ import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { AvatarModule } from 'primeng/avatar';
 import { AuthFormField, CreateUserFormModel, SignInFormModel } from './auth.form';
 import { ReactiveFormsModule } from '@angular/forms';
 import { SessionStore } from '../../chore/stores/session.store';
@@ -16,11 +17,13 @@ export enum AuthMode {
 
 @Component({
   selector: 'app-auuthentication-page',
-  imports: [ButtonModule, CheckboxModule, InputTextModule, CardModule, ReactiveFormsModule, MessageModule],
+  imports: [ButtonModule, CheckboxModule, InputTextModule, CardModule, ReactiveFormsModule, MessageModule, AvatarModule],
   templateUrl: './auuthentication-page.html',
-  styleUrl: './auuthentication-page.css',
 })
 export class AuuthenticationPage {
+  // Carte de connexion plus aérée que les cartes standard
+  readonly cardTokens = { body: { padding: 'var(--ds-space-8) var(--ds-space-6)' } };
+
   mode = signal<AuthMode>(AuthMode.SignIn);
   AuthMode = AuthMode;
   AuthFormField = AuthFormField;

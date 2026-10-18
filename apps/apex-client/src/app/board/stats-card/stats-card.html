@@ -1,11 +1,9 @@
-<p-card class="stats-card">
-  <div class="stats-card__header" [style.--stat-color]="color()">
-    <div class="stats-card__header__icon">
-      <span class="{{ primeIcon() }}" aria-hidden="true"></span>
-    </div>
-    <div class="stats-card__header__content">
-      <span class="stats-card__header__content__value">{{ numberStat() }}</span>
-      <span class="stats-card__header__content__label">{{ statLabel() }}</span>
+<p-card>
+  <div class="ds-row ds-gap-4">
+    <p-avatar [icon]="primeIcon()" [dt]="toneTokens()" aria-hidden="true" />
+    <div class="ds-stack ds-gap-0-5">
+      <span class="ds-figure">{{ numberStat() }}</span>
+      <span class="ds-text-sm ds-text-muted">{{ statLabel() }}</span>
     </div>
   </div>
 </p-card>

@@ -39,6 +39,25 @@ export const appConfig: ApplicationConfig = {
       theme: {
         preset: DesignSystemPreset,
         options: designSystemThemeOptions
+      },
+      // Calendrier, listes et messages des composants PrimeNG en français
+      translation: {
+        firstDayOfWeek: 1,
+        dateFormat: 'dd/mm/yy',
+        dayNames: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'],
+        dayNamesShort: ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'],
+        dayNamesMin: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
+        monthNames: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
+        monthNamesShort: ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'],
+        today: "Aujourd'hui",
+        clear: 'Effacer',
+        weekHeader: 'Sem.',
+        emptyMessage: 'Aucun résultat',
+        emptyFilterMessage: 'Aucun résultat',
+        accept: 'Oui',
+        reject: 'Non',
+        choose: 'Choisir',
+        cancel: 'Annuler',
       }
     }),
     provideRouter(routes, withComponentInputBinding()),
