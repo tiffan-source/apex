@@ -15,3 +15,5 @@ export * from './lib/models/task';
 export * from './lib/models/todo-base';
 
 export * from './lib/queries/get-all-objectives-and-tasks.query';
+
+export * from './lib/internal-services/objective-internal-service';
