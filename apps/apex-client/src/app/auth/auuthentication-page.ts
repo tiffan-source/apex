@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -18,6 +18,7 @@ export enum AuthMode {
 @Component({
   selector: 'app-auuthentication-page',
   imports: [ButtonModule, CheckboxModule, InputTextModule, CardModule, ReactiveFormsModule, MessageModule, AvatarModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './auuthentication-page.html',
 })
 export class AuuthenticationPage {

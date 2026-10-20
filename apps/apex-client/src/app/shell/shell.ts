@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ToolbarModule } from 'primeng/toolbar';
@@ -11,6 +11,7 @@ import { FocusTaskStore } from '../../chore/stores/focus-task.store';
   selector: 'app-shell',
   imports: [RouterModule, ButtonModule, ToolbarModule, DividerModule],
   templateUrl: './shell.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   providers: [ObjectiveStore, DrawerStore, FocusTaskStore]
 })
 export class Shell {

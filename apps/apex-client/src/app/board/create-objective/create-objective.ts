@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { Button } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -7,13 +7,14 @@ import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { AvatarModule } from 'primeng/avatar';
 import { ReactiveFormsModule } from '@angular/forms';
-import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
+import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs';
 
 @Component({
   selector: 'app-create-objective',
   imports: [DialogModule, Button, InputTextModule, TextareaModule, ReactiveFormsModule, DatePickerModule, AvatarModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './create-objective.html',
 })
 export class CreateObjective {

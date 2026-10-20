@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Button } from 'primeng/button';
 import { CreateObjective } from './create-objective/create-objective';
 import { CardModule } from 'primeng/card';
@@ -14,6 +14,7 @@ import { FocusTaskStore } from '../../chore/stores/focus-task.store';
 @Component({
   selector: 'app-board',
   imports: [Button, CreateObjective, CardModule, DatePipe, DecimalPipe, ProgressBarModule, StatsCard, RouterLink, AvatarModule, TagModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './board.html',
 })
 export class Board {

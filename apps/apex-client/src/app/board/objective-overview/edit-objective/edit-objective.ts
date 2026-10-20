@@ -1,20 +1,21 @@
-import { Component, effect, inject, input } from '@angular/core';
+import { Component, effect, inject, input, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ObjectiveOverviewViewModel } from 'apps/apex-client/src/chore/models/objective.viewmodel';
+import { ObjectiveOverviewViewModel } from '../../../../chore/models/objective.viewmodel';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DrawerModule } from 'primeng/drawer';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
-import { DrawerStore } from 'apps/apex-client/src/chore/stores/drawer.store';
+import { DrawerStore } from '../../../../chore/stores/drawer.store';
 import { EditObjectiveFormField, EditObjectiveFormModel } from './edit-objective.form';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
-import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
+import { ObjectiveStore } from '../../../../chore/stores/objective.store';
 
 @Component({
   selector: 'app-edit-objective',
   imports: [InputTextModule, ButtonModule, DrawerModule, CardModule, SkeletonModule, ReactiveFormsModule, TextareaModule, DatePickerModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './edit-objective.html',
 })
 export class EditObjective {

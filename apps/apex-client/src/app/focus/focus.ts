@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { AvatarModule } from 'primeng/avatar';
 import { avatarTone } from '@org/design-tokens';
@@ -12,6 +12,7 @@ import { ProgressBar } from 'primeng/progressbar';
 @Component({
   selector: 'app-focus',
   imports: [DatePipe, DecimalPipe, AvatarModule, CheckboxModule, FormsModule, CardModule, ProgressBar],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './focus.html',
 })
 export class Focus {

@@ -1,6 +1,6 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
-import { ObjectiveViewModel } from 'apps/apex-client/src/chore/models/objective.viewmodel';
+import { ObjectiveViewModel } from '../../../../chore/models/objective.viewmodel';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -8,11 +8,12 @@ import { SelectModule } from 'primeng/select';
 import { EditSubObjectiveFormField, EditSubObjectiveFormModel } from './edit-sub-objective.form';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
-import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
+import { ObjectiveStore } from '../../../../chore/stores/objective.store';
 
 @Component({
   selector: 'app-edit-sub-objective',
   imports: [DialogModule, ReactiveFormsModule, ButtonModule, SelectModule, InputTextModule, TextareaModule, DatePickerModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './edit-sub-objective.html',
 })
 export class EditSubObjective {

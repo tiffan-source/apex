@@ -1,17 +1,18 @@
-import { Component, computed, effect, inject, input, OnInit, output } from '@angular/core';
-import { TaskViewModel } from 'apps/apex-client/src/chore/models/objective.viewmodel';
+import { Component, computed, effect, inject, input, OnInit, output, ChangeDetectionStrategy } from '@angular/core';
+import { TaskViewModel } from '../../../../chore/models/objective.viewmodel';
 import { EditTaskFormField, EditTaskFormModel } from './edit-task.form';
 import { DialogModule } from 'primeng/dialog';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { ImportanceValueOption, UrgencyValueOption } from 'apps/apex-client/src/chore/constants/task.constante';
+import { ImportanceValueOption, UrgencyValueOption } from '../../../../chore/constants/task.constante';
 import { InputTextModule } from 'primeng/inputtext';
-import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
+import { ObjectiveStore } from '../../../../chore/stores/objective.store';
 
 @Component({
   selector: 'app-edit-task',
   imports: [DialogModule, ReactiveFormsModule, ButtonModule, SelectModule, InputTextModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './edit-task.html',
 })
 export class EditTask {

@@ -1,16 +1,16 @@
 import { patchState, signalStore, withComputed, withHooks, withMethods, withState } from "@ngrx/signals";
 import { MessageViewModel } from "./chat.models";
-import { SessionStore } from "apps/apex-client/src/chore/stores/session.store";
+import { SessionStore } from "../../../../chore/stores/session.store";
 import { computed, inject } from "@angular/core";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { concatMap, from, map, pipe, switchMap, takeWhile, tap, timer } from "rxjs";
 import { GetConversationsQuery } from "@org/chat";
 import { tapResponse } from "@ngrx/operators";
 import { MessageMapper } from "./message.mapper";
-import { withOwnerId } from "apps/apex-client/src/chore/stores/utils/filter-auth-operation";
+import { withOwnerId } from "../../../../chore/stores/utils/filter-auth-operation";
 import { RegisteredMessage, SendMessageToAIWorkflow, ToolCall, WorkflowStateValue, WORKFLOW_READY_FOR_NEW_MESSAGE } from "@org/ai-assistant";
-import { withOptimistiqueId } from "apps/apex-client/src/chore/stores/utils/map-optimistique-id";
-import { ObjectiveStore } from "apps/apex-client/src/chore/stores/objective.store";
+import { withOptimistiqueId } from "../../../../chore/stores/utils/map-optimistique-id";
+import { ObjectiveStore } from "../../../../chore/stores/objective.store";
 
 export type ChatState = {
   messages: MessageViewModel[];

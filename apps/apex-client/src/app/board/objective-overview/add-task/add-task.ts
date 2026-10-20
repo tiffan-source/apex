@@ -1,15 +1,16 @@
-import { Component, inject, input, output} from '@angular/core';
+import { Component, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { Button } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { AddTaskFormField, AddTaskFormModel} from './add-task.form';
 import { ReactiveFormsModule } from '@angular/forms';
-import { ObjectiveStore } from 'apps/apex-client/src/chore/stores/objective.store';
-import { ImportanceValueOption, UrgencyValueOption } from 'apps/apex-client/src/chore/constants/task.constante';
+import { ObjectiveStore } from '../../../../chore/stores/objective.store';
+import { ImportanceValueOption, UrgencyValueOption } from '../../../../chore/constants/task.constante';
 
 @Component({
   selector: 'app-add-task',
   imports: [InputTextModule, Button, SelectModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './add-task.html',
 })
 export class AddTask {

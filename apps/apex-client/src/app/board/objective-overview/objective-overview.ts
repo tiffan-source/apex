@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { AddSubObjective } from './add-sub-objective/add-sub-objective';
@@ -14,13 +14,14 @@ import { ObjectiveStore } from "../../../chore/stores/objective.store"
 import { Chat } from './chat/chat';
 import { EditObjective } from "./edit-objective/edit-objective";
 import { RouterLink } from '@angular/router';
-import { ObjectiveOverviewViewModel, ObjectiveViewModel, TaskViewModel } from 'apps/apex-client/src/chore/models/objective.viewmodel';
+import { ObjectiveOverviewViewModel, ObjectiveViewModel, TaskViewModel } from '../../../chore/models/objective.viewmodel';
 import { EditTask } from "./edit-task/edit-task";
 import { EditSubObjective } from './edit-sub-objective/edit-sub-objective';
 
 @Component({
   selector: 'app-objective-overview',
   imports: [AddSubObjective, AddTask, BadgeModule, CardModule, ButtonDirective, Button, CheckboxModule, TagModule, FormsModule, Chat, EditObjective, EditTask, EditSubObjective, RouterLink, DatePipe, DecimalPipe, ProgressBarModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './objective-overview.html',
 })
 export class ObjectiveOverview {

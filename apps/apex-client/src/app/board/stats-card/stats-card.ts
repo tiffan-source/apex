@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { AvatarModule } from 'primeng/avatar';
 import { avatarTone, AvatarTone } from '@org/design-tokens';
@@ -6,6 +6,7 @@ import { avatarTone, AvatarTone } from '@org/design-tokens';
 @Component({
   selector: 'app-stats-card',
   imports: [CardModule, AvatarModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './stats-card.html',
 })
 export class StatsCard {

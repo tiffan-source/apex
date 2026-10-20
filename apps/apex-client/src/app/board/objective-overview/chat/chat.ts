@@ -1,8 +1,8 @@
-import { Component, computed, effect, ElementRef, inject, input, OnDestroy, viewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, input, OnDestroy, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { ChatStore } from './chat.store';
 import { InputTextModule } from 'primeng/inputtext';
-import { SessionStore } from 'apps/apex-client/src/chore/stores/session.store';
-import { DrawerStore } from 'apps/apex-client/src/chore/stores/drawer.store';
+import { SessionStore } from '../../../../chore/stores/session.store';
+import { DrawerStore } from '../../../../chore/stores/drawer.store';
 import { ButtonModule } from 'primeng/button';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -14,6 +14,7 @@ import { MessageModule } from 'primeng/message';
   selector: 'app-chat',
   imports: [InputTextModule, ButtonModule, FormsModule, DrawerModule, CardModule, MarkdownPipe, MessageModule],
   templateUrl: './chat.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   providers: [ChatStore],
 })
 export class Chat implements OnDestroy {

@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -18,6 +18,7 @@ const QUADRANT_SEVERITY: Record<EisenhowerCategory, 'danger' | 'warn' | 'info' |
 @Component({
   selector: 'app-quadrant',
   imports: [CardModule, CheckboxModule, TagModule, BadgeModule, FormsModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './quadrant.html',
 })
 export class Quadrant {
