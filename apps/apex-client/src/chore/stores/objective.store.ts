@@ -13,6 +13,8 @@ import { withUpdateTaskDone } from "./features/with-update-task-done";
 import { withEditObjective } from "./features/with-edit-objective";
 import { withTaskEdit } from "./features/with-task-edit";
 import { withStats } from "./features/with-stats";
+import { withObjectiveViews } from "./features/with-objective-views";
+import { withMoveTaskToQuadrant } from "./features/with-move-task-to-quadrant";
 
 export type ObjectiveState = {
   objectives: ObjectiveViewModel[];
@@ -37,6 +39,8 @@ export const ObjectiveStore = signalStore(
   withUpdateTaskDone(),
   withTaskEdit(),
   withStats(),
+  withObjectiveViews(),
+  withMoveTaskToQuadrant(),
   withHooks((store, session = inject(SessionStore)) =>({
     onInit() {
       effect(() => {

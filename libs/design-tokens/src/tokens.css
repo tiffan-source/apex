@@ -1,482 +1,69 @@
 /*
  * ============================================================================
- *  Design tokens — identité visuelle commune aux applications de productivité
+ *  La mise en page d'Apex, posée sur Empreinte — tokens
  * ============================================================================
  *
- *  Toutes les valeurs de style (couleurs, typographie, espacements, arrondis,
- *  ombres, animations, tailles…) sont définies ici et UNIQUEMENT ici.
- *  Les composants ne doivent jamais écrire de valeur en dur : ils consomment
- *  ces variables.
+ *  Empreinte (@empreinte-studio/tokens, chargé en premier par l'application)
+ *  fournit TOUT ce qui fait l'identité : couleurs Jour et Nuit (--fond,
+ *  --panneau, --encre…), typographie (manifeste, objectif, voix…), pas
+ *  (--pas-1 à --pas-16), cornes, traits, mouvement.
  *
- *  Trois niveaux, du plus brut au plus spécifique :
+ *  Ce fichier ne garde que des valeurs de MISE EN PAGE propres à Apex,
+ *  préfixées --ds- : points de rupture, largeurs, marges des panneaux,
+ *  géométrie de la conversation. Aucune couleur ici, ni en dur ni en alias :
+ *  une couleur se lit directement dans Empreinte (var(--encre-douce)).
  *
- *    1. Primitifs  (--ds-color-violet-600, --ds-space-4…)
- *       La palette brute. Ne dit rien de l'usage. À ne PAS utiliser
- *       directement dans les composants, sauf cas exceptionnel.
+ *  Les valeurs sont construites sur les pas d'Empreinte quand c'est possible ;
+ *  les rares valeurs brutes (largeurs, points de rupture) viennent des
+ *  maquettes du canvas « Apex ».
  *
- *    2. Sémantiques (--ds-color-text, --ds-color-primary…)
- *       Le rôle d'une valeur. C'est ce niveau que les composants utilisent.
- *       Le mode sombre ne redéfinit QUE ce niveau.
- *
- *    3. Composants (--ds-card-padding, --ds-dock-radius…)
- *       Réglages propres à un composant récurrent, construits à partir
- *       des tokens sémantiques.
- *
- *  Pour changer l'identité de toutes les applications, on modifie les
- *  primitifs ; pour changer le rôle d'une couleur, on modifie les sémantiques.
- *
- *  Avant toute modification : skill .claude/skills/design-system-evolution
- *  (niveau, nommage, mode sombre, journal CHANGELOG.md, version).
- *  Les règles sont vérifiées par `npx nx lint design-tokens`, y compris le
- *  contraste WCAG AA des couples texte / fond en clair et en sombre.
+ *  Contrôlé par `npx nx lint design-tokens` (tools/design-system/check.mjs).
+ *  Modifier : skill .claude/skills/design-system-evolution.
  */
 
-/* ============================================================================
- *  1. PRIMITIFS
- * ========================================================================== */
 :root {
-  /* --- Neutres (base de toutes les surfaces et de tous les textes) -------- */
-  --ds-color-gray-0: #ffffff;
-  --ds-color-gray-50: #f8f9fb;
-  --ds-color-gray-100: #f2f3f6;
-  --ds-color-gray-200: #e5e7eb;
-  --ds-color-gray-300: #d1d5db;
-  --ds-color-gray-400: #9ca3af;
-  --ds-color-gray-500: #626977;
-  --ds-color-gray-600: #4b5563;
-  --ds-color-gray-700: #374151;
-  --ds-color-gray-800: #2d323c;
-  --ds-color-gray-900: #1b1e25;
-  --ds-color-gray-950: #111318;
-
-  /* --- Vert (couleur d'action principale) --------------------------------- */
-  --ds-color-green-50: #ecfdf5;
-  --ds-color-green-100: #d1fae5;
-  --ds-color-green-200: #a7f3d0;
-  --ds-color-green-300: #6ee7b7;
-  --ds-color-green-400: #34d399;
-  --ds-color-green-500: #10b981;
-  --ds-color-green-600: #059669;
-  --ds-color-green-700: #047857;
-  --ds-color-green-800: #065f46;
-  --ds-color-green-900: #064e3b;
-  --ds-color-green-950: #022c22;
-
-  /* --- Violet (couleur de marque : objectifs, focus) ---------------------- */
-  --ds-color-violet-50: #f6f4fe;
-  --ds-color-violet-100: #eeebfa;
-  --ds-color-violet-200: #ddd6f6;
-  --ds-color-violet-300: #c3b7f2;
-  --ds-color-violet-400: #a998f0;
-  --ds-color-violet-500: #7c62e0;
-  --ds-color-violet-600: #593bce;
-  --ds-color-violet-700: #4a2fb0;
-  --ds-color-violet-800: #3c278c;
-  --ds-color-violet-900: #2a2447;
-  --ds-color-violet-950: #1a1530;
-
-  /* --- Sarcelle (réussite, tâches terminées) ------------------------------ */
-  --ds-color-teal-50: #f0fdfa;
-  --ds-color-teal-100: #ccfbf1;
-  --ds-color-teal-200: #99f6e4;
-  --ds-color-teal-300: #5eead4;
-  --ds-color-teal-400: #2dd4bf;
-  --ds-color-teal-500: #14b8a6;
-  --ds-color-teal-600: #0d9488;
-  --ds-color-teal-700: #0f766e;
-  --ds-color-teal-800: #115e59;
-  --ds-color-teal-900: #134e4a;
-  --ds-color-teal-950: #042f2e;
-
-  /* --- Orange (avertissement, urgence) ------------------------------------ */
-  --ds-color-orange-50: #fff7ed;
-  --ds-color-orange-100: #ffedd5;
-  --ds-color-orange-200: #fed7aa;
-  --ds-color-orange-300: #fdba74;
-  --ds-color-orange-400: #fb923c;
-  --ds-color-orange-500: #f97316;
-  --ds-color-orange-600: #ea580c;
-  --ds-color-orange-700: #c2410c;
-  --ds-color-orange-800: #9a3412;
-  --ds-color-orange-900: #7c2d12;
-  --ds-color-orange-950: #431407;
-
-  /* --- Jaune (déléguer) ---------------------------------------------------- */
-  --ds-color-yellow-50: #fefce8;
-  --ds-color-yellow-100: #fef9c3;
-  --ds-color-yellow-200: #fef08a;
-  --ds-color-yellow-300: #fde047;
-  --ds-color-yellow-400: #facc15;
-  --ds-color-yellow-500: #eab308;
-  --ds-color-yellow-600: #ca8a04;
-  --ds-color-yellow-700: #a16207;
-  --ds-color-yellow-800: #854d0e;
-  --ds-color-yellow-900: #713f12;
-  --ds-color-yellow-950: #422006;
-
-  /* --- Rouge (danger, à faire tout de suite) ------------------------------ */
-  --ds-color-red-50: #fef2f2;
-  --ds-color-red-100: #fee2e2;
-  --ds-color-red-200: #fecaca;
-  --ds-color-red-300: #fca5a5;
-  --ds-color-red-400: #f87171;
-  --ds-color-red-500: #ef4444;
-  --ds-color-red-600: #dc2626;
-  --ds-color-red-700: #b91c1c;
-  --ds-color-red-800: #991b1b;
-  --ds-color-red-900: #7f1d1d;
-  --ds-color-red-950: #450a0a;
-
-  /* --- Fuchsia (planifier) ------------------------------------------------- */
-  --ds-color-fuchsia-50: #fdf4ff;
-  --ds-color-fuchsia-100: #fae8ff;
-  --ds-color-fuchsia-200: #f5d0fe;
-  --ds-color-fuchsia-300: #f0abfc;
-  --ds-color-fuchsia-400: #e879f9;
-  --ds-color-fuchsia-500: #d946ef;
-  --ds-color-fuchsia-600: #c026d3;
-  --ds-color-fuchsia-700: #a21caf;
-  --ds-color-fuchsia-800: #86198f;
-  --ds-color-fuchsia-900: #701a75;
-  --ds-color-fuchsia-950: #4a044e;
-
-  /* --- Rose (mise en avant : focus du jour) -------------------------------- */
-  --ds-color-pink-50: #fdf2f8;
-  --ds-color-pink-100: #fce7f3;
-  --ds-color-pink-200: #fbcfe8;
-  --ds-color-pink-300: #f9a8d4;
-  --ds-color-pink-400: #f472b6;
-  --ds-color-pink-500: #ec4899;
-  --ds-color-pink-600: #db2777;
-  --ds-color-pink-700: #be185d;
-  --ds-color-pink-800: #9d174d;
-  --ds-color-pink-900: #831843;
-  --ds-color-pink-950: #500724;
-
-  /* --- Bleu ciel (liens, information) -------------------------------------- */
-  --ds-color-sky-50: #f0f9ff;
-  --ds-color-sky-100: #e0f2fe;
-  --ds-color-sky-200: #bae6fd;
-  --ds-color-sky-300: #7dd3fc;
-  --ds-color-sky-400: #38bdf8;
-  --ds-color-sky-500: #0ea5e9;
-  --ds-color-sky-600: #0284c7;
-  --ds-color-sky-700: #0369a1;
-  --ds-color-sky-800: #075985;
-  --ds-color-sky-900: #0c4a6e;
-  --ds-color-sky-950: #082f49;
-
-  /* --- Typographie --------------------------------------------------------- */
-  --ds-font-family-base:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-
-  --ds-font-size-2xs: 0.6875rem; /* 11px */
-  --ds-font-size-xs: 0.75rem; /* 12px */
-  --ds-font-size-sm: 0.875rem; /* 14px */
-  --ds-font-size-md: 1rem; /* 16px */
-  --ds-font-size-lg: 1.125rem; /* 18px */
-  --ds-font-size-xl: 1.25rem; /* 20px */
-  --ds-font-size-2xl: 1.5rem; /* 24px */
-  --ds-font-size-3xl: 1.75rem; /* 28px */
-  --ds-font-size-4xl: 2rem; /* 32px */
-  --ds-font-size-5xl: 2.5rem; /* 40px */
-
-  --ds-font-weight-regular: 400;
-  --ds-font-weight-medium: 500;
-  --ds-font-weight-semibold: 600;
-  --ds-font-weight-bold: 700;
-
-  --ds-line-height-tight: 1.2;
-  --ds-line-height-snug: 1.35;
-  --ds-line-height-normal: 1.5;
-
-  --ds-letter-spacing-normal: 0;
-  --ds-letter-spacing-wide: 0.04em;
-
-  /* --- Espacements (base 4px) ---------------------------------------------- */
-  --ds-space-0: 0;
-  --ds-space-0-5: 0.125rem; /* 2px */
-  --ds-space-1: 0.25rem; /* 4px */
-  --ds-space-1-5: 0.375rem; /* 6px */
-  --ds-space-2: 0.5rem; /* 8px */
-  --ds-space-2-5: 0.625rem; /* 10px */
-  --ds-space-3: 0.75rem; /* 12px */
-  --ds-space-4: 1rem; /* 16px */
-  --ds-space-5: 1.25rem; /* 20px */
-  --ds-space-6: 1.5rem; /* 24px */
-  --ds-space-8: 2rem; /* 32px */
-  --ds-space-10: 2.5rem; /* 40px */
-  --ds-space-12: 3rem; /* 48px */
-  --ds-space-16: 4rem; /* 64px */
-
-  /* --- Tailles (largeurs, hauteurs, icônes) -------------------------------- */
-  --ds-size-1-5: 0.375rem; /* 6px  */
-  --ds-size-2: 0.5rem; /* 8px  */
-  --ds-size-10: 2.5rem; /* 40px */
-  --ds-size-14: 3.5rem; /* 56px */
-  --ds-size-16: 4rem; /* 64px */
-  --ds-size-28: 7rem; /* 112px */
-  --ds-size-40: 10rem; /* 160px */
-  --ds-size-48: 12rem; /* 192px */
-  --ds-size-64: 16rem; /* 256px */
-  --ds-size-80: 20rem; /* 320px */
-  --ds-size-104: 26rem; /* 416px */
-  --ds-size-160: 40rem; /* 640px */
-  --ds-size-192: 48rem; /* 768px */
-  --ds-size-300: 75rem; /* 1200px */
-
-  /* --- Arrondis ------------------------------------------------------------ */
-  --ds-radius-none: 0;
-  --ds-radius-xs: 0.125rem; /* 2px */
-  --ds-radius-sm: 0.25rem; /* 4px */
-  --ds-radius-md: 0.5rem; /* 8px */
-  --ds-radius-lg: 0.75rem; /* 12px */
-  --ds-radius-xl: 1rem; /* 16px */
-  --ds-radius-2xl: 1.25rem; /* 20px */
-  --ds-radius-full: 9999px;
-
-  /* --- Bordures ------------------------------------------------------------ */
-  --ds-border-width-thin: 1px;
-  --ds-border-width-medium: 2px;
-  --ds-border-width-thick: 4px;
-
-  /* --- Opacités ------------------------------------------------------------ */
-  --ds-opacity-faint: 0.08;
-  --ds-opacity-muted: 0.3;
-  --ds-opacity-disabled: 0.6;
-
-  /* --- Animations ---------------------------------------------------------- */
-  --ds-duration-fast: 150ms;
-  --ds-duration-normal: 250ms;
-  --ds-duration-slow: 400ms;
-  --ds-duration-loop: 1200ms;
-  --ds-easing-standard: ease;
-  --ds-easing-in-out: ease-in-out;
-
-  /* --- Ombres : géométrie et teintes -------------------------------------- */
-  --ds-shadow-geometry-sm: 0 0.125rem 0.25rem;
-  --ds-shadow-geometry-md: 0 0.5rem 1.25rem;
-  --ds-shadow-geometry-lg: 0 0.5rem 1.5rem;
-  --ds-color-black-alpha-8: rgb(0 0 0 / 0.08);
-  --ds-color-black-alpha-12: rgb(0 0 0 / 0.12);
-  --ds-color-black-alpha-35: rgb(0 0 0 / 0.35);
-  --ds-color-black-alpha-50: rgb(0 0 0 / 0.5);
-
-  /* --- Profondeur (z-index) ------------------------------------------------ */
-  --ds-z-base: 0;
-  --ds-z-raised: 10;
-  --ds-z-sticky: 100;
-  /* Les overlays PrimeNG (dialog, drawer, toast) gèrent leur propre z-index (≥ 1000) */
-
-  /*
-   * --- Points de rupture ---------------------------------------------------
-   * Les variables CSS ne sont pas utilisables dans @media : ces valeurs servent
-   * de référence (et au JavaScript). Dans les feuilles de style, recopier la
-   * valeur exacte avec un commentaire qui cite le token.
+  /* --- Points de rupture ---------------------------------------------------
+   * Les variables CSS ne fonctionnent pas dans @media : layout.css recopie la
+   * valeur exacte, précédée d'un commentaire qui cite le token, et index.ts
+   * l'exporte pour BreakpointObserver (DS_BREAKPOINTS). Les trois doivent
+   * rester égaux : le contrôle le vérifie.
    */
-  --ds-breakpoint-sm: 640px;
-  --ds-breakpoint-md: 768px;
-  --ds-breakpoint-lg: 1024px;
-  --ds-breakpoint-xl: 1280px;
-}
+  --ds-breakpoint-sm: 760px; /* mobile : la coque d'Empreinte passe la navigation en haut */
+  --ds-breakpoint-md: 900px; /* les grilles de 2 ou 3 panneaux passent à une colonne */
+  --ds-breakpoint-lg: 1100px; /* les panneaux asymétriques (2fr/1fr, 7fr/6fr) passent à une colonne */
 
-/* ============================================================================
- *  2. SÉMANTIQUES — mode clair
- * ========================================================================== */
-:root {
-  color-scheme: light;
+  /* --- Pas intermédiaires ---------------------------------------------------
+   * L'échelle d'Empreinte (--pas-1 = 4px … --pas-16 = 64px) saute certaines
+   * valeurs que les maquettes emploient. Même numérotation : N × 4px.
+   */
+  --ds-space-0-5: calc(var(--pas-1) / 2); /* 2px : entre un intitulé et son détail */
+  --ds-space-5: calc(var(--pas-4) + var(--pas-1)); /* 20px */
+  --ds-space-7: calc(var(--pas-6) + var(--pas-1)); /* 28px */
+  --ds-space-10: calc(var(--pas-8) + var(--pas-2)); /* 40px */
 
-  /* --- Fonds et surfaces --------------------------------------------------- */
-  --ds-color-bg: var(--ds-color-gray-100);
-  --ds-color-surface: var(--ds-color-gray-0);
-  --ds-color-surface-muted: var(--ds-color-gray-50);
-  --ds-color-surface-hover: var(--ds-color-gray-100);
-  --ds-color-shadow: var(--ds-color-black-alpha-8);
-  --ds-color-shadow-strong: var(--ds-color-black-alpha-12);
+  /* --- Largeurs ------------------------------------------------------------- */
+  --ds-page-max-width: 1120px; /* contenu d'une page, comme e-coque__contenu */
+  --ds-page-title-basis: 480px; /* sous cette largeur, l'action d'un en-tête passe sous le titre */
+  --ds-measure: 760px; /* longueur de ligne confortable : en-tête, phrases d'Akari */
+  --ds-narrow-width: 440px; /* bloc étroit centré : connexion */
+  --ds-grid-min-width: 280px; /* colonne minimale de la grille automatique */
+  --ds-arete-min-width: 640px; /* sous cette largeur, l'arête défile au lieu de rétrécir (maquette Arête) */
+  --ds-screen-height: 100dvh; /* hauteur d'un écran plein, barre d'adresse mobile comprise */
 
-  /* --- Textes -------------------------------------------------------------- */
-  --ds-color-text: var(--ds-color-gray-800);
-  --ds-color-text-muted: var(--ds-color-gray-500);
-  --ds-color-text-subtle: var(--ds-color-gray-400);
-  --ds-color-text-inverse: var(--ds-color-gray-0);
-  --ds-color-link: var(--ds-color-sky-700);
+  /* --- Panneaux de la trame ------------------------------------------------- */
+  --ds-panel-padding-block: var(--ds-space-7);
+  --ds-panel-padding-inline: var(--pas-8);
+  --ds-panel-padding-block-mobile: var(--pas-6);
+  --ds-panel-padding-inline-mobile: var(--ds-space-5);
 
-  /* --- Bordures ------------------------------------------------------------ */
-  --ds-color-border: var(--ds-color-gray-200);
-  --ds-color-border-strong: var(--ds-color-gray-300);
+  /* --- Repères de ligne ----------------------------------------------------- */
+  --ds-check-lead: 20px; /* colonne de la case : largeur de e-case d'Empreinte */
+  --ds-entry-lead: var(--ds-space-7); /* colonne du numéro d'une étape */
 
-  /* --- Action principale (boutons, liens d'action) ------------------------- */
-  --ds-color-primary: var(--ds-color-green-700);
-  --ds-color-primary-hover: var(--ds-color-green-800);
-  --ds-color-primary-active: var(--ds-color-green-900);
-  --ds-color-primary-contrast: var(--ds-color-gray-0);
-  --ds-color-primary-soft: var(--ds-color-green-50);
-  --ds-color-focus-ring: var(--ds-color-green-600);
-
-  /* --- Marque (objectifs, progression, focus) ------------------------------ */
-  --ds-color-accent: var(--ds-color-violet-600);
-  --ds-color-accent-soft: var(--ds-color-violet-100);
-
-  /* --- Statuts ------------------------------------------------------------- */
-  --ds-color-success: var(--ds-color-teal-700);
-  --ds-color-success-soft: var(--ds-color-teal-50);
-  --ds-color-warning: var(--ds-color-yellow-700);
-  --ds-color-warning-soft: var(--ds-color-yellow-50);
-  --ds-color-danger: var(--ds-color-red-700);
-  --ds-color-danger-soft: var(--ds-color-red-50);
-  --ds-color-info: var(--ds-color-sky-700);
-  --ds-color-info-soft: var(--ds-color-sky-50);
-  --ds-color-highlight: var(--ds-color-pink-700);
-  --ds-color-highlight-soft: var(--ds-color-pink-50);
-
-  /* Matrice d'Eisenhower : pas de token dédié. Les quadrants et les étiquettes
-   * utilisent les sévérités PrimeNG (Faire = danger, Déléguer = warn,
-   * Planifier = info, Éliminer = secondary), donc les statuts ci-dessus. */
-
-  /* --- Typographie sémantique ---------------------------------------------- */
-  --ds-text-body-size: var(--ds-font-size-md);
-  --ds-text-small-size: var(--ds-font-size-sm);
-  --ds-text-caption-size: var(--ds-font-size-xs);
-  --ds-text-title-size: var(--ds-font-size-3xl);
-  --ds-text-heading-size: var(--ds-font-size-lg);
-  --ds-text-subheading-size: var(--ds-font-size-md);
-
-  /* --- Ombres -------------------------------------------------------------- */
-  /* Le mode sombre n'a qu'à changer les teintes : la géométrie est partagée */
-  --ds-shadow-sm: var(--ds-shadow-geometry-sm) var(--ds-color-shadow);
-  --ds-shadow-md: var(--ds-shadow-geometry-md) var(--ds-color-shadow);
-  --ds-shadow-lg: var(--ds-shadow-geometry-lg) var(--ds-color-shadow-strong);
-}
-
-/* ============================================================================
- *  2 bis. SÉMANTIQUES — mode sombre (suit le réglage du système)
- *  Seul ce niveau change : primitifs et composants restent identiques.
- * ========================================================================== */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-
-    --ds-color-bg: var(--ds-color-gray-950);
-    --ds-color-surface: var(--ds-color-gray-900);
-    --ds-color-surface-muted: var(--ds-color-gray-950);
-    --ds-color-surface-hover: var(--ds-color-gray-800);
-    --ds-color-shadow: var(--ds-color-black-alpha-35);
-    --ds-color-shadow-strong: var(--ds-color-black-alpha-50);
-
-    --ds-color-text: var(--ds-color-gray-200);
-    --ds-color-text-muted: var(--ds-color-gray-400);
-    --ds-color-text-subtle: var(--ds-color-gray-500);
-    --ds-color-text-inverse: var(--ds-color-gray-950);
-    --ds-color-link: var(--ds-color-sky-300);
-
-    --ds-color-border: var(--ds-color-gray-800);
-    --ds-color-border-strong: var(--ds-color-gray-700);
-
-    --ds-color-primary: var(--ds-color-green-400);
-    --ds-color-primary-hover: var(--ds-color-green-300);
-    --ds-color-primary-active: var(--ds-color-green-200);
-    --ds-color-primary-contrast: var(--ds-color-gray-950);
-    --ds-color-primary-soft: color-mix(
-      in srgb,
-      var(--ds-color-green-500) 16%,
-      var(--ds-color-gray-900)
-    );
-    --ds-color-focus-ring: var(--ds-color-green-400);
-
-    --ds-color-accent: var(--ds-color-violet-400);
-    --ds-color-accent-soft: var(--ds-color-violet-900);
-
-    --ds-color-success: var(--ds-color-teal-300);
-    --ds-color-success-soft: color-mix(
-      in srgb,
-      var(--ds-color-teal-500) 14%,
-      var(--ds-color-gray-900)
-    );
-    --ds-color-warning: var(--ds-color-yellow-300);
-    --ds-color-warning-soft: color-mix(
-      in srgb,
-      var(--ds-color-yellow-500) 14%,
-      var(--ds-color-gray-900)
-    );
-    --ds-color-danger: var(--ds-color-red-300);
-    --ds-color-danger-soft: color-mix(
-      in srgb,
-      var(--ds-color-red-500) 14%,
-      var(--ds-color-gray-900)
-    );
-    --ds-color-info: var(--ds-color-sky-300);
-    --ds-color-info-soft: color-mix(
-      in srgb,
-      var(--ds-color-sky-500) 14%,
-      var(--ds-color-gray-900)
-    );
-    --ds-color-highlight: var(--ds-color-pink-300);
-    --ds-color-highlight-soft: color-mix(
-      in srgb,
-      var(--ds-color-pink-500) 14%,
-      var(--ds-color-gray-900)
-    );
-  }
-}
-
-/* ============================================================================
- *  3. COMPOSANTS
- * ========================================================================== */
-:root {
-  /* --- Mise en page -------------------------------------------------------- */
-  --ds-layout-content-max-width: var(--ds-size-300);
-  --ds-layout-page-padding: var(--ds-space-8);
-  --ds-layout-page-padding-mobile: var(--ds-space-4);
-  --ds-layout-grid-gap: var(--ds-space-4);
-
-  /* Largeurs minimales des colonnes de grilles adaptatives */
-  --ds-layout-grid-min-stat: var(--ds-size-48);
-  --ds-layout-grid-min-card: var(--ds-size-64);
-  --ds-layout-grid-min-panel: var(--ds-size-80);
-  --ds-layout-grid-min-field: var(--ds-size-40);
-
-  /* --- Carte --------------------------------------------------------------- */
-  --ds-card-padding: var(--ds-space-3);
-  --ds-card-radius: var(--ds-radius-lg);
-  --ds-card-shadow: var(--ds-shadow-sm);
-
-  /* --- Pastille d'icône (p-avatar : stats, cartes d'objectif, logo) -------- */
-  --ds-icon-box-size: var(--ds-size-10);
-  --ds-icon-box-radius: var(--ds-radius-md);
-
-  /* --- Barre de progression ------------------------------------------------ */
-  --ds-progress-height: var(--ds-size-1-5);
-
-  /* --- Ligne de liste cliquable -------------------------------------------- */
-  --ds-list-row-padding-y: var(--ds-space-2-5);
-  --ds-list-row-padding-x: var(--ds-space-2);
-  --ds-list-row-radius: var(--ds-radius-md);
-
-  /* --- Barre de navigation flottante (dock) -------------------------------- */
-  --ds-dock-offset: var(--ds-space-6);
-  --ds-dock-offset-mobile: var(--ds-space-3);
-  --ds-dock-padding: var(--ds-space-1-5);
-  --ds-dock-radius: var(--ds-radius-2xl);
-  --ds-dock-reserved-space: var(--ds-size-28);
-  --ds-dock-z-index: var(--ds-z-raised);
-
-  /* --- Modales et tiroirs -------------------------------------------------- */
-  --ds-dialog-width: var(--ds-size-160);
-  --ds-dialog-width-mobile: 92vw;
-  --ds-drawer-width: var(--ds-size-160);
-  --ds-drawer-width-wide: var(--ds-size-192);
-  --ds-auth-card-width: var(--ds-size-104);
-
-  /* --- Anneau de focus (accessibilité clavier) ----------------------------- */
-  --ds-focus-ring-width: var(--ds-border-width-medium);
-  --ds-focus-ring-offset: var(--ds-space-0-5);
-
-  /* --- Conversation (assistant IA) ----------------------------------------- */
-  --ds-chat-bubble-max-width: 60%;
-  --ds-chat-bubble-min-width: 20%;
-  --ds-chat-bubble-background: var(--ds-color-surface-hover);
-
-  /* --- Quadrants de la matrice --------------------------------------------- */
-  --ds-matrix-quadrant-min-height: var(--ds-size-48);
+  /* --- Conversation avec Akari --------------------------------------------- */
+  --ds-conversation-gap: var(--ds-space-7);
+  --ds-reply-author-width: calc(var(--pas-12) * 2); /* 96px : colonne du nom */
+  /* Décalage du nom de la personne pour s'aligner sur celui d'Akari, écrit après
+     son losange (e-note__qui : losange de 7px, puis un écart de --pas-2). */
+  --ds-reply-author-indent: calc(7px + var(--pas-2));
 }

@@ -1,7 +1,7 @@
 import { signalStoreFeature, withComputed } from "@ngrx/signals";
 import { ObjectiveState } from "../objective.store";
 import { ApexLibsMetier, EisenhowerCategory } from "@org/apex-library";
-import { TaskViewModel, TaskViewModelWithCategory, TaskViewModelWithCategoryAndObjectiveTitle } from "../../models/objective.viewmodel";
+import { TaskViewModelWithCategoryAndObjectiveTitle } from "../../models/objective.viewmodel";
 import { computed } from "@angular/core";
 import { type } from "@ngrx/signals";
 import { ObjectiveMapper } from "../../mapper/objective.mapper";
@@ -19,10 +19,10 @@ export function withTaskEisenhowerSeparate(){
         };
 
         for (const task of tasks()) {
-          let category: EisenhowerCategory = ApexLibsMetier.getEisenhowerCategory({...task});
+          const category: EisenhowerCategory = ApexLibsMetier.getEisenhowerCategory({...task});
           categories[category].push({
             ...ObjectiveMapper.fromTaskViewModelToCategorizedTaskViewModel(task),
-            objectiveTitle: objectives().find(obj => obj.id === task.objectiveId)?.title || 'This is a task without objective',
+            objectiveTitle: objectives().find(obj => obj.id === task.objectiveId)?.title || 'Objectif inconnu',
           });
         }
 

@@ -1,26 +1,10 @@
 import { CreateObjectiveOutput, ObjectiveOutput, TaskOutput, GetAllObjectiveAndTaskOutput, WhatIsTodayFocusOutput } from "@org/objective";
-import { ObjectiveOverviewViewModel, ObjectiveViewModel, ObjectiveWithProgressViewModel, TaskViewModel, TaskViewModelWithCategory, EisenhowerSeverity } from "../models/objective.viewmodel";
-import { ApexLibsMetier, EisenhowerCategory } from "@org/apex-library"
+import { ObjectiveOverviewViewModel, ObjectiveViewModel, ObjectiveWithProgressViewModel, TaskViewModel, TaskViewModelWithCategory } from "../models/objective.viewmodel";
+import { ApexLibsMetier } from "@org/apex-library"
 import { ObjectiveState } from "../stores/objective.store";
 
 
 export class ObjectiveMapper {
-
-  private static mapCategoryToPrimeNgSeverity(
-    category: EisenhowerCategory
-  ): EisenhowerSeverity {
-    // Même sévérité que le quadrant de la matrice : étiquettes et quadrants concordent
-    switch (category) {
-      case EisenhowerCategory.DO:
-        return 'danger';
-      case EisenhowerCategory.DELEGATE:
-        return 'warn';
-      case EisenhowerCategory.SCHEDULE:
-        return 'info';
-      case EisenhowerCategory.DELETE:
-        return 'secondary';
-    }
-  }
 
   private static toTaskViewModel(task: TaskOutput): TaskViewModel {
     return {
@@ -102,15 +86,12 @@ export class ObjectiveMapper {
 
   public static fromTaskViewModelToCategorizedTaskViewModel(task: TaskViewModel): TaskViewModelWithCategory {
 
-    const category = ApexLibsMetier.getEisenhowerCategory({
-      importance: task.importance,
-      urgency: task.urgency,
-    });
-
     return {
       ...task,
-      category,
-      primNgSeverity: ObjectiveMapper.mapCategoryToPrimeNgSeverity(category),
+      category: ApexLibsMetier.getEisenhowerCategory({
+        importance: task.importance,
+        urgency: task.urgency,
+      }),
     };
   }
 

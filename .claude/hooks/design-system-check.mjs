@@ -19,8 +19,9 @@ import { relative, resolve, sep } from 'node:path';
 const FRONTEND_PATHS = ['apps', 'libs/design-tokens', 'tools/design-system'];
 const FRONTEND = new RegExp(`^(?:${FRONTEND_PATHS.join('|')})/`);
 const GUIDANCE =
-  'Corrige ces violations en suivant le skill frontend-ui (interface) ou design-system-evolution ' +
-  "(design system). Ne contourne pas le contrôle et ne l'affaiblis pas.";
+  'Corrige ces violations en suivant le skill frontend-ui (écrans : composants Empreinte, styles ' +
+  'typographiques, classes .ds-*) ou design-system-evolution (couche de mise en page d’Apex ; Empreinte ' +
+  "se change en amont, jamais par une surcharge locale). Ne contourne pas le contrôle et ne l'affaiblis pas.";
 
 let input = {};
 try {
@@ -57,7 +58,10 @@ if (input.hook_event_name === 'PostToolUse') {
   const { ok, report } = runCheck();
   if (ok) process.exit(0);
   process.stderr.write(
-    `Contrôle du design system après la modification de ${path} : des règles ne sont pas respectées.\n${GUIDANCE}\n\n${report}\n`,
+    `Contrôle du design system après la modification de ${path} : des règles ne sont pas respectées.\n${GUIDANCE} ` +
+      "Corrige d'abord ce qui relève de ton travail ; des violations dans des fichiers que tu n'as pas touchés " +
+      "(écrans pas encore migrés vers Empreinte) se signalent à l'utilisateur.\n\n" +
+      `${report}\n`,
   );
   process.exit(2);
 }

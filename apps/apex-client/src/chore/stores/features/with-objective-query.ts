@@ -7,6 +7,8 @@ import { from, pipe, switchMap, tap } from "rxjs";
 import { tapResponse } from "@ngrx/operators";
 import { ObjectiveState } from "../objective.store";
 import { RequestStatusState } from "../utils/loading-feature";
+import { AnnoncesStore } from "../annonces.store";
+import { failureReport } from "../../constants/messages.constante";
 
 export function withObjectiveQuery() {
   return signalStoreFeature(
@@ -14,7 +16,7 @@ export function withObjectiveQuery() {
     withComputed(({objectives, tasks}) => ({
       mainObjectivesWithProgress: computed(() => ObjectiveMapper.toObjectivesWithProgress(objectives(), tasks())),
     })),
-    withMethods((store, objectiveService = inject(GetAllObjectiveAndTaskQuery)) => ({
+    withMethods((store, objectiveService = inject(GetAllObjectiveAndTaskQuery), annonces = inject(AnnoncesStore)) => ({
       loadObjectives: rxMethod<{ ownerId: string }>(
         pipe(
           tap(() => patchState(store, { requestStatus: "pending" })),
@@ -24,7 +26,9 @@ export function withObjectiveQuery() {
                 next: (data) => patchState(store, { ...ObjectiveMapper.fromLoadToObjectiveViewModels(data), requestStatus: "fulfilled" }),
                 error: (error)=>{
                   console.error(error);
-                  patchState(store, { requestStatus: {error: "Failed to load objectives"} });
+                  const report = failureReport('loadObjectives');
+                  annonces.signaler(report);
+                  patchState(store, { requestStatus: { error: report } });
                 },
               })
             )

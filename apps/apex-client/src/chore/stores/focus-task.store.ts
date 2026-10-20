@@ -6,8 +6,8 @@ import { rxMethod } from "@ngrx/signals/rxjs-interop"
 import { from, pipe, switchMap, tap } from "rxjs"
 import { WhatIsTodayFocusUsecase } from "@org/objective"
 import { tapResponse } from "@ngrx/operators"
-import { MessageService } from "primeng/api"
-import { ObjectiveMapper } from "../mapper/objective.mapper"
+import { AnnoncesStore } from "./annonces.store"
+import { failureReport } from "../constants/messages.constante"
 import { ObjectiveStore } from "./objective.store"
 
 export type FocusTaskState = {
@@ -25,14 +25,15 @@ export const FocusTaskStore = signalStore(
   withComputed((store, objectiveStore = inject(ObjectiveStore))=>({
     tasksWithObjective: computed(()=>{
       const objectives = objectiveStore.objectives();
-      return store.tasksId().map((taskId)=>{
-        const task = objectiveStore.tasks().find((t)=>t.id === taskId) as TaskViewModel;
-        const objective = objectives.find((obj)=>obj.id === task.objectiveId);
-        return {
+      const tasks = objectiveStore.tasks();
+      // Les pas du jour peuvent arriver avant les objectifs : un pas pas encore chargé est ignoré
+      return store.tasksId()
+        .map((taskId)=>tasks.find((t)=>t.id === taskId))
+        .filter((task): task is TaskViewModel => task !== undefined)
+        .map((task)=>({
           ...task,
-          objectiveTitle: objective?.title || "Objectif inconnu"
-        }
-      })
+          objectiveTitle: objectives.find((obj)=>obj.id === task.objectiveId)?.title || "Objectif inconnu"
+        }))
     }),
     taskTotal: computed(()=>{
       return store.tasksId().length;
@@ -41,13 +42,13 @@ export const FocusTaskStore = signalStore(
   })),
   withComputed((store) =>({
     taskDone: computed(()=>{
-      let tasksWithObjective = store.tasksWithObjective();
+      const tasksWithObjective = store.tasksWithObjective();
       return tasksWithObjective.filter((task)=>task.done).length;
     })
   })),
   withMethods((store,
     focusUsecase = inject(WhatIsTodayFocusUsecase),
-    messageService = inject(MessageService),
+    annonces = inject(AnnoncesStore),
   )=>({
     loadFocusTask: rxMethod<{userId: string}>(
       pipe(
@@ -59,13 +60,13 @@ export const FocusTaskStore = signalStore(
               if(data.success) {
                 patchState(store, {tasksId: data.data.map((t)=>t.id), loading: false})
               }else{
-                messageService.add({severity: 'error', summary: 'Erreur', detail: "Impossible de charger les taches du jour"})
+                annonces.signaler(failureReport('loadFocus', data.error.code))
               }
               patchState(store, {loading: false})
             },
             error: (error)=>{
               console.error(error);
-              messageService.add({severity: 'error', summary: 'Erreur', detail: "Impossible de charger les taches du jour"})
+              annonces.signaler(failureReport('loadFocus'))
               patchState(store, {loading: false})
             }
           })

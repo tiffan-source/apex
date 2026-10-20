@@ -1,383 +1,682 @@
 /*
  * ============================================================================
- *  Base et mise en page — ce que PrimeNG ne fournit pas
+ *  La mise en page d'Apex, posée sur Empreinte — classes .ds-*
  * ============================================================================
  *
- *  PrimeNG habille les composants (via le preset), mais ne gère ni la remise à
- *  zéro du navigateur, ni la mise en page (lignes, colonnes, grilles).
- *  Ce fichier couvre uniquement ces deux besoins, avec des classes utilitaires
- *  préfixées .ds- et construites sur les tokens. Les applications ne devraient
- *  avoir besoin d'aucune autre feuille de style.
+ *  Empreinte dessine (composants e-*, typographie, couleurs, focus, page) ;
+ *  ce fichier ne fait QUE placer : empiler, aligner, mettre en grille,
+ *  composer la trame de panneaux des maquettes. Il ne recrée jamais
+ *  l'apparence d'un composant d'Empreinte (bouton, carte, case…), ne touche
+ *  ni à la typographie ni aux formes.
  *
- *  Charger après tokens.css. Ajouter une classe : skill
- *  .claude/skills/design-system-evolution (recette D).
+ *  Règles (vérifiées par `npx nx lint design-tokens`) :
+ *  - chaque règle part d'une classe .ds-* ; une classe e-* ou un élément ne se
+ *    cible que sous une .ds-* ;
+ *  - valeurs en tokens d'Empreinte (var(--pas-4), var(--trame)…) ou --ds-*
+ *    (tokens.css), plus 0, %, fr, nombres sans unité et mots-clés CSS ;
+ *  - media queries : valeur exacte d'un --ds-breakpoint-*, annoncée par le
+ *    commentaire du token juste au-dessus ;
+ *  - l'ordre compte : à spécificité égale, la règle la plus basse l'emporte.
+ *    D'où l'ordre : conteneurs, compositions, modificateurs, puis responsive.
+ *
+ *  Charger après @empreinte-studio/tokens/empreinte.css et tokens.css.
+ *  Ajouter une classe : skill .claude/skills/design-system-evolution.
  */
 
 /* ============================================================================
- *  Base
+ *  0. Marges des enfants
+ *  Dans tout conteneur .ds-*, les enfants directs perdent leurs marges par
+ *  défaut (h1, p, ul…) : l'espacement vient de l'écart (gap) du conteneur.
+ *  Spécificité nulle (:where) : la marge propre à un composant d'Empreinte
+ *  (légende de e-pas, case…) l'emporte toujours.
  * ========================================================================== */
-*,
-*::before,
-*::after {
+:where(
+    .ds-page,
+    .ds-page-header,
+    .ds-title-row,
+    .ds-stack,
+    .ds-row,
+    .ds-actions,
+    .ds-grid,
+    .ds-panels,
+    .ds-panel,
+    .ds-list-bare,
+    .ds-divided,
+    .ds-check,
+    .ds-entry,
+    .ds-conversation,
+    .ds-reply,
+    .ds-composer,
+    .ds-screen-center,
+    .ds-narrow,
+    .ds-prose
+  )
+  > * {
   margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: var(--ds-font-family-base);
-  font-size: var(--ds-text-body-size);
-  line-height: var(--ds-line-height-normal);
-  color: var(--ds-color-text);
-  background: var(--ds-color-bg);
-}
-
-h1,
-h2,
-h3,
-h4 {
-  color: var(--ds-color-text);
-  line-height: var(--ds-line-height-tight);
-}
-
-h1 {
-  font-size: var(--ds-text-title-size);
-}
-h2 {
-  font-size: var(--ds-font-size-xl);
-}
-h3 {
-  font-size: var(--ds-text-heading-size);
-}
-
-p {
-  color: var(--ds-color-text-muted);
-  font-size: var(--ds-text-small-size);
-}
-
-a {
-  color: var(--ds-color-link);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-button,
-input,
-select,
-textarea {
-  font-family: inherit;
-}
-
-ul,
-ol {
-  list-style: none;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-label {
-  font-size: var(--ds-text-small-size);
-  font-weight: var(--ds-font-weight-medium);
-}
-
-:focus-visible {
-  outline: var(--ds-focus-ring-width) solid var(--ds-color-focus-ring);
-  outline-offset: var(--ds-focus-ring-offset);
 }
 
 /* ============================================================================
- *  Conteneur de page
+ *  1. Page
  * ========================================================================== */
+
+/* Conteneur d'une page : sections empilées, séparées de pas-8, largeur max
+   centrée (comme e-coque__contenu, qu'il peut habiter sans rien changer). */
 .ds-page {
-  max-width: var(--ds-layout-content-max-width);
-  margin: 0 auto;
-  padding: var(--ds-layout-page-padding) var(--ds-layout-page-padding)
-    var(--ds-dock-reserved-space);
-}
-
-/* Écran plein centré (connexion, état vide pleine page) */
-.ds-screen-center {
+  box-sizing: border-box;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: var(--ds-space-4);
-}
-
-/* Bloc étroit centré (formulaire de connexion, carte isolée) */
-.ds-narrow {
+  flex-direction: column;
+  gap: var(--pas-8);
   width: 100%;
-  max-width: var(--ds-auth-card-width);
+  max-width: var(--ds-page-max-width);
+  min-width: 0;
+  margin-inline: auto;
 }
 
-/* Élément flottant centré en bas de l'écran (barre de navigation) */
-.ds-float-bottom {
+/* En-tête de page : bloc de titre (premier enfant) à gauche, action à droite,
+   alignés sur le bas ; l'action passe sous le titre quand la place manque. */
+.ds-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--pas-4) var(--pas-6);
+}
+
+/* Le bloc de titre prend la place et pousse l'action à la ligne sous
+   --ds-page-title-basis. */
+.ds-page-header > :first-child {
+  flex: 1 1 var(--ds-page-title-basis);
+  min-width: 0;
+}
+
+/* Ligne de titre : le titre à gauche, un compte ou une légende à droite, sur
+   la même ligne de base ; passe à la ligne si la place manque. */
+.ds-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pas-2) var(--pas-4);
+}
+
+/* Écran plein au contenu centré (connexion, hors de la coque). */
+.ds-screen-center {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-height: var(--ds-screen-height);
+  padding: var(--pas-6) var(--pas-4);
+}
+
+/* Bloc étroit, pleine largeur sur mobile (formulaire de connexion). */
+.ds-narrow {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--ds-narrow-width);
+}
+
+/* Lien d'évitement « Aller au contenu », premier élément de la coque : hors
+   de l'écran tant qu'il n'a pas le focus, puis posé en haut à gauche sur un
+   panneau. (.e-masque ne convient pas : il reste masqué même au focus.) */
+.ds-skip-link {
   position: fixed;
-  bottom: var(--ds-dock-offset);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: var(--ds-dock-z-index);
-  box-shadow: var(--ds-shadow-lg);
-  border-radius: var(--ds-dock-radius);
+  inset-block-start: calc(-1 * var(--pas-16));
+  inset-inline-start: var(--pas-2);
+  z-index: 10;
+  padding: var(--pas-2) var(--pas-4);
+  background: var(--panneau);
+  color: var(--encre);
+}
+
+.ds-skip-link:focus {
+  inset-block-start: var(--pas-2);
 }
 
 /* ============================================================================
- *  Empilement vertical et lignes horizontales
- *  L'espacement se règle avec .ds-gap-* (défaut : --ds-space-4 / --ds-space-3)
+ *  2. Empilements et rangées
  * ========================================================================== */
+
+/* Empilement vertical (écart pas-4 ; .ds-gap-* pour le changer). Les enfants
+   s'étirent sur la largeur : .ds-self-start pour un bouton à sa taille. */
 .ds-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-gap, var(--ds-space-4));
+  gap: var(--pas-4);
+  min-width: 0;
 }
 
+/* Rangée horizontale centrée verticalement (écart pas-3). */
 .ds-row {
   display: flex;
   align-items: center;
-  gap: var(--ds-gap, var(--ds-space-3));
+  gap: var(--pas-3);
   min-width: 0;
 }
 
-.ds-wrap {
+/* Rangée d'actions : boutons côte à côte (écart pas-2), qui passent à la
+   ligne quand la place manque. */
+.ds-actions {
+  display: flex;
   flex-wrap: wrap;
-}
-.ds-between {
-  justify-content: space-between;
-}
-.ds-end {
-  justify-content: flex-end;
-}
-.ds-items-start {
-  align-items: flex-start;
-}
-.ds-items-end {
-  align-items: flex-end;
-}
-.ds-items-baseline {
-  align-items: baseline;
-}
-.ds-items-center {
   align-items: center;
-}
-.ds-self-start {
-  align-self: flex-start;
-}
-.ds-grow {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Bloc limité à la largeur d'un panneau (méta-données à côté d'un titre) ;
-   déclaré après .ds-grow pour que sa largeur minimale force le retour à la ligne */
-.ds-max-panel {
-  max-width: var(--ds-layout-grid-min-panel);
-  min-width: min(var(--ds-layout-grid-min-card), 100%);
-}
-
-.ds-gap-0-5 {
-  --ds-gap: var(--ds-space-0-5);
-}
-.ds-gap-1 {
-  --ds-gap: var(--ds-space-1);
-}
-.ds-gap-2 {
-  --ds-gap: var(--ds-space-2);
-}
-.ds-gap-3 {
-  --ds-gap: var(--ds-space-3);
-}
-.ds-gap-4 {
-  --ds-gap: var(--ds-space-4);
-}
-.ds-gap-6 {
-  --ds-gap: var(--ds-space-6);
-}
-.ds-gap-8 {
-  --ds-gap: var(--ds-space-8);
+  gap: var(--pas-2);
 }
 
 /* ============================================================================
- *  Grilles adaptatives : autant de colonnes que la largeur le permet
+ *  3. Grilles et trame
  * ========================================================================== */
+
+/* Grille espacée (écart pas-6), une colonne par défaut ; les colonnes se
+   choisissent avec .ds-cols-* ou .ds-grid-auto. */
 .ds-grid {
   display: grid;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(min(var(--ds-grid-min, var(--ds-layout-grid-min-card)), 100%), 1fr)
-  );
-  gap: var(--ds-gap, var(--ds-layout-grid-gap));
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--pas-6);
+}
+
+/* La trame des maquettes : des panneaux posés côte à côte, séparés et
+   entourés d'un filet trame de trait-fin. Les enfants sont des .ds-panel ou
+   des surfaces d'Empreinte (eSurface, eCarte). Colonnes : .ds-cols-*. */
+.ds-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--trait-fin);
+  background: var(--trame);
+  border: var(--trait-fin) solid var(--trame);
+}
+
+/* Autant de colonnes que la largeur le permet (min --ds-grid-min-width). */
+.ds-grid-auto {
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--ds-grid-min-width), 100%), 1fr));
+}
+
+/* Deux colonnes égales ; une seule sous --ds-breakpoint-md. */
+.ds-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Trois colonnes égales ; une seule sous --ds-breakpoint-md. */
+.ds-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Deux tiers / un tiers (l'arête et son étape) ; une colonne sous
+   --ds-breakpoint-lg. */
+.ds-cols-2-1 {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+/* Sept / six (la conversation et le brouillon d'Akari) ; une colonne sous
+   --ds-breakpoint-lg. */
+.ds-cols-7-6 {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 6fr);
+}
+
+/* Occupe deux colonnes (dans .ds-cols-3 seulement) ; revient à une colonne
+   sous --ds-breakpoint-md. */
+.ds-span-2 {
+  grid-column: span 2;
+}
+
+/* Occupe toute la largeur de la grille. */
+.ds-span-all {
+  grid-column: 1 / -1;
+}
+
+/* Dans une trame à deux colonnes, un dernier panneau seul occupe toute la
+   largeur : la trame ne laisse jamais de case vide. */
+.ds-panels.ds-cols-2 > :nth-child(odd):last-child {
+  grid-column: 1 / -1;
+}
+
+/* ============================================================================
+ *  4. Panneaux
+ * ========================================================================== */
+
+/* Panneau de la trame : fond panneau, marges intérieures des maquettes
+   (28px / 32px, 24px / 20px sur mobile), contenu empilé (écart pas-4).
+   Sur une surface d'Empreinte (eSurface, eCorne), le fond reste celui de la
+   surface, pour que la corne se découpe sur la trame. */
+.ds-panel {
+  --ds-panel-inset: var(--ds-panel-padding-inline);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pas-4);
+  min-width: 0;
+  padding: var(--ds-panel-padding-block) var(--ds-panel-inset);
+}
+
+.ds-panel:not(.e-surface) {
+  background: var(--panneau);
+}
+
+/* Les tâches d'une liste nue s'alignent sur le texte du panneau. */
+.ds-panel .e-tache {
+  padding-inline: 0;
+}
+
+/* Panneau à bord perdu : les listes de tâches (ul[eListe] nue) vont d'un
+   bord à l'autre, leurs tâches gardant la marge du panneau ; les autres
+   enfants directs (titre, rangée d'actions…) gardent la marge du panneau. */
+.ds-panel-flush {
+  padding-inline: 0;
+}
+
+.ds-panel-flush > * {
+  margin-inline: var(--ds-panel-inset);
+}
+
+.ds-panel-flush > .e-liste {
+  margin-inline: 0;
+}
+
+.ds-panel-flush .e-tache {
+  padding-inline: var(--ds-panel-inset);
+}
+
+/* ============================================================================
+ *  5. Listes et lignes
+ * ========================================================================== */
+
+/* Liste sans puces ni retrait (à combiner avec .ds-stack pour l'écart). */
+.ds-list-bare {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Lignes séparées par des filets trame (dessus de chaque ligne, dessous de la
+   dernière), espacées de pas-3 : étapes du brouillon, objectifs accomplis. */
+.ds-divided {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-divided > * {
+  padding-block: var(--pas-3);
+  box-shadow: inset 0 var(--trait-fin) 0 var(--trame);
+}
+
+.ds-divided > :last-child {
+  box-shadow:
+    inset 0 var(--trait-fin) 0 var(--trame),
+    inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
+}
+
+/* Filet trame au-dessus, avec un pas-4 d'air : pied de carte, prochain pas,
+   zone de réponse. */
+.ds-rule-top {
+  padding-block-start: var(--pas-4);
+  box-shadow: inset 0 var(--trait-fin) 0 var(--trame);
+}
+
+/* Filets trame dessus et dessous : un bloc replié (« Accomplis »). */
+.ds-rule-block {
+  box-shadow:
+    inset 0 var(--trait-fin) 0 var(--trame),
+    inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
+}
+
+/* Case et intitulé : la case (input[eCase]) dans une colonne de 20px,
+   l'intitulé à côté ; les enfants suivants (détail, action) passent sous
+   l'intitulé. Pour une case hors d'une liste ul[eListe] (élément de matrice,
+   prochain pas d'une carte). */
+.ds-check {
+  display: grid;
+  grid-template-columns: var(--ds-check-lead) minmax(0, 1fr);
+  gap: var(--ds-space-0-5) var(--pas-3);
   align-items: start;
 }
 
-.ds-grid-fit {
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(min(var(--ds-grid-min, var(--ds-layout-grid-min-card)), 100%), 1fr)
-  );
-}
-.ds-grid-stretch {
-  align-items: stretch;
+.ds-check > :nth-child(n + 3) {
+  grid-column: 2;
 }
 
-/* Enfant de grille qui occupe toute la hauteur de sa cellule (et son contenu PrimeNG aussi) */
-.ds-fill,
-.ds-grid-stretch > * {
-  height: 100%;
-}
-
-.ds-fill > .p-card,
-.ds-grid-stretch > * > .p-card {
-  height: 100%;
-}
-
-.ds-grid-stat {
-  --ds-grid-min: var(--ds-layout-grid-min-stat);
-}
-.ds-grid-card {
-  --ds-grid-min: var(--ds-layout-grid-min-card);
-}
-.ds-grid-panel {
-  --ds-grid-min: var(--ds-layout-grid-min-panel);
-}
-.ds-grid-field {
-  --ds-grid-min: var(--ds-layout-grid-min-field);
-}
-
-/* Deux colonnes, une seule sous --ds-breakpoint-md */
-.ds-grid-2 {
+/* Ligne à repère : un repère étroit (numéro d'étape), le texte, une valeur à
+   droite (« 4 pas ») ; les enfants suivants passent sous le texte. */
+.ds-entry {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(var(--ds-matrix-quadrant-min-height), auto);
-  gap: var(--ds-gap, var(--ds-layout-grid-gap));
+  grid-template-columns: var(--ds-entry-lead) minmax(0, 1fr) auto;
+  gap: var(--ds-space-0-5) var(--pas-3);
+  align-items: baseline;
 }
 
-/* --ds-breakpoint-md */
-@media (max-width: 768px) {
-  .ds-grid-2 {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* --ds-breakpoint-sm */
-@media (max-width: 640px) {
-  .ds-page {
-    padding: var(--ds-layout-page-padding-mobile)
-      var(--ds-layout-page-padding-mobile) var(--ds-dock-reserved-space);
-  }
-
-  .ds-float-bottom {
-    bottom: var(--ds-dock-offset-mobile);
-  }
-
-  /* Boutons en icône seule sur petit écran (le nom reste donné par aria-label) */
-  .ds-icons-only-mobile .p-button-label {
-    display: none;
-  }
+.ds-entry > :nth-child(n + 4) {
+  grid-column: 2 / -1;
 }
 
 /* ============================================================================
- *  Texte
+ *  6. Conversation avec Akari
  * ========================================================================== */
-.ds-text-muted {
-  color: var(--ds-color-text-muted);
+
+/* Le fil des répliques : liste nue, répliques séparées de 28px. */
+.ds-conversation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-conversation-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.ds-text-sm {
-  font-size: var(--ds-text-small-size);
+
+/* Une réplique : le nom dans une colonne de 96px, la phrase à côté, sur la
+   même ligne de base ; empilés sur mobile. */
+.ds-reply {
+  display: grid;
+  grid-template-columns: var(--ds-reply-author-width) minmax(0, 1fr);
+  gap: var(--pas-1) var(--pas-4);
+  align-items: baseline;
 }
-.ds-text-xs {
-  font-size: var(--ds-text-caption-size);
+
+/* Le nom de la personne, décalé pour s'aligner sur celui d'Akari, écrit
+   après son losange (p.e-note__qui). */
+.ds-reply-author {
+  padding-inline-start: var(--ds-reply-author-indent);
 }
-.ds-text-strong {
-  font-weight: var(--ds-font-weight-semibold);
-  color: var(--ds-color-text);
+
+/* Zone de réponse : la saisie (textarea[eSaisie]) prend la place, le bouton
+   d'envoi reste à sa taille, aligné en bas. */
+.ds-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--pas-3);
 }
-.ds-text-center {
-  text-align: center;
+
+.ds-composer > textarea {
+  flex: 1 1 auto;
+  min-width: 0;
 }
-.ds-text-italic {
-  font-style: italic;
+
+/* Texte rendu depuis le Markdown (réponses d'Akari) : blocs espacés de pas-3,
+   listes en retrait de pas-6, mots trop longs coupés, bloc de code qui défile
+   au lieu de déborder. La typographie reste celle du conteneur (voix,
+   corps) : un titre Markdown garde la taille du navigateur, le rendre plutôt
+   en paragraphe. */
+.ds-prose {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
-.ds-strike {
-  text-decoration: line-through;
-  color: var(--ds-color-text-muted);
+
+.ds-prose > * + * {
+  margin-block-start: var(--pas-3);
 }
-.ds-first-upper::first-letter {
-  text-transform: uppercase;
+
+.ds-prose :where(ul, ol) {
+  padding-inline-start: var(--pas-6);
 }
+
+.ds-prose :where(li + li, li > ul, li > ol) {
+  margin-block-start: var(--pas-1);
+}
+
+.ds-prose :where(pre) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* ============================================================================
+ *  7. Modificateurs (après les conteneurs : ils l'emportent)
+ * ========================================================================== */
+
+/* --- Retour à la ligne et alignements --------------------------------------- */
+
+/* Les enfants passent à la ligne quand la place manque. */
+.ds-wrap {
+  flex-wrap: wrap;
+}
+
+/* Enfants répartis aux deux bouts. */
+.ds-between {
+  justify-content: space-between;
+}
+
+/* Enfants poussés à la fin de la ligne. */
+.ds-justify-end {
+  justify-content: flex-end;
+}
+
+/* Enfants centrés sur la ligne. */
+.ds-justify-center {
+  justify-content: center;
+}
+
+/* Enfants alignés en haut (rangée) ou à gauche (empilement). */
+.ds-items-start {
+  align-items: flex-start;
+}
+
+/* Enfants centrés sur l'axe secondaire. */
+.ds-items-center {
+  align-items: center;
+}
+
+/* Enfants alignés en bas (rangée) ou à droite (empilement). */
+.ds-items-end {
+  align-items: flex-end;
+}
+
+/* Enfants alignés sur leur ligne de base (titre et compte). */
+.ds-items-baseline {
+  align-items: baseline;
+}
+
+/* Enfants étirés sur l'axe secondaire. */
+.ds-items-stretch {
+  align-items: stretch;
+}
+
+/* Cet enfant se place au début (un bouton à sa taille dans un empilement). */
+.ds-self-start {
+  align-self: flex-start;
+}
+
+/* Cet enfant se centre. */
+.ds-self-center {
+  align-self: center;
+}
+
+/* Cet enfant se place à la fin. */
+.ds-self-end {
+  align-self: flex-end;
+}
+
+/* --- Place dans une rangée ou un empilement --------------------------------- */
+
+/* Prend toute la place restante, et peut rétrécir sous son contenu. */
+.ds-grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Ne rétrécit jamais (sceau, icône, bouton à côté d'un texte long). */
+.ds-no-shrink {
+  flex-shrink: 0;
+}
+
+/* Poussé en bas de l'empilement (pied d'un panneau). */
+.ds-push-down {
+  margin-block-start: auto;
+}
+
+/* Poussé à droite de la rangée. */
+.ds-push-right {
+  margin-inline-start: auto;
+}
+
+/* --- Écart entre les enfants : l'échelle des pas (N × 4px) ------------------ */
+
+/* Aucun écart. */
+.ds-gap-0 {
+  gap: 0;
+}
+
+/* 2px : un intitulé et son détail. */
+.ds-gap-0-5 {
+  gap: var(--ds-space-0-5);
+}
+
+/* 4px (pas-1). */
+.ds-gap-1 {
+  gap: var(--pas-1);
+}
+
+/* 8px (pas-2) : repère, titre et sous-titre d'un en-tête. */
+.ds-gap-2 {
+  gap: var(--pas-2);
+}
+
+/* 12px (pas-3). */
+.ds-gap-3 {
+  gap: var(--pas-3);
+}
+
+/* 16px (pas-4). */
+.ds-gap-4 {
+  gap: var(--pas-4);
+}
+
+/* 20px : un fil d'Ariane et l'en-tête qu'il précède. */
+.ds-gap-5 {
+  gap: var(--ds-space-5);
+}
+
+/* 24px (pas-6). */
+.ds-gap-6 {
+  gap: var(--pas-6);
+}
+
+/* 32px (pas-8) : entre les sections d'une page. */
+.ds-gap-8 {
+  gap: var(--pas-8);
+}
+
+/* 40px. */
+.ds-gap-10 {
+  gap: var(--ds-space-10);
+}
+
+/* 48px (pas-12) : autour d'un manifeste. */
+.ds-gap-12 {
+  gap: var(--pas-12);
+}
+
+/* --- Texte (la typographie elle-même vient des 8 styles d'Empreinte) -------- */
+
+/* Texte secondaire en encre douce : dates, horizons, comptes, « pourquoi ». */
+.ds-muted {
+  color: var(--encre-douce);
+}
+
+/* Lien dans le texte (« Accomplis », réponses d'Akari) : dans l'encre du texte
+   qui l'entoure, souligné par le navigateur. Le bleu par défaut n'existe pas
+   dans Empreinte, dont la base ne règle pas les liens. */
+.ds-link {
+  color: inherit;
+}
+
+/* Coupe les mots trop longs plutôt que de déborder (titres saisis). */
 .ds-break {
   overflow-wrap: anywhere;
 }
 
-/* Coupe le texte après deux lignes */
-.ds-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+/* Ne passe jamais à la ligne. */
+.ds-nowrap {
+  white-space: nowrap;
+}
+
+/* Une seule ligne, coupée par des points de suspension. */
+.ds-truncate {
+  min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Grand chiffre (statistiques, progression) */
-.ds-figure {
-  font-size: var(--ds-font-size-3xl);
-  font-weight: var(--ds-font-weight-bold);
-  line-height: var(--ds-line-height-tight);
-  color: var(--ds-color-text);
+/* Texte centré. */
+.ds-text-center {
+  text-align: center;
 }
 
-.ds-figure-xl {
-  font-size: var(--ds-font-size-5xl);
+/* Texte aligné à la fin de la ligne. */
+.ds-text-end {
+  text-align: end;
+}
+
+/* Longueur de ligne confortable (en-tête d'accueil, phrase d'Akari). */
+.ds-measure {
+  max-width: var(--ds-measure);
+}
+
+/* --- Débordement ------------------------------------------------------------- */
+
+/* Défilement horizontal pour un contenu plus large que son conteneur. */
+.ds-scroll-x {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/* L'arête d'Empreinte prend 100 % de la largeur : sur mobile, elle
+   rétrécirait jusqu'à rendre ses noms illisibles. Dans .ds-scroll-x, elle
+   garde la largeur de la maquette et défile. */
+.ds-scroll-x > .e-arete-hote {
+  min-width: var(--ds-arete-min-width);
 }
 
 /* ============================================================================
- *  Interaction
+ *  8. Responsive (en dernier : ces règles l'emportent sur les précédentes)
  * ========================================================================== */
 
-/* Ligne de liste cliquable (survol + zone de clic confortable) */
-.ds-list-row {
-  padding: var(--ds-list-row-padding-y) var(--ds-list-row-padding-x);
-  border-radius: var(--ds-list-row-radius);
-  cursor: pointer;
-  transition: background-color var(--ds-duration-fast) var(--ds-easing-standard);
+/* --ds-breakpoint-lg */
+@media (max-width: 1100px) {
+  /* Les panneaux asymétriques passent à une colonne. */
+  .ds-cols-2-1,
+  .ds-cols-7-6 {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.ds-list-row:hover {
-  background-color: var(--ds-color-surface-hover);
+/* --ds-breakpoint-md */
+@media (max-width: 900px) {
+  /* Les grilles de 2 ou 3 colonnes égales passent à une colonne. */
+  .ds-cols-2,
+  .ds-cols-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ds-span-2 {
+    grid-column: auto;
+  }
 }
 
-/* Lien qui enveloppe un composant (carte cliquable) sans le styler */
-.ds-link-block {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-  border-radius: var(--ds-card-radius);
+/* --ds-breakpoint-sm */
+@media (max-width: 760px) {
+  /* Mobile : panneaux plus serrés, comme la coque d'Empreinte. */
+  .ds-panel {
+    --ds-panel-inset: var(--ds-panel-padding-inline-mobile);
+    padding-block: var(--ds-panel-padding-block-mobile);
+  }
+
+  /* Le nom passe au-dessus de la phrase. */
+  .ds-reply {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Masqué sur mobile (aperçu de l'arête du brouillon). À poser sur un
+     élément simple, pas sur l'hôte d'un composant d'Empreinte. */
+  .ds-hide-mobile {
+    display: none;
+  }
 }
 
-.ds-link-block:hover {
-  text-decoration: none;
-}
-
-/* Bouton natif sans apparence (titre cliquable dans une liste) */
-.ds-button-reset {
-  all: unset;
-  cursor: pointer;
-  color: var(--ds-color-text);
-  overflow-wrap: anywhere;
-}
-
-.ds-button-reset:focus-visible {
-  outline: var(--ds-focus-ring-width) solid var(--ds-color-focus-ring);
-  outline-offset: var(--ds-focus-ring-offset);
-  border-radius: var(--ds-radius-sm);
-}
-
-/* Bulle de conversation : largeur bornée */
-.ds-chat-bubble {
-  max-width: var(--ds-chat-bubble-max-width);
-  min-width: var(--ds-chat-bubble-min-width);
+/* --ds-breakpoint-sm */
+@media (width > 760px) {
+  /* Visible seulement sur mobile (l'accès aux réglages, quand le bas de la
+     navigation disparaît). Comme .ds-hide-mobile : sur un élément simple,
+     pas sur l'hôte d'un composant d'Empreinte. */
+  .ds-show-mobile {
+    display: none;
+  }
 }

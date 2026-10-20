@@ -6,13 +6,12 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
-import { providePrimeNG } from 'primeng/config';
-import { DesignSystemPreset, designSystemThemeOptions } from '@org/design-tokens';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideEmpreinte } from '@empreinte-studio/angular/core';
 import { ChoreProviders } from '../chore/providers/chore.providers';
 import { ObjectiveProviders } from '../chore/providers/objective.providers';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { AIProvider } from '../chore/providers/ai.provider';
 import { provideGemini } from '../chore/providers/gemini.provider';
@@ -35,31 +34,9 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     { provide: LOCALE_ID, useValue: 'fr' },
-    providePrimeNG({
-      theme: {
-        preset: DesignSystemPreset,
-        options: designSystemThemeOptions
-      },
-      // Calendrier, listes et messages des composants PrimeNG en français
-      translation: {
-        firstDayOfWeek: 1,
-        dateFormat: 'dd/mm/yy',
-        dayNames: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'],
-        dayNamesShort: ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'],
-        dayNamesMin: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
-        monthNames: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
-        monthNamesShort: ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'],
-        today: "Aujourd'hui",
-        clear: 'Effacer',
-        weekHeader: 'Sem.',
-        emptyMessage: 'Aucun résultat',
-        emptyFilterMessage: 'Aucun résultat',
-        accept: 'Oui',
-        reject: 'Non',
-        choose: 'Choisir',
-        cancel: 'Annuler',
-      }
-    }),
+    // Empreinte : thème Jour au premier lancement, puis le choix retenu (clé « empreinte:theme »,
+    // lue aussi par le script d'index.html pour éviter un éclair de Jour en Nuit).
+    provideEmpreinte({ theme: 'jour' }),
     provideRouter(routes, withComponentInputBinding()),
     ...provideSupabase(env.SUPABASE_CONFIG),
     ...provideFirebase(env.FIREBASE_CONFIG),
@@ -68,7 +45,6 @@ export const appConfig: ApplicationConfig = {
     ...ObjectiveProviders,
     ...AIProvider,
     ...AuthProviders,
-    ...ChoreProviders,
     ...ChatProvider,
     ...WorkflowProvider
   ],
