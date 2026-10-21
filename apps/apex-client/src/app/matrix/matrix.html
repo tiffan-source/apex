@@ -1,13 +1,68 @@
-<div class="ds-stack ds-gap-8">
-  <header class="ds-stack ds-gap-1">
-    <h1>Matrice d'Eisenhower</h1>
-    <p>Priorisez vos tâches par urgence et importance</p>
+<div class="ds-page">
+  <header class="ds-stack ds-gap-5">
+    <div class="ds-stack ds-gap-2">
+      <p class="repere ds-muted">
+        {{ today }}
+        @if (loaded()) {
+          · {{ taskCount() }}
+        }
+      </p>
+      <h1 class="manifeste ds-break">La matrice</h1>
+    </div>
+    @if (showFilters()) {
+      <e-filtres
+        libelle="Filtrer par objectif"
+        libelleTous="Tous les objectifs"
+        [options]="filterOptions()"
+        [selection]="activeFilter()"
+        (selectionChange)="filter.set($event)"
+      />
+    }
   </header>
 
-  <main class="ds-grid-2 ds-grid-stretch">
-    <app-quadrant [category]="Category.DO" label="FAIRE" description="Urgent et important" emptyMessage="Rien d'urgent et important. Bien joué !" />
-    <app-quadrant [category]="Category.DELEGATE" label="DÉLÉGUER" description="Urgent mais pas important" emptyMessage="Aucune tâche à déléguer." />
-    <app-quadrant [category]="Category.SCHEDULE" label="PLANIFIER" description="Important mais pas urgent" emptyMessage="Aucune tâche à planifier." />
-    <app-quadrant [category]="Category.DELETE" label="ÉLIMINER" description="Ni urgent ni important" emptyMessage="Aucune tâche à éliminer." />
-  </main>
+  @if (isEmpty()) {
+    <div class="ds-stack ds-gap-3">
+      <p class="corps ds-muted ds-measure">Aucun pas pour l'instant. Ajoute des pas à tes objectifs : ils viendront se ranger ici.</p>
+      <div class="ds-actions">
+        <a eBouton="trait" petit routerLink="/">Voir mes objectifs</a>
+      </div>
+    </div>
+  }
+
+  <section aria-labelledby="matrix-title">
+    <h2 class="e-masque" id="matrix-title">Tes pas, par urgence et importance</h2>
+    <e-matrice
+      courant="maintenant"
+      [quadrants]="matrix()"
+      [piste]="trackById"
+      [unite]="taskUnit"
+      (deplacement)="move($event)"
+    >
+      <ng-template [eMatriceElement]="matrix()" let-task let-quadrant="quadrant">
+        <div class="ds-row ds-items-start ds-pad-block-1">
+          <div class="ds-check ds-grow">
+            <input
+              #box
+              type="checkbox"
+              eCase
+              [id]="checkboxId(task)"
+              [checked]="task.done"
+              (change)="toggle(task, box.checked)"
+            />
+            <label class="corps ds-break" [class.ds-muted]="task.done" [for]="checkboxId(task)">{{ task.title }}</label>
+            @if (taskDetail(task); as detail) {
+              <span class="detail ds-muted ds-break">{{ detail }}</span>
+            }
+          </div>
+          <e-menu
+            icone="deplacer"
+            petit
+            [libelle]="'Déplacer « ' + task.title + ' » vers…'"
+            [entrees]="moveTargets[quadrant]"
+            (choix)="moveTo(task, $event)"
+          />
+        </div>
+      </ng-template>
+    </e-matrice>
+  </section>
 </div>

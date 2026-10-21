@@ -1,45 +1,67 @@
-<div class="ds-screen-center">
-  <p-card class="ds-narrow" [dt]="cardTokens">
-    <div class="ds-stack ds-gap-6">
-      <div class="ds-stack ds-gap-2 ds-items-center ds-text-center">
-        <p-avatar icon="pi pi-bullseye" size="large" />
-        @if (mode() === AuthMode.SignIn) {
-          <h1>Bon retour !</h1>
-          <p>Pas encore de compte ? <p-button label="Créer un compte" variant="text" size="small" (click)="changeMode()"/></p>
-        } @else {
-          <h1>Créer votre compte</h1>
-          <p>Déjà inscrit ? <p-button label="Se connecter" variant="text" size="small" (click)="changeMode()"/></p>
-        }
-      </div>
-
-    <form class="ds-stack" [formGroup]="mode() === AuthMode.SignIn ? loginForm : createUserForm" (ngSubmit)="submitAuthForm()">
+<main class="ds-screen-center">
+  <form eSurface class="ds-panel ds-narrow ds-gap-8" [formRoot]="credentials" aria-labelledby="auth-title">
+    <header class="ds-stack ds-gap-6">
+      <e-marque>Apex</e-marque>
       <div class="ds-stack ds-gap-2">
-        <label for="{{ AuthFormField.EMAIL }}">Adresse e-mail</label>
-        <input placeholder="jean.dupont@exemple.com" pInputText fluid type="email" autocomplete="email" id="{{ AuthFormField.EMAIL }}" formControlName="{{ AuthFormField.EMAIL }}"/>
+        <h1 class="objectif ds-break" id="auth-title">{{ texts().title }}</h1>
+        <p class="voix ds-muted">{{ tagline }}</p>
       </div>
-      <div class="ds-stack ds-gap-2">
-        <label for="{{ AuthFormField.PASSWORD }}">Mot de passe</label>
-        <input placeholder="6 caractères minimum" pInputText fluid id="{{ AuthFormField.PASSWORD }}" formControlName="{{ AuthFormField.PASSWORD }}" type="password"
-          [attr.autocomplete]="mode() === AuthMode.SignIn ? 'current-password' : 'new-password'"/>
-      </div>
-      @if (mode() === AuthMode.CreateUser) {
-        <div class="ds-stack ds-gap-2">
-          <label for="{{ AuthFormField.CONFIRM_PASSWORD }}">Confirmer le mot de passe</label>
-          <input placeholder="Retapez votre mot de passe" pInputText fluid id="{{ AuthFormField.CONFIRM_PASSWORD }}" formControlName="{{ AuthFormField.CONFIRM_PASSWORD }}" type="password" autocomplete="new-password"/>
-        </div>
-      }
+    </header>
 
-      @if (errorMessage(); as error) {
-        <p-message severity="error" icon="pi pi-exclamation-circle" role="alert">{{ error }}</p-message>
-      }
+    <div class="ds-stack">
+      <e-champ libelle="Ton adresse e-mail" [erreur]="emailServerError()">
+        <input eSaisie id="auth-email" type="email" autocomplete="username" [formField]="credentials.email" />
+      </e-champ>
 
-      <p-button
-        fluid
-        type="submit"
-        [label]="mode() === AuthMode.SignIn ? 'Se connecter' : 'Créer mon compte'"
-        [loading]="sessionStore.isPending()"
-      />
-    </form>
+      <e-champ
+        libelle="Ton mot de passe"
+        [aide]="creatingAccount() ? passwordHelp : undefined"
+        [erreur]="passwordServerError()"
+      >
+        <input
+          eSaisie
+          id="auth-password"
+          type="password"
+          [attr.autocomplete]="creatingAccount() ? 'new-password' : 'current-password'"
+          [formField]="credentials.password"
+        />
+      </e-champ>
+
+      @if (creatingAccount()) {
+        <e-champ libelle="Confirme ton mot de passe">
+          <input
+            eSaisie
+            id="auth-confirm-password"
+            type="password"
+            autocomplete="new-password"
+            [formField]="credentials.confirmPassword"
+          />
+        </e-champ>
+      }
     </div>
-  </p-card>
-</div>
+
+    @if (note(); as text) {
+      <aside eNote>
+        <p role="alert">{{ text }}</p>
+      </aside>
+    }
+
+    <div class="ds-stack ds-gap-3">
+      <div class="ds-row ds-wrap">
+        <button eBouton="sceau" type="submit" [attr.aria-disabled]="pending() ? 'true' : null">
+          {{ texts().submit }}
+        </button>
+        <p class="detail ds-muted" role="status">{{ status() }}</p>
+      </div>
+      <button
+        eBouton="nu"
+        type="button"
+        class="ds-self-start"
+        [attr.aria-disabled]="pending() ? 'true' : null"
+        (click)="switchMode()"
+      >
+        {{ texts().switch }}
+      </button>
+    </div>
+  </form>
+</main>

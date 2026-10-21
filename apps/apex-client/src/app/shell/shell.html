@@ -1,33 +1,63 @@
-<nav class="ds-float-bottom ds-icons-only-mobile" aria-label="Navigation principale">
-  <p-toolbar>
-    <div class="ds-row ds-gap-1">
-      @for (item of navigationList; track item.link) {
-        <a
-          pButton
-          [routerLink]="item.link"
-          routerLinkActive
-          #rla="routerLinkActive"
-          [routerLinkActiveOptions]="{ exact: item.link === '/' }"
-          [text]="!rla.isActive"
-          [severity]="rla.isActive ? 'primary' : 'secondary'"
-          [icon]="item.primeIcon"
-         
-          [label]="item.label"
-          size="small"
-          [attr.aria-label]="item.label"
-          [attr.aria-current]="rla.isActive ? 'page' : null"
-        ></a>
-      }
+<!-- Lien d'évitement : hors de l'écran tant qu'il n'a pas le focus. Pas de href="#contenu" écrit en dur :
+     avec <base href="/">, il renverrait vers l'accueil. Le routeur garde l'adresse de la page. -->
+<a
+  class="ds-skip-link"
+  [routerLink]="[]"
+  fragment="contenu"
+  queryParamsHandling="preserve"
+  (click)="goToContent()"
+  >Aller au contenu</a
+>
 
-      @if (drawerStore.canBeActivated()) {
-        <p-divider layout="vertical" />
-        <p-button text severity="secondary" icon="pi pi-comments" label="Assistant" ariaLabel="Assistant" size="small" (click)="drawerStore.openChatDrawer()" />
-        <p-button text severity="secondary" icon="pi pi-pencil" label="Modifier" ariaLabel="Modifier l'objectif" size="small" (click)="drawerStore.openObjectiveEditionDrawer()" />
-      }
+<div eCoque>
+  <nav eNav aria-label="Navigation principale">
+    <a eMarque class="e-nav__marque" routerLink="/">Apex</a>
+
+    <ul eNavListe>
+      <li>
+        <a eLienNav icone="objectifs" routerLink="/" [attr.aria-current]="objectivesCurrent()">Objectifs</a>
+      </li>
+      <li>
+        <a eLienNav icone="matrice" routerLink="/matrice" routerLinkActive ariaCurrentWhenActive="page">Matrice</a>
+      </li>
+    </ul>
+
+    <div eNavBas>
+      <div class="ds-row ds-rule-top ds-pad-inline-3">
+        @if (initial()) {
+          <span class="ds-initial voix" aria-hidden="true">{{ initial() }}</span>
+        }
+        <!-- Une grille à une piste minmax(0, 1fr) ne réclame aucune largeur : sans elle, une adresse longue
+             élargirait toute la navigation (232px dans les maquettes) au lieu d'être coupée. -->
+        <div class="ds-grid ds-grow">
+          <span class="detail ds-truncate">{{ identity() }}</span>
+        </div>
+        <e-menu libelle="Réglages" icone="reglages" [entrees]="settings()" (choix)="chooseTheme($event)" />
+      </div>
     </div>
-  </p-toolbar>
-</nav>
 
-<div class="ds-page">
-  <router-outlet></router-outlet>
+    <!-- Sous 760px, le bas de la navigation disparaît : les réglages restent accessibles ici. -->
+    <div class="ds-show-mobile ds-push-right">
+      <e-menu libelle="Réglages" icone="reglages" [entrees]="settings()" (choix)="chooseTheme($event)" />
+    </div>
+  </nav>
+
+  <main eCoquePrincipal id="contenu" tabindex="-1" #contenu>
+    <div eCoqueContenu>
+      @if (annonces.signalement(); as texte) {
+        <aside eNote>
+          <p>{{ texte }}</p>
+          <div eNoteActions>
+            <button eBouton="trait" petit type="button" (click)="understood()">Compris</button>
+          </div>
+        </aside>
+      }
+
+      <!-- Un bloc simple autour de la sortie : sinon router-outlet, élément vide de la colonne, ajouterait
+           l'écart de la coque au-dessus de chaque page. -->
+      <div>
+        <router-outlet />
+      </div>
+    </div>
+  </main>
 </div>

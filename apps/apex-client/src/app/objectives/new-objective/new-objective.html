@@ -1,0 +1,111 @@
+<div class="ds-page">
+  <header class="ds-stack ds-gap-2">
+    <p class="repere ds-muted ds-row ds-gap-2"><e-icone nom="akari" [taille]="16" />Akari</p>
+    <h1 class="manifeste ds-break">Nouvel objectif</h1>
+    <p class="detail ds-muted">On le construit ensemble. Rien n'est enregistré tant que tu ne t'engages pas.</p>
+  </header>
+
+  <!-- Le formulaire porte la trame : les réponses à gauche, le brouillon et « Je m'y engage » à droite. -->
+  <form class="ds-panels ds-cols-7-6" [formRoot]="draft">
+    <section class="ds-panel" aria-label="Conversation avec Akari">
+      <ol class="ds-conversation">
+        <li>
+          <aside eNote><p id="question-title">Qu'est-ce que tu veux construire&nbsp;?</p></aside>
+        </li>
+        <li class="ds-reply">
+          <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+          <e-champ #titleField libelle="Ton objectif">
+            <input
+              eSaisie
+              autocomplete="off"
+              placeholder="Décrocher un stage cet été"
+              [formField]="draft.title"
+              [attr.aria-labelledby]="'question-title ' + titleField.idLibelle"
+            />
+          </e-champ>
+        </li>
+
+        <li>
+          <aside eNote><p id="question-why">Pourquoi est-ce que ça compte pour toi&nbsp;?</p></aside>
+        </li>
+        <li class="ds-reply">
+          <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+          <e-champ #whyField libelle="Ton pourquoi" facultatif>
+            <textarea
+              eSaisie
+              tailleAuto
+              [lignesMin]="2"
+              [lignesMax]="6"
+              [formField]="draft.why"
+              [attr.aria-labelledby]="'question-why ' + whyField.idLibelle"
+            ></textarea>
+          </e-champ>
+        </li>
+
+        <li>
+          <aside eNote><p id="question-due-date">Pour quand&nbsp;?</p></aside>
+        </li>
+        <li class="ds-reply">
+          <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+          <e-champ #dueDateField libelle="Ton horizon" facultatif aide="Une date, même approximative.">
+            <input
+              eSaisie
+              type="date"
+              [attr.min]="today"
+              [formField]="draft.dueDate"
+              [attr.aria-labelledby]="'question-due-date ' + dueDateField.idLibelle"
+            />
+          </e-champ>
+        </li>
+
+        <li>
+          <aside eNote><p id="question-description">Tu veux en dire plus&nbsp;?</p></aside>
+        </li>
+        <li class="ds-reply">
+          <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+          <e-champ #descriptionField libelle="En quelques mots" facultatif>
+            <textarea
+              eSaisie
+              tailleAuto
+              [lignesMin]="2"
+              [lignesMax]="8"
+              [formField]="draft.description"
+              [attr.aria-labelledby]="'question-description ' + descriptionField.idLibelle"
+            ></textarea>
+          </e-champ>
+        </li>
+
+        @if (preview().title) {
+          <li>
+            <aside eNote><p>Relis ton brouillon. Change ce que tu veux avant de t'engager.</p></aside>
+          </li>
+        }
+      </ol>
+    </section>
+
+    <section class="ds-panel ds-gap-5" eSurface eCorne="l" aria-labelledby="draft-title">
+      <p class="repere ds-muted">Brouillon · pas encore enregistré</p>
+      <div class="ds-stack ds-gap-3">
+        <h2 class="objectif ds-break" id="draft-title" [class.ds-muted]="!preview().title">
+          {{ preview().title || texts.untitled }}
+        </h2>
+        @if (preview().why) {
+          <p class="voix ds-muted ds-break">«&nbsp;{{ preview().why }}&nbsp;»</p>
+        }
+        @if (preview().description) {
+          <p class="corps ds-break">{{ preview().description }}</p>
+        }
+        <p class="detail" [class.ds-muted]="!preview().horizon">{{ preview().horizon || texts.noHorizon }}</p>
+      </div>
+      <!-- Pendant l'enregistrement, aria-disabled plutôt que disabled : le bouton garde le focus du clavier. -->
+      <div class="ds-actions">
+        <button eBouton="sceau" type="submit" [disabled]="!hasTitle()" [attr.aria-disabled]="saving() ? 'true' : null">
+          Je m'y engage
+        </button>
+        <a eBouton="nu" routerLink="/">Plus tard</a>
+        <p class="detail ds-muted" role="status">{{ saving() ? texts.saving : '' }}</p>
+      </div>
+      <p class="detail ds-muted">En t'engageant, l'objectif rejoint tes objectifs, puis Akari te propose des étapes.</p>
+    </section>
+  </form>
+</div>
