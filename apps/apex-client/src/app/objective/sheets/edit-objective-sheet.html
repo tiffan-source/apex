@@ -1,0 +1,20 @@
+<e-feuille titre="Modifier l'objectif">
+  <form class="ds-stack" id="feuille-objectif" [formRoot]="fields">
+    <e-champ libelle="Ce que tu veux construire">
+      <input eSaisie autocomplete="off" [formField]="fields.title" />
+    </e-champ>
+    <e-champ libelle="En quelques mots" facultatif>
+      <textarea eSaisie tailleAuto [lignesMin]="2" [lignesMax]="6" [formField]="fields.description"></textarea>
+    </e-champ>
+    <e-champ libelle="Pourquoi ça compte pour toi" facultatif>
+      <textarea eSaisie tailleAuto [lignesMin]="2" [lignesMax]="6" [formField]="fields.why"></textarea>
+    </e-champ>
+    <e-champ libelle="Pour quand" [facultatif]="dueDateOptional" aide="Une date, même approximative. L'horizon se lit au mois.">
+      <input eSaisie type="date" [formField]="fields.dueDate" />
+    </e-champ>
+  </form>
+  <div eFeuilleActions>
+    <button eBouton="trait" type="submit" form="feuille-objectif">Enregistrer</button>
+    <button eBouton="nu" type="button" (click)="ref.close()">Annuler</button>
+  </div>
+</e-feuille>

@@ -1,11 +1,3 @@
-import { EisenhowerCategory } from "@org/apex-library";
-
-export type ObjectiveWithProgressViewModel = ObjectiveViewModel & {
-  totalTasks: number; // tâches de cet objectif + tous ses sous-objectifs
-  doneTasks: number;
-  progress: number; // 0 à 1, dérivé de doneTasks / totalTasks
-};
-
 export type ObjectiveViewModel = {
   id: string;
   title: string;
@@ -23,24 +15,3 @@ export type TaskViewModel = {
   urgency: number;
   objectiveId: string;
 };
-
-export type EisenhowerSeverity = 'danger' | 'warn' | 'info' | 'secondary';
-
-export type TaskViewModelWithCategory = TaskViewModel & {
-  category: EisenhowerCategory;
-  primNgSeverity: EisenhowerSeverity;
-};
-
-export type TaskViewModelWithCategoryAndObjectiveTitle = TaskViewModelWithCategory & {
-  objectiveTitle: string;
-};
-
-export type ObjectiveOverviewViewModel = {
-  id: string;
-  title: string;
-  why: string;
-  description: string;
-  dueDate: string;
-  tasks: TaskViewModelWithCategoryAndObjectiveTitle[];
-  subObjectives: ObjectiveViewModel[];
-}

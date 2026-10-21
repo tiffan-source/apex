@@ -1,114 +1,191 @@
-import { Component, computed, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
-import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
-import { CheckboxModule } from 'primeng/checkbox';
-import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
-import { AvatarModule } from 'primeng/avatar';
-import { AuthFormField, CreateUserFormModel, SignInFormModel } from './auth.form';
-import { ReactiveFormsModule } from '@angular/forms';
-import { SessionStore } from '../../chore/stores/session.store';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
+import { FormField, FormRoot, form } from '@angular/forms/signals';
+import { EBouton, EChamp, EMarque, ENote, ESaisie, ESurface } from '@empreinte-studio/angular';
+import { AnnoncesStore } from '../../chore/stores/annonces.store';
+import { SessionStore } from '../../chore/stores/session.store';
+import {
+  AuthMode,
+  EMPTY_CREDENTIALS,
+  PASSWORD_MIN_LENGTH,
+  authSchema,
+  translateAuthError,
+  type AuthCredentials,
+  type AuthErrorField,
+} from './auth.form';
 
-export enum AuthMode {
-  SignIn = 'sign-in',
-  CreateUser = 'create-user'
-}
+/**
+ * Les textes de l'écran qui changent avec le mode (les libellés fixes sont dans le gabarit). La bascule est un
+ * bouton : moins de 4 mots (brand book, Bouton) ; la question qui l'amène est écrite à côté, en détail.
+ */
+export const AUTH_TEXTS = {
+  tagline: 'Chaque pas laisse une empreinte.',
+  passwordHelp: `Au moins ${PASSWORD_MIN_LENGTH} caractères.`,
+  [AuthMode.SignIn]: {
+    title: 'Te revoilà.',
+    submit: 'Me connecter',
+    pending: 'Je te connecte…',
+    question: 'Pas encore de compte ?',
+    switch: 'Créer un compte',
+  },
+  [AuthMode.CreateUser]: {
+    title: 'Crée ton compte',
+    submit: 'Créer mon compte',
+    pending: 'Je crée ton compte…',
+    question: 'Déjà un compte ?',
+    switch: 'Me connecter',
+  },
+} as const;
 
+/** Ce qui a été envoyé au serveur : sa réponse ne vaut que pour ces valeurs et ce mode. */
+type AuthAttempt = { mode: AuthMode; email: string; password: string };
+
+/**
+ * La connexion (/auth), hors de la coque : un panneau étroit au centre de la page, la marque, puis
+ * « Te revoilà. » ou « Crée ton compte ». Le bouton sceau (le seul de l'écran) connecte ou crée le
+ * compte par SessionStore ; une fois la session ouverte, l'écran mène à l'accueil.
+ *
+ * Ce qui manque s'écrit sous le champ concerné, en encre, avec la solution (e-champ). Une réponse du
+ * serveur est traduite (translateAuthError) : sous le champ qu'elle concerne, qui reçoit le focus, ou
+ * dans une note d'Akari au-dessus du bouton. Elle s'efface dès que la personne change ce qu'elle avait
+ * envoyé. La bascule entre les deux modes annonce le nouveau titre aux lecteurs d'écran.
+ */
 @Component({
   selector: 'app-auuthentication-page',
-  imports: [ButtonModule, CheckboxModule, InputTextModule, CardModule, ReactiveFormsModule, MessageModule, AvatarModule],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [FormField, FormRoot, EBouton, EChamp, EMarque, ENote, ESaisie, ESurface],
   templateUrl: './auuthentication-page.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuuthenticationPage {
-  // Carte de connexion plus aérée que les cartes standard
-  readonly cardTokens = { body: { padding: 'var(--ds-space-8) var(--ds-space-6)' } };
+  private readonly session = inject(SessionStore);
+  private readonly annonces = inject(AnnoncesStore);
+  private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
 
-  mode = signal<AuthMode>(AuthMode.SignIn);
-  AuthMode = AuthMode;
-  AuthFormField = AuthFormField;
+  /** Connexion, ou création de compte. */
+  protected readonly mode = signal<AuthMode>(AuthMode.SignIn);
+  protected readonly creatingAccount = computed(() => this.mode() === AuthMode.CreateUser);
+  protected readonly texts = computed(() => AUTH_TEXTS[this.mode()]);
+  protected readonly tagline = AUTH_TEXTS.tagline;
+  protected readonly passwordHelp = AUTH_TEXTS.passwordHelp;
 
-  loginForm = new SignInFormModel();
-  createUserForm = new CreateUserFormModel();
+  /** Ce que la personne écrit ; l'adresse et le mot de passe restent d'un mode à l'autre. */
+  protected readonly model = signal<AuthCredentials>({ ...EMPTY_CREDENTIALS });
 
-  sessionStore = inject(SessionStore);
+  /**
+   * Le formulaire (Signal Forms) : le bouton sceau le soumet. Valide, il part au serveur ; sinon,
+   * chaque champ dit ce qui manque et le focus va au premier concerné. Le nom donne aux champs des
+   * attributs name stables (auth.email, auth.password), que les gestionnaires de mots de passe retiennent.
+   */
+  protected readonly credentials = form(this.model, authSchema(this.mode), {
+    name: 'auth',
+    submission: {
+      action: async () => {
+        await this.send();
+        return undefined;
+      },
+      onInvalid: () => this.focusFirstInvalidField(),
+    },
+  });
 
-  router = inject(Router);
+  /** Vrai pendant l'appel au serveur : le sceau est inactif, le statut le dit. */
+  protected readonly pending = computed(() => this.session.isPending());
+  protected readonly status = computed(() => (this.pending() ? this.texts().pending : ''));
 
-  // Erreur détectée côté formulaire (champ manquant, mots de passe différents…)
-  formError = signal<string | null>(null);
+  /** Le dernier envoi, ou null (aucun envoi, ou le mode a changé depuis). */
+  private readonly attempt = signal<AuthAttempt | null>(null);
 
-  // Le formulaire a priorité, sinon on traduit l'erreur renvoyée par le serveur
-  errorMessage = computed(() => {
-    const formError = this.formError();
-    if (formError) return formError;
-    return this.sessionStore.error() ? this.translateAuthError(this.sessionStore.error() as string) : null;
+  /** La réponse du serveur au dernier envoi, dans la voix ; null tant qu'il n'y a rien à dire. */
+  private readonly serverReport = computed(() => {
+    const attempt = this.attempt();
+    const message = this.session.error();
+    if (!attempt || !message || attempt.mode !== this.mode()) return null;
+    return translateAuthError(message, attempt.mode);
+  });
+
+  /** L'adresse, puis le mot de passe envoyés sont toujours dans leur champ : la réponse les concerne encore. */
+  private readonly sentEmailKept = computed(() => this.attempt()?.email === this.model().email.trim());
+  private readonly sentPasswordKept = computed(() => this.attempt()?.password === this.model().password);
+
+  protected readonly emailServerError = computed(() => this.fieldReport('email'));
+  protected readonly passwordServerError = computed(() => this.fieldReport('password'));
+
+  /** Une réponse qui ne concerne aucun champ : Akari la dit au-dessus du bouton. */
+  protected readonly note = computed(() => {
+    const report = this.serverReport();
+    return report && report.field === null ? report.text : null;
   });
 
   constructor() {
+    // Une session ouverte (connexion, création de compte, ou déjà là) mène à l'accueil.
     effect(() => {
-      if (this.sessionStore.isAuthenticated()) {
-        this.router.navigate(['/']);
-      }
+      if (this.session.isAuthenticated()) void this.router.navigate(['/']);
     });
   }
 
-  changeMode() {
-    this.mode.set(this.mode() === AuthMode.SignIn ? AuthMode.CreateUser : AuthMode.SignIn);
-    this.formError.set(null);
+  /** Passe de la connexion à la création de compte, et inversement. */
+  protected switchMode(): void {
+    if (this.pending()) return;
+    this.mode.update((mode) => (mode === AuthMode.SignIn ? AuthMode.CreateUser : AuthMode.SignIn));
+    this.attempt.set(null);
+    this.model.update((credentials) => ({ ...credentials, confirmPassword: '' }));
+    // Les messages du mode précédent s'effacent : ils reviendront à la prochaine soumission.
+    this.credentials().reset();
+    // Le focus reste sur la bascule : le nouveau titre est dit aux lecteurs d'écran.
+    this.annonces.annoncer(this.texts().title);
   }
 
-  submitAuthForm() {
-    if (this.sessionStore.isPending()) return;
-
-    const form = this.mode() === AuthMode.SignIn ? this.loginForm : this.createUserForm;
-    if (form.invalid) {
-      form.markAllAsTouched();
-      this.formError.set(this.describeFormError());
-      return;
-    }
-
-    this.formError.set(null);
-
-    if (this.mode() === AuthMode.SignIn) {
-      const { email, password } = this.loginForm.getRawValue();
-      this.sessionStore.login({ email, password });
+  /** Envoie l'adresse et le mot de passe à SessionStore, selon le mode. */
+  private async send(): Promise<void> {
+    if (this.pending()) return;
+    const mode = this.mode();
+    const { email, password, confirmPassword } = this.model();
+    const sent = { email: email.trim(), password };
+    this.attempt.set({ mode, ...sent });
+    if (mode === AuthMode.SignIn) {
+      await this.session.login(sent);
     } else {
-      const { email, password, confirmPassword } = this.createUserForm.getRawValue();
-
-      if (password !== confirmPassword) {
-        this.formError.set('Les deux mots de passe ne correspondent pas.');
-        return;
-      }
-
-      this.sessionStore.signup({ email, password, confirmPassword });
+      await this.session.signup({ ...sent, confirmPassword });
     }
+    this.focusReportedField();
   }
 
-  private describeFormError(): string {
-    const form = this.mode() === AuthMode.SignIn ? this.loginForm : this.createUserForm;
-    const emailControl = form.controls[AuthFormField.EMAIL];
-    const passwordControl = form.controls[AuthFormField.PASSWORD];
-
-    if (emailControl?.hasError('required') || passwordControl?.hasError('required')) {
-      return 'Renseignez votre e-mail et votre mot de passe.';
-    }
-    if (emailControl?.hasError('email')) {
-      return "L'adresse e-mail n'est pas valide.";
-    }
-    if (passwordControl?.hasError('minlength')) {
-      return 'Le mot de passe doit contenir au moins 6 caractères.';
-    }
-    return 'Vérifiez les champs du formulaire.';
+  /**
+   * Une adresse refusée vaut tant que l'adresse reste ; un mot de passe refusé, tant que l'adresse et le
+   * mot de passe restent (« Ce mot de passe ne correspond pas à cette adresse »).
+   */
+  private fieldReport(field: Exclude<AuthErrorField, null>): string | null {
+    const report = this.serverReport();
+    if (report?.field !== field) return null;
+    const kept = field === 'email' ? this.sentEmailKept() : this.sentEmailKept() && this.sentPasswordKept();
+    return kept ? report.text : null;
   }
 
-  private translateAuthError(message: string): string {
-    const lower = message.toLowerCase();
-    if (lower.includes('invalid login credentials')) return 'E-mail ou mot de passe incorrect.';
-    if (lower.includes('already registered')) return 'Un compte existe déjà avec cet e-mail.';
-    if (lower.includes('email not confirmed')) return 'Confirmez votre adresse e-mail avant de vous connecter.';
-    if (lower.includes('fetch') || lower.includes('network')) return 'Impossible de joindre le serveur. Vérifiez votre connexion.';
-    return 'La connexion a échoué. Réessayez dans un instant.';
+  /**
+   * La réponse du serveur concerne un champ : le focus y va, une fois le message écrit, pour que le
+   * lecteur d'écran le lise avec le libellé (le message du champ est masqué tant qu'il est vide, sa
+   * région aria-live ne suffit pas). Une réponse sans champ est dite par la note d'Akari (role="alert").
+   */
+  private focusReportedField(): void {
+    const field = this.serverReport()?.field;
+    if (!field || !this.fieldReport(field) || this.destroyRef.destroyed) return;
+    afterNextRender(() => this.credentials[field]().focusBoundControl(), { injector: this.injector });
+  }
+
+  private focusFirstInvalidField(): void {
+    const { email, password, confirmPassword } = this.credentials;
+    const firstInvalid = [email, password, confirmPassword].find((field) => !field().hidden() && field().invalid());
+    firstInvalid?.().focusBoundControl();
   }
 }

@@ -1,6 +1,10 @@
-@import "primeicons/primeicons.css";
+@import '@empreinte-studio/tokens/empreinte.css';
 
 /*
- * Aucune règle ici : l'apparence vient du preset PrimeNG (@org/design-tokens)
- * et la mise en page des classes .ds-* (libs/design-tokens/src/layout.css).
+ * Uniquement des @import, Empreinte en premier (polices, tokens Jour et Nuit,
+ * typographie, base de la page). La couche de mise en page d'Apex
+ * (libs/design-tokens/src/tokens.css puis layout.css) est chargée juste après,
+ * par le tableau "styles" de apps/apex-client/project.json.
+ * Aucune règle ici : l'apparence vient des composants Empreinte, la mise en
+ * page des classes .ds-*.
  */

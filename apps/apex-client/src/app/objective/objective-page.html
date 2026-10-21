@@ -1,0 +1,194 @@
+<div class="ds-page">
+  @if (detail(); as d) {
+    <header class="ds-stack ds-gap-5">
+      <nav eFilAriane>
+        <ol>
+          <li><a routerLink="/">Objectifs</a></li>
+          <li aria-current="page">{{ crumb() }}</li>
+        </ol>
+      </nav>
+      <div class="ds-page-header">
+        <div class="ds-stack ds-gap-3">
+          @if (d.objective.horizon) {
+            <p class="detail ds-muted">{{ d.objective.horizon }}</p>
+          }
+          <h1 class="manifeste ds-break" tabindex="-1" #pageHeading>{{ d.objective.title }}</h1>
+          @if (d.objective.why) {
+            <p class="voix ds-muted ds-break">«&nbsp;{{ d.objective.why }}&nbsp;»</p>
+          }
+          @if (d.objective.description) {
+            <p class="detail ds-muted ds-break">{{ d.objective.description }}</p>
+          }
+        </div>
+        <div class="ds-actions">
+          @if (d.stages.length > 0) {
+            <button eBouton="trait" petit type="button" (click)="addStage()">
+              <e-icone nom="plus" [taille]="18" />Ajouter une étape
+            </button>
+          }
+          <button eBouton="nu" petit type="button" (click)="editObjective()">
+            <e-icone nom="modifier" [taille]="18" />Modifier l'objectif
+          </button>
+        </div>
+      </div>
+    </header>
+
+    @if (d.stages.length > 0) {
+      <div class="ds-panels ds-cols-2-1">
+        <section class="ds-panel ds-gap-6" aria-labelledby="titre-arete">
+          <div class="ds-title-row">
+            <h2 class="section" id="titre-arete">L'arête · {{ stageCount() }}</h2>
+            <!-- Les cases d'e-pas tiennent lieu de légende en attendant celle d'e-arete (catalogue § 9) : la case
+                 « En cours » porte une corne que la borne de l'arête n'a pas. -->
+            <ul class="ds-list-bare ds-row ds-wrap ds-gap-4 detail ds-muted" aria-label="Légende de l'arête">
+              <li class="ds-row ds-gap-2"><e-pas aria-hidden="true" [faits]="1" legende="" />Faite</li>
+              <li class="ds-row ds-gap-2"><e-pas aria-hidden="true" enCours legende="" />En cours</li>
+              <li class="ds-row ds-gap-2"><e-pas aria-hidden="true" [aVenir]="1" legende="" />À venir</li>
+            </ul>
+          </div>
+          <div class="ds-scroll-x">
+            <!-- La tête de l'arête est le sceau de l'écran : aucun bouton sceau ailleurs. -->
+            <e-arete [objectif]="d.objective.title" [etapes]="d.aretes" interactive (choisir)="chooseStage($event)" />
+          </div>
+        </section>
+
+        <section class="ds-panel ds-panel-flush" aria-labelledby="titre-etape">
+          @if (stage(); as s) {
+            <div class="ds-stack ds-gap-2">
+              <p class="repere ds-muted">Étape {{ s.index }} · {{ stageStateLabels[s.state] }}</p>
+              <h2 class="objectif ds-break" id="titre-etape" tabindex="-1" #stageHeading>{{ stageName(s.title) }}</h2>
+              @if (s.horizon) {
+                <p class="detail ds-muted">{{ s.horizon }}</p>
+              }
+              @if (s.description) {
+                <p class="detail ds-muted ds-break">{{ s.description }}</p>
+              }
+              @if (s.tasks.length > 0) {
+                <e-pas [faits]="s.progress.done" [enCours]="s.progress.inProgress" [aVenir]="s.progress.upcoming" />
+              } @else {
+                <p class="detail ds-muted">{{ s.detail }}</p>
+              }
+            </div>
+
+            @if (s.tasks.length > 0) {
+              <!-- ds-break : un intitulé sans espace (une adresse) passe à la ligne au lieu d'élargir la page. -->
+              <ul eListe nue class="ds-break" aria-labelledby="titre-etape">
+                @for (p of s.tasks; track p.id) {
+                  <li
+                    eTache
+                    [titre]="p.title"
+                    [meta]="p.done ? undefined : quadrantTitles[p.quadrant]"
+                    [fait]="p.done"
+                    (faitChange)="toggleTask(p.id, $event)"
+                  >
+                    <div eTacheActions>
+                      <button
+                        eBouton="nu"
+                        petit
+                        type="button"
+                        [attr.aria-label]="'Modifier « ' + p.title + ' »'"
+                        (click)="editTask(p, s.id)"
+                      >
+                        Modifier
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+
+            <div class="ds-actions">
+              <button eBouton="trait" petit type="button" (click)="addTask(s.id)">
+                <e-icone nom="plus" [taille]="18" />Ajouter un pas
+              </button>
+              <a eBouton="nu" petit [routerLink]="['/objectifs', d.objective.id, 'akari']" [queryParams]="akariQuery()">
+                <e-icone nom="akari" [taille]="18" />Proposer des pas avec Akari
+              </a>
+              <button eBouton="nu" petit type="button" (click)="editStage(s)">
+                <e-icone nom="modifier" [taille]="18" />Modifier l'étape
+              </button>
+            </div>
+          }
+        </section>
+      </div>
+    } @else if (!hasReport()) {
+      <aside eNote>
+        <p>Une arête commence par une étape. Ajoute la première, ou demande-moi de t'en proposer.</p>
+        <div eNoteActions>
+          <button eBouton="trait" petit type="button" (click)="addStage()">
+            <e-icone nom="plus" [taille]="18" />Ajouter une étape
+          </button>
+          <a eBouton="nu" petit [routerLink]="['/objectifs', d.objective.id, 'akari']">Proposer des étapes</a>
+        </div>
+      </aside>
+    } @else {
+      <!-- La coque affiche déjà une note d'Akari (une par écran) : la même invitation, sans note. Les actions
+           restent, le bouton de l'en-tête n'apparaissant qu'avec une étape. -->
+      <div class="ds-stack ds-gap-3">
+        <p class="corps ds-muted">Une arête commence par une étape.</p>
+        <div class="ds-actions">
+          <button eBouton="trait" petit type="button" (click)="addStage()">
+            <e-icone nom="plus" [taille]="18" />Ajouter une étape
+          </button>
+          <a eBouton="nu" petit [routerLink]="['/objectifs', d.objective.id, 'akari']">Proposer des étapes</a>
+        </div>
+      </div>
+    }
+
+    @if (d.tasksWithoutStage.length > 0) {
+      <div class="ds-panels">
+        <section class="ds-panel ds-panel-flush" aria-labelledby="titre-sans-etape">
+          <div class="ds-stack ds-gap-2">
+            <h2 class="section" id="titre-sans-etape">Pas sans étape</h2>
+            <p class="detail ds-muted">{{ looseTasksHint() }}</p>
+          </div>
+          <ul eListe nue class="ds-break" aria-labelledby="titre-sans-etape">
+            @for (p of d.tasksWithoutStage; track p.id) {
+              <li
+                eTache
+                [titre]="p.title"
+                [meta]="p.done ? undefined : quadrantTitles[p.quadrant]"
+                [fait]="p.done"
+                (faitChange)="toggleTask(p.id, $event)"
+              >
+                <div eTacheActions>
+                  <button
+                    eBouton="nu"
+                    petit
+                    type="button"
+                    [attr.aria-label]="'Modifier « ' + p.title + ' »'"
+                    (click)="editTask(p, null)"
+                  >
+                    Modifier
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
+        </section>
+      </div>
+    }
+  } @else if (notFound()) {
+    <section class="ds-stack ds-gap-4" aria-labelledby="titre-introuvable">
+      <h1 class="objectif" id="titre-introuvable">Cet objectif est introuvable</h1>
+      <p class="corps">Le lien est peut-être incomplet. Retrouve-le parmi tes objectifs.</p>
+      <div class="ds-actions">
+        <a eBouton="trait" routerLink="/">Voir mes objectifs</a>
+      </div>
+    </section>
+  } @else if (!store.error()) {
+    <p class="detail ds-muted" role="status">Chargement de ton objectif…</p>
+  } @else {
+    <!-- Le chargement n'a pas abouti : la page garde un titre et un chemin. La note de la coque explique ;
+         une fois lue (« Compris »), l'écran dit quoi faire. -->
+    <section class="ds-stack ds-gap-4" aria-labelledby="titre-non-charge">
+      <h1 class="objectif" id="titre-non-charge">Tes objectifs ne sont pas chargés</h1>
+      @if (!hasReport()) {
+        <p class="corps">Vérifie ta connexion, puis recharge la page.</p>
+      }
+      <div class="ds-actions">
+        <a eBouton="trait" routerLink="/">Voir mes objectifs</a>
+      </div>
+    </section>
+  }
+</div>

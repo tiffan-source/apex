@@ -1,0 +1,149 @@
+<div class="ds-page">
+  @if (detail(); as d) {
+    <header class="ds-stack ds-gap-5">
+      <nav eFilAriane>
+        <ol>
+          <li><a routerLink="/">Objectifs</a></li>
+          <li><a [routerLink]="['/objectifs', d.objective.id]">{{ crumb() }}</a></li>
+          <li aria-current="page">Akari</li>
+        </ol>
+      </nav>
+      <div class="ds-stack ds-gap-2">
+        <p class="repere ds-muted ds-row ds-gap-2"><e-icone nom="akari" [taille]="16" />Akari</p>
+        <h1 class="objectif ds-break">{{ d.objective.title }}</h1>
+        <p class="detail ds-muted">Akari propose, tu décides : rien n'est ajouté sans ton accord.</p>
+      </div>
+    </header>
+
+    <div class="ds-panels ds-cols-7-6">
+      <section class="ds-panel" aria-label="Conversation avec Akari">
+        <ol class="ds-conversation">
+          @for (message of chat.orderLatestMessages(); track message.id) {
+            @if (message.sender === 'user') {
+              <li #reply class="ds-reply">
+                <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+                <div class="corps ds-prose" [innerHTML]="message.content | markdown"></div>
+              </li>
+            } @else {
+              <li #reply>
+                <aside eNote>
+                  <div class="ds-prose" [innerHTML]="message.content | markdown"></div>
+                </aside>
+              </li>
+            }
+          }
+
+          @if (invitation(); as invite) {
+            <li #reply>
+              <aside eNote>
+                <p class="ds-break">{{ invite.phrase }}</p>
+                <div eNoteActions>
+                  <button eBouton="trait" petit type="button" (click)="accept(invite)">{{ invite.action }}</button>
+                </div>
+              </aside>
+            </li>
+          }
+
+          @if (chat.isAwaitingPermission()) {
+            <li #reply>
+              <aside eNote libelle="Demande d'Akari">
+                <p id="akari-demande" class="ds-break">{{ permissionPhrase() }}</p>
+                <div eNoteActions>
+                  <button #accept eBouton="trait" petit type="button" aria-describedby="akari-demande" (click)="answer(true)">
+                    {{ acceptLabel() }}
+                  </button>
+                  <button eBouton="nu" petit type="button" aria-describedby="akari-demande" (click)="answer(false)">
+                    Pas maintenant
+                  </button>
+                </div>
+              </aside>
+            </li>
+          }
+        </ol>
+
+        <p class="detail ds-muted" role="status" aria-live="polite">{{ status() }}</p>
+
+        <form class="ds-composer ds-rule-top ds-push-down" (submit)="submit($event)">
+          <label class="e-masque" for="akari-reponse">Réponds à Akari</label>
+          <textarea
+            #saisie
+            eSaisie
+            tailleAuto
+            id="akari-reponse"
+            [lignesMin]="2"
+            [lignesMax]="6"
+            placeholder="Réponds à Akari…"
+            [value]="draft()"
+            [disabled]="!ready()"
+            (input)="write($event)"
+            (keydown.enter)="enter($event)"
+          ></textarea>
+          <button eBouton="trait" icone type="submit" aria-label="Envoyer" [disabled]="!canSend()">
+            <e-icone nom="envoyer" />
+          </button>
+        </form>
+      </section>
+
+      <section class="ds-panel ds-gap-6" aria-labelledby="akari-titre-arete">
+        <div class="ds-title-row">
+          <h2 class="section" id="akari-titre-arete">L'arête</h2>
+          @if (summary()) {
+            <p class="detail ds-muted">{{ summary() }}</p>
+          }
+        </div>
+
+        <!-- L'arête prend la largeur de la colonne (ses noms restent lisibles sur ordinateur). Masquée sur
+             mobile, comme l'aperçu de la maquette : la liste des étapes suit. -->
+        <div class="ds-hide-mobile">
+          <e-arete [objectif]="d.objective.title" [etapes]="d.aretes" />
+        </div>
+
+        @if (stageRows().length) {
+          <ol class="ds-divided" aria-label="Les étapes">
+            @for (stage of stageRows(); track stage.id) {
+              <li class="ds-entry">
+                <span class="objectif">{{ stage.index }}</span>
+                <span class="corps ds-break">{{ stage.title }}</span>
+                <span class="detail ds-muted ds-nowrap">{{ stage.taskCount }}</span>
+                <span class="detail ds-muted">{{ stage.state }}</span>
+              </li>
+            }
+          </ol>
+        } @else {
+          <p class="corps ds-muted">Aucune étape pour l'instant. Akari peut t'en proposer.</p>
+        }
+
+        @if (looseTasks()) {
+          <p class="detail ds-muted">{{ looseTasks() }}</p>
+        }
+
+        <div class="ds-actions ds-push-down">
+          <a eBouton="trait" [routerLink]="['/objectifs', d.objective.id]">Voir l'arête</a>
+        </div>
+      </section>
+    </div>
+  } @else if (notFound()) {
+    <!-- Comme sur l'arête de l'objectif (/objectifs/:id) : la page garde un titre. -->
+    <section class="ds-stack ds-gap-4" aria-labelledby="akari-introuvable">
+      <h1 class="objectif" id="akari-introuvable">Cet objectif est introuvable</h1>
+      <p class="corps">Le lien est peut-être incomplet. Retrouve-le parmi tes objectifs.</p>
+      <div class="ds-actions">
+        <a eBouton="trait" routerLink="/">Voir mes objectifs</a>
+      </div>
+    </section>
+  } @else if (searching()) {
+    <p class="detail ds-muted" role="status">Akari retrouve ton objectif…</p>
+  } @else {
+    <!-- Le chargement n'a pas abouti : comme sur l'arête, la page garde un titre et un chemin. La note de la
+         coque explique ; une fois lue (« Compris »), l'écran dit quoi faire. -->
+    <section class="ds-stack ds-gap-4" aria-labelledby="akari-non-charge">
+      <h1 class="objectif" id="akari-non-charge">Tes objectifs ne sont pas chargés</h1>
+      @if (!hasReport()) {
+        <p class="corps">Vérifie ta connexion, puis recharge la page.</p>
+      }
+      <div class="ds-actions">
+        <a eBouton="trait" routerLink="/">Voir mes objectifs</a>
+      </div>
+    </section>
+  }
+</div>

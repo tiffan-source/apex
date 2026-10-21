@@ -4,15 +4,15 @@ import { SessionStore } from "./session.store";
 import { ObjectiveViewModel, TaskViewModel } from "../models/objective.viewmodel";
 import { withCreateObjective } from "./features/with-create-objective";
 import { withObjectiveQuery } from "./features/with-objective-query";
-import { withTask } from "./features/with-task-flatten";
+import { withObjectivesLoaded } from "./features/with-objectives-loaded";
 import { withRequestStatus } from "./utils/loading-feature";
 import { withCreateSubObjective } from "./features/with-create-sub-objective";
 import { withAddTaskToObjective } from "./features/with-add-task-to-objective";
-import { withTaskEisenhowerSeparate } from "./features/with-task-eisenhower-separate";
 import { withUpdateTaskDone } from "./features/with-update-task-done";
 import { withEditObjective } from "./features/with-edit-objective";
 import { withTaskEdit } from "./features/with-task-edit";
-import { withStats } from "./features/with-stats";
+import { withObjectiveViews } from "./features/with-objective-views";
+import { withMoveTaskToQuadrant } from "./features/with-move-task-to-quadrant";
 
 export type ObjectiveState = {
   objectives: ObjectiveViewModel[];
@@ -24,19 +24,24 @@ const initialState: ObjectiveState = {
   tasks: []
 };
 
+/*
+ * signalStore() n'a de surcharges typées que jusqu'à 15 fonctionnalités : au-delà, tout le type du store
+ * tombe (TS2769). Une nouvelle fonctionnalité qui ne tiendrait plus se regroupe avec d'autres dans un
+ * signalStoreFeature.
+ */
 export const ObjectiveStore = signalStore(
   withState<ObjectiveState>(initialState),
   withRequestStatus(),
+  withObjectivesLoaded(),
   withObjectiveQuery(),
-  withTask(),
   withCreateObjective(),
   withCreateSubObjective(),
   withAddTaskToObjective(),
-  withTaskEisenhowerSeparate(),
   withEditObjective(),
   withUpdateTaskDone(),
   withTaskEdit(),
-  withStats(),
+  withObjectiveViews(),
+  withMoveTaskToQuadrant(),
   withHooks((store, session = inject(SessionStore)) =>({
     onInit() {
       effect(() => {

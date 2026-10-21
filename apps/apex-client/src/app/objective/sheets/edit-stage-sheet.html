@@ -1,0 +1,17 @@
+<e-feuille titre="Modifier l'étape">
+  <form class="ds-stack" id="feuille-etape" [formRoot]="fields">
+    <e-champ libelle="Le nom de l'étape">
+      <input eSaisie autocomplete="off" [formField]="fields.title" />
+    </e-champ>
+    <e-champ libelle="En quelques mots" facultatif>
+      <textarea eSaisie tailleAuto [lignesMin]="2" [lignesMax]="6" [formField]="fields.description"></textarea>
+    </e-champ>
+    <e-champ libelle="Pour quand" [facultatif]="dueDateOptional" aide="L'échéance de cette étape, même approximative.">
+      <input eSaisie type="date" [formField]="fields.dueDate" />
+    </e-champ>
+  </form>
+  <div eFeuilleActions>
+    <button eBouton="trait" type="submit" form="feuille-etape">Enregistrer</button>
+    <button eBouton="nu" type="button" (click)="ref.close()">Annuler</button>
+  </div>
+</e-feuille>

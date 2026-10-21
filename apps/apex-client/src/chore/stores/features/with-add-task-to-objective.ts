@@ -4,13 +4,15 @@ import { RequestStatusState } from "../utils/loading-feature";
 import { AddTaskToObjectiveUsecase } from "@org/objective";
 import { inject } from "@angular/core";
 import { SessionStore } from "../session.store";
-import { MessageService } from "primeng/api";
+import { AnnoncesStore } from "../annonces.store";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
-import { from, pipe, switchMap, tap } from "rxjs";
+import { from, mergeMap, pipe, tap } from "rxjs";
 import { withOwnerId } from "../utils/filter-auth-operation";
-import { withOptimistiqueId } from "../utils/map-optimistique-id";
+import { isTemporaryId, swapTaskId, withOptimistiqueId } from "../utils/map-optimistique-id";
+import { WriteQueue } from "../utils/write-queue";
 import { TaskViewModel } from "../../models/objective.viewmodel";
 import { tapResponse } from "@ngrx/operators";
+import { SUCCESS_ANNOUNCEMENTS, failureReport } from "../../constants/messages.constante";
 
 export type TaskQuery = {
   title: string;
@@ -24,8 +26,10 @@ export function withAddTaskToObjective() {
     withMethods((store,
       addTaskToObjectiveUsecase = inject(AddTaskToObjectiveUsecase),
       sessionStore = inject(SessionStore),
-      messageService = inject(MessageService)
+      annonces = inject(AnnoncesStore),
+      writes = inject(WriteQueue)
     )=>({
+      /** Ajoute un pas à un objectif ou à une étape (objectiveId), d'abord dans l'état puis en base. */
       addTaskToObjective: rxMethod<{ objectiveId: string; task: TaskQuery }>(
         pipe(
           withOwnerId(sessionStore.currentUserId),
@@ -39,47 +43,52 @@ export function withAddTaskToObjective() {
               importance: task.importance,
               urgency: task.urgency,
               done: false,
-              objectiveId: objectiveId,
+              // L'étape a pu être enregistrée pendant que la feuille était ouverte (avec son id temporaire) :
+              // le pas va à son id définitif, sinon il resterait rattaché à un id qui n'existe plus dans l'état.
+              // Encore temporaire, swapObjectiveId le fera suivre à l'enregistrement.
+              objectiveId: writes.resolve(objectiveId),
             };
 
             patchState(store, {
               tasks: [...store.tasks(), newTask],
             });
           }),
-          switchMap(({ objectiveId, task, ownerId, tempId }) =>
-            from(addTaskToObjectiveUsecase.execute(objectiveId, { ...task, ownerId })).pipe(
+          mergeMap(({ objectiveId, task, ownerId, tempId }) =>
+            from(writes.run(async () => {
+              // L'étape a pu être enregistrée entre-temps : son id définitif est connu ici
+              const targetId = writes.resolve(objectiveId);
+              if (isTemporaryId(targetId)) return null; // sa création n'a pas abouti (déjà signalé)
+              return addTaskToObjectiveUsecase.execute(targetId, { ...task, ownerId });
+            })).pipe(
               tapResponse({
                 next: (data) => {
-                  if (data.success) {
-                    const updatedTask: TaskViewModel = {
-                      id: data.data.id,
-                      title: data.data.title,
-                      importance: data.data.importance,
-                      urgency: data.data.urgency,
-                      done: false,
-                      objectiveId,
-                    };
-
+                  if (data === null) {
+                    patchState(store, { tasks: store.tasks().filter((t) => t.id !== tempId), requestStatus: 'idle' });
+                  } else if (data.success) {
+                    writes.link(tempId, data.data.id);
                     patchState(store, {
-                      tasks: store.tasks().map((t) => t.id === tempId ? updatedTask : t),
+                      // Le pas garde son état optimiste (coché, déplacé…) : ces gestes partent ensuite dans la file
+                      tasks: swapTaskId(store.tasks(), tempId, data.data.id),
                       requestStatus: 'fulfilled'
                     });
 
-                    messageService.add({ severity: 'success', summary: 'Succès', detail: "La tâche a été ajoutée avec succès." });
+                    annonces.annoncer(SUCCESS_ANNOUNCEMENTS.taskAdded);
                   } else {
-                    messageService.add({ severity: 'error', summary: 'Erreur', detail: data.error.message });
+                    const report = failureReport('addTask', data.error.code);
+                    annonces.signaler(report);
                     patchState(store, {
                       tasks: store.tasks().filter((t) => t.id !== tempId),
-                      requestStatus: {error: data.error.message}
+                      requestStatus: { error: report }
                     });
                   }
                 },
                 error: (error) => {
                   console.error(error);
-                  messageService.add({ severity: 'error', summary: 'Erreur', detail: "Impossible d'ajouter la tâche. Veuillez réessayer." });
+                  const report = failureReport('addTask');
+                  annonces.signaler(report);
                   patchState(store, {
                     tasks: store.tasks().filter((t) => t.id !== tempId),
-                    requestStatus: {error: "Impossible d'ajouter la tâche. Veuillez réessayer."}
+                    requestStatus: { error: report }
                   });
                 },
               })

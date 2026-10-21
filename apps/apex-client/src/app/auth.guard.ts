@@ -1,11 +1,8 @@
 import { inject } from "@angular/core";
-import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from "@angular/router";
+import { CanActivateFn, Router } from "@angular/router";
 import { SessionStore } from "../chore/stores/session.store";
 
-export const authGuard: CanActivateFn = async (
-  route: ActivatedRouteSnapshot,
-  state: RouterStateSnapshot,
-) => {
+export const authGuard: CanActivateFn = async () => {
     const router = inject(Router);
     const authService = inject(SessionStore);
 

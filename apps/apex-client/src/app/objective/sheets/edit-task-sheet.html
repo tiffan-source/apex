@@ -1,0 +1,26 @@
+<e-feuille titre="Modifier le pas">
+  <form class="ds-stack" id="feuille-pas" [formRoot]="fields">
+    <e-champ libelle="Le pas">
+      <input eSaisie autocomplete="off" [formField]="fields.title" />
+    </e-champ>
+    @if (stageOptions().length > 0) {
+      <e-champ libelle="Étape" [aide]="withoutStage ? 'Range ce pas dans une étape de ton arête.' : undefined">
+        <e-selection [options]="stageOptions()" texteVide="Choisis une étape" [formField]="fields.stageId" />
+      </e-champ>
+    } @else {
+      <p class="detail ds-muted">Ajoute une étape à ton objectif pour y ranger ce pas.</p>
+    }
+    <div class="ds-grid ds-cols-2 ds-gap-4">
+      <e-champ libelle="Importance">
+        <e-selection [options]="importanceOptions" [formField]="fields.importance" />
+      </e-champ>
+      <e-champ libelle="Urgence">
+        <e-selection [options]="urgencyOptions" [formField]="fields.urgency" />
+      </e-champ>
+    </div>
+  </form>
+  <div eFeuilleActions>
+    <button eBouton="trait" type="submit" form="feuille-pas">Enregistrer</button>
+    <button eBouton="nu" type="button" (click)="ref.close()">Annuler</button>
+  </div>
+</e-feuille>

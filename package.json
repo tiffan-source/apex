@@ -21,15 +21,12 @@
     "@google/genai": "^2.13.0",
     "@ngrx/operators": "^22.0.1",
     "@ngrx/signals": "^22.0.1",
-    "@primeuix/themes": "^2.0.3",
     "@supabase/supabase-js": "^2.112.2",
     "dompurify": "^3.4.12",
     "express": "^4.21.2",
     "firebase": "^12.17.0",
     "marked": "^18.0.9",
     "ngx-vflow": "^2.7.0",
-    "primeicons": "^7.0.0",
-    "primeng": "^21.1.9",
     "rxjs": "~7.8.0",
     "xstate": "^5.32.5",
     "zod": "^4.6.5",
@@ -93,14 +90,6 @@
     "vitest": "~4.1.0"
   },
   "overrides": {
-    "primeng": {
-      "@angular/cdk": "$@angular/cdk",
-      "@angular/common": "$@angular/common",
-      "@angular/core": "$@angular/core",
-      "@angular/forms": "$@angular/forms",
-      "@angular/platform-browser": "$@angular/platform-browser",
-      "@angular/router": "$@angular/router"
-    },
     "tsconfck": {
       "typescript": "$typescript"
     }
