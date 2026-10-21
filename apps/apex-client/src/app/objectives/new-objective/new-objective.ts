@@ -8,6 +8,7 @@ import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
 import { FAILURE_REPORTS } from '../../../chore/constants/messages.constante';
 import { fromDateInputValue } from '../../../chore/mapper/date-input.mapper';
 import { formatHorizon } from '../../../chore/mapper/objective-view.mapper';
+import { firstName } from '../../../chore/mapper/person.mapper';
 import {
   EMPTY_DRAFT,
   type NewObjectiveDraft,
@@ -87,10 +88,9 @@ export class NewObjective {
   protected readonly hasTitle = computed(() => this.draftModel().title.trim() !== '');
 
   /** Le prénom de la personne dans la conversation (« Toi » si on ne le connaît pas). */
-  protected readonly personName = computed(() => {
-    const name = this.session.currentUser()?.name?.trim() ?? '';
-    return name.split(/\s+/)[0] || NEW_OBJECTIVE_TEXTS.personFallback;
-  });
+  protected readonly personName = computed(() =>
+    firstName(this.session.currentUser()?.name, NEW_OBJECTIVE_TEXTS.personFallback),
+  );
 
   /** Le brouillon relu : textes sans espaces autour, horizon écrit « Jusqu'en mai ». */
   protected readonly preview = computed(() => {

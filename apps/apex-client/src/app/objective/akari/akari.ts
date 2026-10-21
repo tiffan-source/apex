@@ -35,6 +35,7 @@ import { ChatStore } from './chat.store';
 import { PermissionRequestViewModel } from './chat.models';
 import { MarkdownPipe } from './markdown.pipe';
 import { STAGE_STATE_TITLES, stageName } from '../stage-labels';
+import { firstName } from '../../../chore/mapper/person.mapper';
 
 /** Une invitation d'Akari : sa phrase, son bouton, et le message envoyé quand on l'accepte. */
 export type AkariInvitation = {
@@ -181,7 +182,7 @@ export class Akari {
   });
 
   /** La personne signe de son prénom, ou « Toi ». */
-  protected readonly personName = computed(() => this.session.currentUser()?.name?.trim().split(/\s+/)[0] || 'Toi');
+  protected readonly personName = computed(() => firstName(this.session.currentUser()?.name, 'Toi'));
 
   /**
    * Akari écoute : le workflow attend un nouveau message, et l'historique est là. Avant, un message envoyé
@@ -236,7 +237,6 @@ export class Akari {
   private readonly replies = viewChildren('reply', { read: ElementRef });
   private readonly textarea = viewChild('saisie', { read: ElementRef });
   private readonly acceptButton = viewChild('accept', { read: ElementRef });
-  private readonly areteScroller = viewChild('areteScroller', { read: ElementRef });
 
   /** L'objectif dont la conversation est ouverte. */
   private readonly openedFor = signal<string | null>(null);
@@ -248,8 +248,6 @@ export class Akari {
   private readonly refocus = signal(false);
   /** La dernière réplique affichée au rendu précédent (référence DOM, pas un état de l'écran). */
   private lastReply: HTMLElement | null = null;
-  /** Le nombre d'étapes de l'arête quand sa vue a été menée à la fin ; null avant le premier rendu. */
-  private shownStages: number | null = null;
 
   constructor() {
     // Ouvre la conversation dès que l'objectif est connu : l'historique, puis le workflow,
@@ -277,19 +275,6 @@ export class Akari {
         if (previous?.isConnected && !this.isVisible(previous)) return;
         const instant = previous === null || this.mouvement.reduit();
         last.scrollIntoView?.({ block: 'nearest', behavior: instant ? 'auto' : 'smooth' });
-      });
-    });
-
-    // L'arête défile dans une colonne plus étroite qu'elle, et sa tête (le nom de l'objectif, le sceau de
-    // l'écran) est à sa fin, comme la dernière étape ajoutée : à l'ouverture et à chaque étape en plus ou en
-    // moins, la vue va à la fin. Ailleurs (la personne a fait défiler, un pas change), elle ne bouge pas.
-    afterRenderEffect(() => {
-      const stages = this.detail()?.aretes.length ?? 0;
-      const scroller = this.areteScroller()?.nativeElement as HTMLElement | undefined;
-      untracked(() => {
-        if (!scroller || stages === this.shownStages) return;
-        this.shownStages = stages;
-        scroller.scrollLeft = scroller.scrollWidth;
       });
     });
 

@@ -92,16 +92,9 @@
           }
         </div>
 
-        <!-- La colonne est plus étroite que l'arête : la vue va à sa fin (la tête, la dernière étape), et la zone
-             défile au clavier (Safari ne fait défiler au clavier qu'une zone focalisable). Masquée sur mobile, comme
-             l'aperçu de la maquette : la liste des étapes suit. -->
-        <div
-          #areteScroller
-          class="ds-scroll-x ds-hide-mobile"
-          tabindex="0"
-          role="region"
-          aria-label="L'arête de l'objectif"
-        >
+        <!-- L'arête prend la largeur de la colonne (ses noms restent lisibles sur ordinateur). Masquée sur
+             mobile, comme l'aperçu de la maquette : la liste des étapes suit. -->
+        <div class="ds-hide-mobile">
           <e-arete [objectif]="d.objective.title" [etapes]="d.aretes" />
         </div>
 

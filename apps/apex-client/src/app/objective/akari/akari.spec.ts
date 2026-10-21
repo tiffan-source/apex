@@ -545,7 +545,7 @@ describe('Akari : l’arête à droite', () => {
     const panel = root.querySelector('section[aria-labelledby="akari-titre-arete"]') as HTMLElement;
     expect(text(panel.querySelector('h2'))).toBe("L'arête");
     expect(text(panel)).toContain('2 étapes · 4 pas');
-    expect(panel.querySelector('.ds-scroll-x > e-arete')).not.toBeNull();
+    expect(panel.querySelector('.ds-hide-mobile > e-arete')).not.toBeNull();
     expect(panel.querySelector('e-arete')?.hasAttribute('interactive')).toBe(false);
 
     const rows = Array.from(panel.querySelectorAll('ol.ds-divided > li.ds-entry'));
@@ -597,32 +597,12 @@ describe('Akari : l’arête à droite', () => {
     expect(Array.from(root.querySelectorAll('e-arete .etape .nom')).map(text)).toEqual(['Endurance', 'Étape sans nom']);
   });
 
-  it('mène la vue de l’arête à sa fin (sa tête, la dernière étape), dans une zone qui défile au clavier', async () => {
-    // jsdom ne mesure rien : une arête plus large que sa colonne.
-    vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockReturnValue(900);
-    try {
-      const { fixture, objectives, root } = await setup();
-      const scroller = root.querySelector('.ds-scroll-x') as HTMLElement;
-      expect(scroller.scrollLeft).toBe(900);
-      expect(scroller.getAttribute('tabindex')).toBe('0');
-      expect(scroller.getAttribute('role')).toBe('region');
-      expect(scroller.getAttribute('aria-label')).toBe("L'arête de l'objectif");
-      // Comme l'aperçu de la maquette, masquée sur mobile ; la liste des étapes suit.
-      expect(scroller.classList).toContain('ds-hide-mobile');
-
-      // La personne fait défiler ; un pas qui change ne la ramène pas à la fin.
-      scroller.scrollLeft = 0;
-      objectives.tasks.update((list) => list.map((t) => (t.id === 't1' ? { ...t, done: true } : t)));
-      await refresh(fixture);
-      expect(scroller.scrollLeft).toBe(0);
-
-      // Akari ajoute une étape : la vue va à la fin, où elle arrive.
-      objectives.objectives.update((list) => [...list, { id: 'recup', title: 'Récupération', why: '', description: '', dueDate: '', parentId: 'semi' }]);
-      await refresh(fixture);
-      expect(scroller.scrollLeft).toBe(900);
-    } finally {
-      vi.restoreAllMocks();
-    }
+  it('laisse l’arête prendre la largeur de sa colonne, sans zone qui défile, et la masque sur mobile', async () => {
+    const { root } = await setup();
+    const panel = root.querySelector('section[aria-labelledby="akari-titre-arete"]') as HTMLElement;
+    expect(panel.querySelector('.ds-scroll-x')).toBeNull();
+    // Comme l'aperçu de la maquette, masquée sur mobile ; la liste des étapes suit.
+    expect(panel.querySelector('e-arete')?.parentElement?.classList).toContain('ds-hide-mobile');
   });
 
   it('garde un seul sceau : la tête de l’arête', async () => {
