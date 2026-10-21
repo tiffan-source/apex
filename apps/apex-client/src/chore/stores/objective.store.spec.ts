@@ -11,14 +11,12 @@ import {
   EditObjectiveUsecase,
   GetAllObjectiveAndTaskQuery,
   UpdateDoneStatusOfTaskUsecase,
-  WhatIsTodayFocusUsecase,
   type GetAllObjectiveAndTaskOutput,
   type TaskOutput,
 } from '@org/objective';
 import { SessionStore } from './session.store';
 import { AnnoncesStore } from './annonces.store';
 import { ObjectiveStore } from './objective.store';
-import { FocusTaskStore } from './focus-task.store';
 import { isTemporaryId } from './utils/map-optimistique-id';
 import { FAILURE_REPORTS, SUCCESS_ANNOUNCEMENTS, taskMovedAnnouncement, voiceIssues } from '../constants/messages.constante';
 
@@ -57,23 +55,26 @@ function deferred<T>() {
 
 type Mock = { execute: ReturnType<typeof vi.fn> };
 
-/** Un ObjectiveStore chargé avec `loaded`, ses cas d'usage simulés et le LiveAnnouncer espionné. */
-async function setup(loaded: GetAllObjectiveAndTaskOutput = LOADED) {
+/**
+ * Un ObjectiveStore chargé avec `loaded`, ses cas d'usage simulés et le LiveAnnouncer espionné.
+ * Avec `firstLoad`, le premier chargement attend cette promesse (et `loaded` sert aux suivants).
+ */
+async function setup(loaded: GetAllObjectiveAndTaskOutput = LOADED, firstLoad?: Promise<GetAllObjectiveAndTaskOutput>) {
+  const query = vi.fn().mockResolvedValue(structuredClone(loaded));
+  if (firstLoad) query.mockReturnValueOnce(firstLoad);
   const usecases = {
-    query: { execute: vi.fn().mockResolvedValue(structuredClone(loaded)) } as Mock,
+    query: { execute: query } as Mock,
     create: { execute: vi.fn() } as Mock,
     addSub: { execute: vi.fn() } as Mock,
     addTask: { execute: vi.fn() } as Mock,
     editObjective: { execute: vi.fn() } as Mock,
     editTask: { execute: vi.fn() } as Mock,
     toggle: { execute: vi.fn() } as Mock,
-    focus: { execute: vi.fn().mockResolvedValue(ok([])) } as Mock,
   };
   const announce = vi.fn().mockResolvedValue(undefined);
   TestBed.configureTestingModule({
     providers: [
       ObjectiveStore,
-      FocusTaskStore,
       { provide: GetAllObjectiveAndTaskQuery, useValue: usecases.query },
       { provide: CreateObjectiveUsecase, useValue: usecases.create },
       { provide: AddSubObjectiveUsecase, useValue: usecases.addSub },
@@ -81,7 +82,6 @@ async function setup(loaded: GetAllObjectiveAndTaskOutput = LOADED) {
       { provide: EditObjectiveUsecase, useValue: usecases.editObjective },
       { provide: EditMyTaskUsecase, useValue: usecases.editTask },
       { provide: UpdateDoneStatusOfTaskUsecase, useValue: usecases.toggle },
-      { provide: WhatIsTodayFocusUsecase, useValue: usecases.focus },
       { provide: SessionStore, useValue: { currentUserId: signal('lea') } },
       { provide: LiveAnnouncer, useValue: { announce } },
     ],
@@ -93,6 +93,11 @@ async function setup(loaded: GetAllObjectiveAndTaskOutput = LOADED) {
   return { store, annonces, announce, ...usecases };
 }
 
+/** Les ids temporaires qui restent dans l'état. */
+function temporaryIdsOf(store: Awaited<ReturnType<typeof setup>>['store']): string[] {
+  return [...store.objectives().map((item) => item.id), ...store.tasks().map((item) => item.id)].filter(isTemporaryId);
+}
+
 beforeEach(() => vi.spyOn(console, 'error').mockImplementation(() => undefined));
 afterEach(() => vi.restoreAllMocks());
 
@@ -101,8 +106,7 @@ describe('ObjectiveStore', () => {
   beforeEach(async () => (s = await setup()));
 
   const task = (id: string) => s.store.tasks().find((item) => item.id === id);
-  const temporaryIds = () =>
-    [...s.store.objectives().map((item) => item.id), ...s.store.tasks().map((item) => item.id)].filter(isTemporaryId);
+  const temporaryIds = () => temporaryIdsOf(s.store);
 
   it('charge les objectifs de la personne connectée', () => {
     expect(s.query.execute).toHaveBeenCalledWith({ ownerId: 'lea' });
@@ -230,6 +234,44 @@ describe('ObjectiveStore', () => {
       expect(temporaryIds()).toEqual([]);
     });
 
+    it('un pas ajouté avec l’id temporaire d’une étape enregistrée entre-temps va dans cette étape, à l’écran aussi', async () => {
+      s.addSub.execute.mockResolvedValueOnce(ok({ id: 'portfolio', title: 'Portfolio' }));
+      s.addTask.execute.mockResolvedValueOnce(ok({ id: 'p1', title: 'Trois projets', importance: 3, urgency: 2 }));
+
+      // La feuille « Ajouter un pas » s'ouvre sur l'étape encore optimiste ; l'étape est enregistrée pendant qu'on écrit.
+      s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Portfolio' });
+      const temporaryStageId = s.store.stageOptions('semi')[1].valeur;
+      await settle();
+      expect(s.store.stageOptions('semi')[1].valeur).toBe('portfolio');
+
+      s.store.addTaskToObjective({ objectiveId: temporaryStageId, task: { title: 'Trois projets', importance: 3, urgency: 2 } });
+      // Tout de suite, et pas seulement au prochain chargement : le pas est dans l'étape, et compté.
+      expect(s.store.tasks().at(-1)?.objectiveId).toBe('portfolio');
+      expect(s.store.objectiveDetail('semi')?.stages[1].tasks.map((item) => item.title)).toEqual(['Trois projets']);
+      await settle();
+
+      expect(s.addTask.execute).toHaveBeenCalledWith('portfolio', expect.objectContaining({ title: 'Trois projets' }));
+      expect(task('p1')?.objectiveId).toBe('portfolio');
+      expect(s.store.matrix().planifier.find((item) => item.id === 'p1')?.rootObjectiveId).toBe('semi');
+    });
+
+    it('un pas rangé dans une étape enregistrée pendant que la feuille était ouverte la rejoint à l’écran', async () => {
+      s.addSub.execute.mockResolvedValueOnce(ok({ id: 'portfolio', title: 'Portfolio' }));
+      s.editTask.execute.mockResolvedValueOnce(ok({}));
+
+      s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Portfolio' });
+      const temporaryStageId = s.store.stageOptions('semi')[1].valeur;
+      await settle();
+
+      // La feuille « Modifier le pas » avait proposé l'étape avec son id temporaire.
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 4, urgency: 1, objectiveId: temporaryStageId } });
+      expect(task('t1')?.objectiveId).toBe('portfolio');
+      await settle();
+
+      expect(s.editTask.execute).toHaveBeenCalledWith(expect.objectContaining({ task: expect.objectContaining({ id: 't1', objectiveId: 'portfolio' }) }));
+      expect(s.store.objectiveDetail('semi')?.stages.map((stage) => stage.tasks.map((item) => item.id))).toEqual([['t2'], ['t1']]);
+    });
+
     it('une étape ajoutée à un objectif pas encore enregistré part avec son id définitif', async () => {
       s.create.execute.mockResolvedValueOnce(ok({ id: 'guitare', title: 'Guitare' }));
       s.addSub.execute.mockResolvedValueOnce(ok({ id: 'accords', title: 'Accords' }));
@@ -283,6 +325,153 @@ describe('ObjectiveStore', () => {
       expect(s.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance']);
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.createObjective);
       expect(s.store.isPending()).toBe(false);
+    });
+  });
+
+  describe('objectivesLoaded : la mémoire du chargement', () => {
+    it('vrai une fois chargé, et il le reste quand une écriture passe par requestStatus', async () => {
+      expect(s.store.objectivesLoaded()).toBe(true);
+      s.create.execute.mockResolvedValueOnce(ko('FAIL_TO_SAVE_OBJECTIVE'));
+      s.store.createObjective({ title: 'Guitare' });
+      expect(s.store.isPending()).toBe(true);
+      expect(s.store.objectivesLoaded()).toBe(true);
+      await settle();
+      expect(s.store.error()).toBe(FAILURE_REPORTS.createObjective);
+      expect(s.store.objectivesLoaded()).toBe(true);
+    });
+
+    it('faux pendant le premier chargement, et après un chargement qui n’aboutit pas', async () => {
+      TestBed.resetTestingModule();
+      const load = deferred<GetAllObjectiveAndTaskOutput>();
+      const t = await setup(LOADED, load.promise);
+      expect(t.store.isPending()).toBe(true);
+      expect(t.store.objectivesLoaded()).toBe(false);
+
+      load.resolve(structuredClone(LOADED));
+      await settle();
+      expect(t.store.objectivesLoaded()).toBe(true);
+
+      t.store.clearObjectives(); // déconnexion
+      expect(t.store.objectivesLoaded()).toBe(false);
+      t.query.execute.mockRejectedValueOnce(new Error('réseau'));
+      t.store.loadObjectives({ ownerId: 'lea' });
+      await settle();
+      expect(t.store.objectivesLoaded()).toBe(false);
+      expect(t.annonces.signalement()).toBe(FAILURE_REPORTS.loadObjectives);
+    });
+  });
+
+  describe('le chargement garde les créations en vol', () => {
+    it('le premier chargement garde l’objectif, l’étape et le pas encore optimistes', async () => {
+      TestBed.resetTestingModule();
+      const load = deferred<GetAllObjectiveAndTaskOutput>();
+      const t = await setup(LOADED, load.promise);
+      const created = deferred<unknown>();
+      t.create.execute.mockReturnValueOnce(created.promise);
+      t.addSub.execute.mockResolvedValueOnce(ok({ id: 'accords', title: 'Accords' }));
+      t.addTask.execute.mockResolvedValueOnce(ok({ id: 'p1', title: 'Do, ré, mi', importance: 3, urgency: 2 }));
+
+      // « Je m'y engage » avant la fin du premier chargement, puis une étape et un pas sur cet objectif
+      t.store.createObjective({ title: 'Guitare' });
+      const objectiveId = t.store.objectiveOptions()[0].valeur;
+      t.store.addSubObjective({ objectiveId, subObjectiveTitle: 'Accords' });
+      const stageId = t.store.stageOptions(objectiveId)[0].valeur;
+      t.store.addTaskToObjective({ objectiveId: stageId, task: { title: 'Do, ré, mi', importance: 3, urgency: 2 } });
+      await settle();
+      // Les écritures attendent le chargement : elles partent après sa lecture de la base
+      expect(t.create.execute).not.toHaveBeenCalled();
+
+      load.resolve(structuredClone(LOADED));
+      await settle();
+      // Le chargement a remplacé l'état : les éléments optimistes sont toujours là, après les éléments chargés
+      expect(t.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance', objectiveId, stageId]);
+      expect(t.store.tasks().map((item) => item.title)).toEqual(['Courir 8 km', 'Sortie longue', 'Do, ré, mi']);
+      expect(t.store.tasks()[2]).toMatchObject({ objectiveId: stageId, done: false });
+      expect(t.create.execute).toHaveBeenCalledTimes(1);
+
+      created.resolve(ok({ id: 'guitare', title: 'Guitare' }));
+      await settle();
+      expect(temporaryIdsOf(t.store)).toEqual([]);
+      expect(t.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance', 'guitare', 'accords']);
+      expect(t.store.tasks().map((item) => item.id)).toEqual(['t1', 't2', 'p1']);
+      expect(t.store.objectiveDetail('guitare')?.stages[0].tasks.map((item) => item.id)).toEqual(['p1']);
+      expect(t.store.lastCreatedObjectiveId()).toBe('guitare');
+    });
+
+    it('un objectif créé juste avant un rechargement n’est ni perdu ni en double', async () => {
+      let saved = false;
+      s.create.execute.mockImplementationOnce(async () => {
+        saved = true;
+        return ok({ id: 'guitare', title: 'Guitare' });
+      });
+      // La base, lue après l'écriture, contient le nouvel objectif
+      s.query.execute.mockImplementationOnce(async () => ({
+        objectives: [
+          ...LOADED.objectives,
+          ...(saved ? [{ id: 'guitare', title: 'Guitare', description: '', why: '', dueDate: null, parentObjective: null }] : []),
+        ],
+        tasks: LOADED.tasks,
+      }));
+
+      s.store.createObjective({ title: 'Guitare' });
+      s.store.loadObjectives({ ownerId: 'lea' });
+      await settle();
+
+      expect(s.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance', 'guitare']);
+      expect(s.create.execute.mock.invocationCallOrder[0]).toBeLessThan(s.query.execute.mock.invocationCallOrder[1]);
+    });
+
+    it('un pas coché pendant un rechargement reste coché : la base est relue après son écriture', async () => {
+      // Une base simulée : ce que la coche enregistre, la lecture suivante le rend.
+      let t1DoneInDb = false;
+      s.toggle.execute.mockImplementation(async ({ done }: { done: boolean }) => {
+        t1DoneInDb = done;
+        return ok({});
+      });
+      s.query.execute.mockImplementation(async () => ({
+        ...structuredClone(LOADED),
+        tasks: LOADED.tasks.map((item) => (item.id === 't1' ? { ...item, done: t1DoneInDb } : item)),
+      }));
+      const reload = deferred<GetAllObjectiveAndTaskOutput>();
+      s.query.execute.mockReturnValueOnce(reload.promise);
+
+      // Le rechargement de fin de tour d'Akari lit la base ; la personne coche t1 pendant ce temps.
+      s.store.loadObjectives({ ownerId: 'lea' });
+      await settle();
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      expect(task('t1')?.done).toBe(true);
+
+      // La lecture, faite avant l'écriture de la coche, rend t1 à faire : elle n'efface pas la coche.
+      reload.resolve(structuredClone(LOADED));
+      await settle();
+
+      expect(s.toggle.execute).toHaveBeenCalledWith({ taskId: 't1', done: true });
+      expect(t1DoneInDb).toBe(true);
+      expect(task('t1')?.done).toBe(true);
+      // Le premier chargement, le rechargement, puis une seule relecture.
+      expect(s.query.execute).toHaveBeenCalledTimes(3);
+      expect(s.store.isPending()).toBe(false);
+      expect(s.store.error()).toBeNull();
+    });
+
+    it('un rechargement sans geste pendant sa lecture ne relit pas la base', async () => {
+      s.store.loadObjectives({ ownerId: 'lea' });
+      await settle();
+      expect(s.query.execute).toHaveBeenCalledTimes(2);
+    });
+
+    it('un pas dont l’ajout n’aboutit pas après le chargement disparaît quand même', async () => {
+      TestBed.resetTestingModule();
+      const load = deferred<GetAllObjectiveAndTaskOutput>();
+      const t = await setup(LOADED, load.promise);
+      t.addTask.execute.mockResolvedValueOnce(ko('FAIL_TO_SAVE_TASK'));
+
+      load.resolve(structuredClone(LOADED));
+      t.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 2 } });
+      await settle();
+
+      expect(t.store.tasks().map((item) => item.id)).toEqual(['t1', 't2']);
+      expect(t.annonces.signalement()).toBe(FAILURE_REPORTS.addTask);
     });
   });
 
@@ -343,12 +532,7 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
       if (outcome === 'throw') {
         s.query.execute.mockRejectedValueOnce(new Error(DOMAIN_MESSAGE));
         s.store.loadObjectives({ ownerId: 'lea' });
-        s.focus.execute.mockRejectedValueOnce(new Error(DOMAIN_MESSAGE));
-      } else if (outcome !== 'success') {
-        s.focus.execute.mockResolvedValueOnce(ko(outcome));
       }
-      TestBed.inject(FocusTaskStore);
-      TestBed.tick();
       await settle();
 
       for (const [text] of s.announce.mock.calls) texts.add(text as string);
@@ -447,18 +631,5 @@ describe('déplacer un pas vers un quadrant : les 16 cas de départ et d’arriv
         });
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.moveTask);
     }
-  });
-});
-
-describe('FocusTaskStore', () => {
-  it('ne plante pas quand les pas du jour arrivent avant les objectifs', async () => {
-    const s = await setup({ objectives: [], tasks: [] });
-    s.focus.execute.mockResolvedValue(ok([{ id: 'inconnu', title: 'X', important: 3, urgent: 3, done: false, objectiveId: 'o' }]));
-    const focus = TestBed.inject(FocusTaskStore);
-    TestBed.tick();
-    await settle();
-    expect(focus.taskTotal()).toBe(1);
-    expect(focus.tasksWithObjective()).toEqual([]);
-    expect(focus.taskDone()).toBe(0);
   });
 });

@@ -60,7 +60,7 @@ if (input.hook_event_name === 'PostToolUse') {
   process.stderr.write(
     `Contrôle du design system après la modification de ${path} : des règles ne sont pas respectées.\n${GUIDANCE} ` +
       "Corrige d'abord ce qui relève de ton travail ; des violations dans des fichiers que tu n'as pas touchés " +
-      "(écrans pas encore migrés vers Empreinte) se signalent à l'utilisateur.\n\n" +
+      "se signalent à l'utilisateur.\n\n" +
       `${report}\n`,
   );
   process.exit(2);

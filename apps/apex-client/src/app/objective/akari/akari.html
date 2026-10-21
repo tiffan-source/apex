@@ -4,7 +4,7 @@
       <nav eFilAriane>
         <ol>
           <li><a routerLink="/">Objectifs</a></li>
-          <li><a [routerLink]="['/objectifs', d.objective.id]">{{ d.objective.title }}</a></li>
+          <li><a [routerLink]="['/objectifs', d.objective.id]">{{ crumb() }}</a></li>
           <li aria-current="page">Akari</li>
         </ol>
       </nav>
@@ -36,7 +36,7 @@
           @if (invitation(); as invite) {
             <li #reply>
               <aside eNote>
-                <p>{{ invite.phrase }}</p>
+                <p class="ds-break">{{ invite.phrase }}</p>
                 <div eNoteActions>
                   <button eBouton="trait" petit type="button" (click)="accept(invite)">{{ invite.action }}</button>
                 </div>
@@ -47,7 +47,7 @@
           @if (chat.isAwaitingPermission()) {
             <li #reply>
               <aside eNote libelle="Demande d'Akari">
-                <p id="akari-demande">{{ permissionPhrase() }}</p>
+                <p id="akari-demande" class="ds-break">{{ permissionPhrase() }}</p>
                 <div eNoteActions>
                   <button #accept eBouton="trait" petit type="button" aria-describedby="akari-demande" (click)="answer(true)">
                     {{ acceptLabel() }}
@@ -92,7 +92,16 @@
           }
         </div>
 
-        <div class="ds-scroll-x">
+        <!-- La colonne est plus étroite que l'arête : la vue va à sa fin (la tête, la dernière étape), et la zone
+             défile au clavier (Safari ne fait défiler au clavier qu'une zone focalisable). Masquée sur mobile, comme
+             l'aperçu de la maquette : la liste des étapes suit. -->
+        <div
+          #areteScroller
+          class="ds-scroll-x ds-hide-mobile"
+          tabindex="0"
+          role="region"
+          aria-label="L'arête de l'objectif"
+        >
           <e-arete [objectif]="d.objective.title" [etapes]="d.aretes" />
         </div>
 
@@ -131,5 +140,17 @@
     </section>
   } @else if (searching()) {
     <p class="detail ds-muted" role="status">Akari retrouve ton objectif…</p>
+  } @else {
+    <!-- Le chargement n'a pas abouti : comme sur l'arête, la page garde un titre et un chemin. La note de la
+         coque explique ; une fois lue (« Compris »), l'écran dit quoi faire. -->
+    <section class="ds-stack ds-gap-4" aria-labelledby="akari-non-charge">
+      <h1 class="objectif" id="akari-non-charge">Tes objectifs ne sont pas chargés</h1>
+      @if (!hasReport()) {
+        <p class="corps">Vérifie ta connexion, puis recharge la page.</p>
+      }
+      <div class="ds-actions">
+        <a eBouton="trait" routerLink="/">Voir mes objectifs</a>
+      </div>
+    </section>
   }
 </div>

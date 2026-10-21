@@ -5,10 +5,10 @@ import { provideRouter } from '@angular/router';
 import { EIcone, motsAEviter } from '@empreinte-studio/angular';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
-import { FAILURE_REPORTS, voiceIssues } from '../../chore/constants/messages.constante';
+import { voiceIssues } from '../../chore/constants/messages.constante';
 import type { ObjectiveCardViewModel } from '../../chore/models/objective-card.viewmodel';
-import type { RequestStatus } from '../../chore/stores/utils/loading-feature';
-import { Objectives, TODAY_CHECK_INTERVAL, cardProgress, formatToday, loadIsSettled } from './objectives';
+import { TODAY_CHECK_INTERVAL, formatToday } from '../../chore/clock/today';
+import { Objectives, cardProgress } from './objectives';
 
 /** Une carte d'objectif, à compléter selon le cas. */
 function card(overrides: Partial<ObjectiveCardViewModel> = {}): ObjectiveCardViewModel {
@@ -43,7 +43,8 @@ function createStore() {
   return {
     objectiveCards: signal<ObjectiveCardViewModel[]>([]),
     accomplishedObjectives: signal<ObjectiveCardViewModel[]>([]),
-    requestStatus: signal<RequestStatus>('pending'),
+    objectivesLoaded: signal(false),
+    error: signal<string | null>(null),
     updateTaskDone: vi.fn(),
   };
 }
@@ -87,7 +88,7 @@ describe('Objectives', () => {
 
   describe('en-tête', () => {
     it('dit la date du jour, le manifeste et ce qui est en marche et accompli', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([card(), card({ id: 'licence', title: 'Valider ma première année' })]);
       store.accomplishedObjectives.set([ACCOMPLISHED]);
       render();
@@ -126,14 +127,14 @@ describe('Objectives', () => {
     });
 
     it('accorde le compte des accomplis et omet ce qui vaut zéro', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.accomplishedObjectives.set([ACCOMPLISHED, { ...ACCOMPLISHED, id: 'permis' }]);
       render();
       expect(text('header .detail')).toBe('2 accomplis');
     });
 
     it('porte un seul sceau, « Nouvel objectif », qui mène au nouvel objectif', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       store.accomplishedObjectives.set([ACCOMPLISHED]);
       render();
@@ -147,7 +148,7 @@ describe('Objectives', () => {
 
   describe('cartes des objectifs en marche', () => {
     it('montre l’horizon, le nom lié à la carte, le pourquoi entre « » et la progression par étapes', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       render();
 
@@ -166,7 +167,7 @@ describe('Objectives', () => {
     });
 
     it('offre le prochain pas avec sa case, et « Ouvrir » vers l’arête', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       render();
 
@@ -181,7 +182,7 @@ describe('Objectives', () => {
     });
 
     it('cocher le prochain pas passe par la mise à jour optimiste du store', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       render();
 
@@ -190,7 +191,7 @@ describe('Objectives', () => {
     });
 
     it('le pas suivant arrive avec une case vide, pas avec celle qu’on vient de cocher', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       store.updateTaskDone.mockImplementation(() =>
         store.objectiveCards.set([card({ nextTask: { id: 't2', title: 'Courir 8 km', done: false } })]),
@@ -206,8 +207,78 @@ describe('Objectives', () => {
       expect(text(`label[for="${box.id}"]`)).toBe('Courir 8 km');
     });
 
+    it('au clavier, le focus passe à la case du nouveau prochain pas', async () => {
+      store.objectivesLoaded.set(true);
+      store.objectiveCards.set([card()]);
+      store.updateTaskDone.mockImplementation(() =>
+        store.objectiveCards.set([card({ nextTask: { id: 't2', title: 'Courir 8 km', done: false } })]),
+      );
+      render();
+
+      const checked = element.querySelector('#prochain-pas-t1') as HTMLInputElement;
+      checked.focus();
+      checked.click();
+      render();
+      await fixture.whenStable();
+
+      // La case cochée a disparu : le focus n'est pas tombé sur la page.
+      expect(checked.isConnected).toBe(false);
+      expect(document.activeElement).toBe(element.querySelector('#prochain-pas-t2'));
+    });
+
+    it('sans prochain pas, le focus va au lien « Ouvrir » de la carte', async () => {
+      store.objectivesLoaded.set(true);
+      store.objectiveCards.set([card()]);
+      store.updateTaskDone.mockImplementation(() => store.objectiveCards.set([card({ nextTask: null })]));
+      render();
+
+      const checked = element.querySelector('#prochain-pas-t1') as HTMLInputElement;
+      checked.focus();
+      checked.click();
+      render();
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(element.querySelector('#ouvrir-semi'));
+      expect(document.activeElement?.textContent?.trim()).toBe('Ouvrir');
+    });
+
+    it('le dernier pas coché range la carte dans « Accomplis » : le focus va au résumé de la liste', async () => {
+      store.objectivesLoaded.set(true);
+      store.objectiveCards.set([card()]);
+      store.updateTaskDone.mockImplementation(() => {
+        store.objectiveCards.set([]);
+        store.accomplishedObjectives.set([card({ nextTask: null, accomplished: true })]);
+      });
+      render();
+
+      const checked = element.querySelector('#prochain-pas-t1') as HTMLInputElement;
+      checked.focus();
+      checked.click();
+      render();
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(element.querySelector('details > summary'));
+    });
+
+    it('laisse le focus où il est quand la personne est ailleurs', async () => {
+      store.objectivesLoaded.set(true);
+      store.objectiveCards.set([card()]);
+      store.updateTaskDone.mockImplementation(() =>
+        store.objectiveCards.set([card({ nextTask: { id: 't2', title: 'Courir 8 km', done: false } })]),
+      );
+      render();
+
+      const seal = element.querySelector('.e-btn--sceau') as HTMLElement;
+      (element.querySelector('#prochain-pas-t1') as HTMLInputElement).click();
+      seal.focus();
+      render();
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(seal);
+    });
+
     it('sans étape, la progression se lit par pas', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([
         card({ stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 1, total: 3 } }),
       ]);
@@ -216,7 +287,7 @@ describe('Objectives', () => {
     });
 
     it('au-delà de 12 étapes, la légende se lit seule, sans barre', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([
         card({ stageCount: 14, stageProgress: { done: 3, inProgress: true, upcoming: 10, inProgressName: 'Endurance' } }),
       ]);
@@ -226,7 +297,7 @@ describe('Objectives', () => {
     });
 
     it('sans étape ni pas, invite à poser la première étape', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([
         card({
           stageCount: 0,
@@ -245,7 +316,7 @@ describe('Objectives', () => {
     });
 
     it('un objectif pas encore enregistré ne met pas son id temporaire dans une adresse', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([card({ id: 'temp-id-123', nextTask: null })]);
       render();
 
@@ -257,7 +328,7 @@ describe('Objectives', () => {
   });
 
   describe('état vide et chargement', () => {
-    it('pendant le premier chargement, rien ne dit « vide »', () => {
+    it('tant que les objectifs ne sont pas chargés (chargement en cours, ou qui n’a pas abouti), rien ne dit « vide »', () => {
       render();
       expect(element.querySelector('aside.e-note')).toBeNull();
       expect(element.querySelector('article')).toBeNull();
@@ -266,7 +337,7 @@ describe('Objectives', () => {
     });
 
     it('une fois chargé, sans objectif en marche, Akari demande ce que tu veux construire', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       render();
 
       const note = element.querySelector('aside.e-note') as HTMLElement;
@@ -279,23 +350,16 @@ describe('Objectives', () => {
       expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(1);
     });
 
-    it('un chargement qui n’aboutit pas ne dit pas « vide » : la coque affiche déjà le signalement', () => {
-      render();
-      store.requestStatus.set({ error: FAILURE_REPORTS.loadObjectives });
-      render();
-      expect(element.querySelector('aside.e-note')).toBeNull();
-    });
-
-    it('né après une écriture qui n’a pas abouti, l’écran sait que le chargement est fini', () => {
-      // Un premier objectif n'a pas pu être créé, puis la personne revient à l'accueil : la coque a déjà
-      // affiché le signalement, et la personne l'a lu.
-      store.requestStatus.set({ error: FAILURE_REPORTS.createObjective });
+    it('né après le chargement, l’écran le sait tout de suite', () => {
+      // La personne revient à l'accueil : les objectifs sont chargés depuis longtemps, quoi qu'aient dit les
+      // écritures depuis (requestStatus est partagé ; objectivesLoaded, lui, ne bouge pas avec elles).
+      store.objectivesLoaded.set(true);
       render();
       expect(element.querySelector('aside.e-note')?.textContent).toContain("Qu'est-ce que tu veux construire ?");
     });
 
     it('tant que la coque affiche un signalement, Akari ne pose pas sa question : une note à la fois', () => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       annonces.aUnSignalement.set(true);
       render();
       expect(element.querySelector('aside.e-note')).toBeNull();
@@ -305,17 +369,29 @@ describe('Objectives', () => {
       expect(element.querySelector('aside.e-note')).toBeTruthy();
     });
 
-    it('une écriture qui repasse le store en attente ne fait pas disparaître l’état vide', () => {
-      store.requestStatus.set('fulfilled');
+    it('pendant le premier chargement, l’écran le dit dans une ligne d’état', () => {
       render();
-      expect(element.querySelector('aside.e-note')).toBeTruthy();
+      expect(text('[role="status"]')).toBe('Chargement de tes objectifs…');
 
-      store.requestStatus.set('pending');
+      store.objectivesLoaded.set(true);
+      store.objectiveCards.set([card()]);
       render();
-      expect(element.querySelector('aside.e-note')).toBeTruthy();
-      store.requestStatus.set('idle');
+      expect(element.querySelector('[role="status"]')).toBeNull();
+    });
+
+    it('après un chargement qui n’aboutit pas, l’écran attend la lecture de la note, puis dit quoi faire', () => {
+      store.error.set("Je n'ai pas pu charger tes objectifs. Vérifie ta connexion, puis recharge la page.");
+      annonces.aUnSignalement.set(true);
       render();
-      expect(element.querySelector('aside.e-note')).toBeTruthy();
+      // La note de la coque explique : ni « Chargement… », ni une seconde phrase.
+      expect(element.querySelector('[role="status"]')).toBeNull();
+      expect(element.querySelector('p.corps')).toBeNull();
+      expect(text('h1')).toBe('Mes objectifs');
+
+      annonces.aUnSignalement.set(false); // « Compris »
+      render();
+      expect(text('p.corps')).toBe('Tes objectifs ne sont pas chargés. Vérifie ta connexion, puis recharge la page.');
+      expect(element.querySelector('aside.e-note')).toBeNull();
     });
 
     it('des objectifs arrivés avant la fin du chargement s’affichent quand même', () => {
@@ -328,7 +404,7 @@ describe('Objectives', () => {
 
   describe('Accomplis', () => {
     beforeEach(() => {
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       store.accomplishedObjectives.set([ACCOMPLISHED]);
     });
@@ -381,7 +457,10 @@ describe('Objectives', () => {
       };
 
       collect(); // premier chargement
-      store.requestStatus.set('fulfilled');
+      store.error.set('chargement non abouti');
+      collect(); // chargement qui n'a pas abouti, note lue
+      store.error.set(null);
+      store.objectivesLoaded.set(true);
       collect(); // vide
       store.objectiveCards.set([
         card(),
@@ -438,19 +517,5 @@ describe('cardProgress', () => {
     expect(
       cardProgress(card({ stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 0, total: 0 } })),
     ).toEqual({ kind: 'invite' });
-  });
-});
-
-describe('loadIsSettled', () => {
-  it('le chargement est fini quand il a abouti, ou quand une écriture qui n’a pas abouti a pris le statut', () => {
-    expect(loadIsSettled('fulfilled')).toBe(true);
-    expect(loadIsSettled({ error: FAILURE_REPORTS.createObjective })).toBe(true);
-    expect(loadIsSettled({ error: FAILURE_REPORTS.toggleTask })).toBe(true);
-  });
-
-  it('ni en attente, ni au repos, ni après un chargement qui n’a pas abouti', () => {
-    expect(loadIsSettled('idle')).toBe(false);
-    expect(loadIsSettled('pending')).toBe(false);
-    expect(loadIsSettled({ error: FAILURE_REPORTS.loadObjectives })).toBe(false);
   });
 });

@@ -26,13 +26,15 @@ import {
   ETailleAuto,
   PreferencesMouvement,
   compter,
-  type EtatEtape,
 } from '@empreinte-studio/angular';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
+import { AnnoncesStore } from '../../../chore/stores/annonces.store';
+import { CRUMB_TITLE_MAX, shortTitle } from '../../../chore/mapper/title.mapper';
 import { SessionStore } from '../../../chore/stores/session.store';
 import { ChatStore } from './chat.store';
 import { PermissionRequestViewModel } from './chat.models';
 import { MarkdownPipe } from './markdown.pipe';
+import { STAGE_STATE_TITLES, stageName } from '../stage-labels';
 
 /** Une invitation d'Akari : sa phrase, son bouton, et le message envoyé quand on l'accepte. */
 export type AkariInvitation = {
@@ -84,16 +86,6 @@ export function permissionPrompt(
   }
 }
 
-/** Le nom d'une étape enregistrée sans nom (comme sur l'arête). */
-export const UNTITLED_STAGE = 'Étape sans nom';
-
-/** Ce qu'on lit sous le nom d'une étape. */
-export const STAGE_STATE_LABELS: Record<EtatEtape, string> = {
-  faite: 'Faite',
-  'en-cours': 'En cours',
-  'a-venir': 'À venir',
-};
-
 /**
  * Akari pour un objectif (/objectifs/:id/akari) : la conversation avec Akari à gauche, l'arête de
  * l'objectif à droite, qui se remplit quand la personne accepte une étape ou un pas. La tête de
@@ -125,6 +117,7 @@ export class Akari {
 
   protected readonly chat = inject(ChatStore);
   private readonly objectives = inject(ObjectiveStore);
+  private readonly annonces = inject(AnnoncesStore);
   private readonly session = inject(SessionStore);
   private readonly mouvement = inject(PreferencesMouvement);
   private readonly document = inject(DOCUMENT);
@@ -134,19 +127,20 @@ export class Akari {
 
   protected readonly detail = computed(() => (this.known() ? this.objectives.objectiveDetail(this.id()) : undefined));
 
-  /**
-   * Les objectifs sont chargés, et celui-ci n'en fait pas partie. requestStatus est partagé par toutes les
-   * écritures (qui le repassent à 'pending') : des objectifs déjà là prouvent aussi que le chargement a eu lieu.
-   */
-  protected readonly notFound = computed(
-    () => !this.known() && (this.objectives.requestStatus() === 'fulfilled' || this.objectives.objectiveOptions().length > 0),
-  );
+  /** Le titre de l'objectif dans le fil d'Ariane, coupé comme sur l'arête. */
+  protected readonly crumb = computed(() => shortTitle(this.detail()?.objective.title ?? '', CRUMB_TITLE_MAX));
+
+  /** Les objectifs sont chargés (objectivesLoaded), et celui-ci n'en fait pas partie. */
+  protected readonly notFound = computed(() => this.objectives.objectivesLoaded() && !this.known());
 
   /**
    * Le chargement de l'objectif est en cours. Après un chargement qui n'a pas abouti, la coque affiche déjà
    * le signalement : l'écran ne prétend pas chercher encore.
    */
   protected readonly searching = computed(() => !this.detail() && !this.notFound() && !this.objectives.error());
+
+  /** La coque affiche un signalement (une note d'Akari) : l'écran ne le répète pas. */
+  protected readonly hasReport = this.annonces.aUnSignalement;
 
   /** L'étape venue de ?etape=<id>, si elle appartient à cet objectif. */
   private readonly stage = computed(() => {
@@ -174,9 +168,9 @@ export class Akari {
     (this.detail()?.stages ?? []).map((stage) => ({
       id: stage.id,
       index: stage.index,
-      title: stage.title || UNTITLED_STAGE,
+      title: stageName(stage.title),
       taskCount: compter(stage.tasks.length, 'pas', 'pas'),
-      state: [STAGE_STATE_LABELS[stage.state], stage.horizon].filter(Boolean).join(' · '),
+      state: [STAGE_STATE_TITLES[stage.state], stage.horizon].filter(Boolean).join(' · '),
     })),
   );
 
@@ -213,7 +207,7 @@ export class Akari {
     const detail = this.detail();
     if (!detail || !this.ready() || this.spoke()) return null;
     const stage = this.stage();
-    if (stage) return stageInvitation(stage.title || UNTITLED_STAGE);
+    if (stage) return stageInvitation(stageName(stage.title));
     return this.chat.messages().length === 0 ? objectiveInvitation(detail.objective.title) : null;
   });
 
@@ -224,7 +218,7 @@ export class Akari {
     const stages = this.detail()?.stages ?? [];
     return permissionPrompt(request, (id) => {
       const stage = stages.find((candidate) => candidate.id === id);
-      return stage ? stage.title || UNTITLED_STAGE : undefined;
+      return stage ? stageName(stage.title) : undefined;
     });
   });
 
@@ -242,6 +236,7 @@ export class Akari {
   private readonly replies = viewChildren('reply', { read: ElementRef });
   private readonly textarea = viewChild('saisie', { read: ElementRef });
   private readonly acceptButton = viewChild('accept', { read: ElementRef });
+  private readonly areteScroller = viewChild('areteScroller', { read: ElementRef });
 
   /** L'objectif dont la conversation est ouverte. */
   private readonly openedFor = signal<string | null>(null);
@@ -253,6 +248,8 @@ export class Akari {
   private readonly refocus = signal(false);
   /** La dernière réplique affichée au rendu précédent (référence DOM, pas un état de l'écran). */
   private lastReply: HTMLElement | null = null;
+  /** Le nombre d'étapes de l'arête quand sa vue a été menée à la fin ; null avant le premier rendu. */
+  private shownStages: number | null = null;
 
   constructor() {
     // Ouvre la conversation dès que l'objectif est connu : l'historique, puis le workflow,
@@ -280,6 +277,19 @@ export class Akari {
         if (previous?.isConnected && !this.isVisible(previous)) return;
         const instant = previous === null || this.mouvement.reduit();
         last.scrollIntoView?.({ block: 'nearest', behavior: instant ? 'auto' : 'smooth' });
+      });
+    });
+
+    // L'arête défile dans une colonne plus étroite qu'elle, et sa tête (le nom de l'objectif, le sceau de
+    // l'écran) est à sa fin, comme la dernière étape ajoutée : à l'ouverture et à chaque étape en plus ou en
+    // moins, la vue va à la fin. Ailleurs (la personne a fait défiler, un pas change), elle ne bouge pas.
+    afterRenderEffect(() => {
+      const stages = this.detail()?.aretes.length ?? 0;
+      const scroller = this.areteScroller()?.nativeElement as HTMLElement | undefined;
+      untracked(() => {
+        if (!scroller || stages === this.shownStages) return;
+        this.shownStages = stages;
+        scroller.scrollLeft = scroller.scrollWidth;
       });
     });
 

@@ -9,8 +9,7 @@ import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { rootObjectiveOptions, toObjectiveDetail } from '../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../chore/constants/messages.constante';
 import type { ObjectiveViewModel, TaskViewModel } from '../../chore/models/objective.viewmodel';
-import type { RequestStatus } from '../../chore/stores/utils/loading-feature';
-import { ObjectivePage, shortTitle } from './objective-page';
+import { ObjectivePage } from './objective-page';
 import { AddStageSheet } from './sheets/add-stage-sheet';
 import { AddTaskSheet } from './sheets/add-task-sheet';
 import { EditObjectiveSheet } from './sheets/edit-objective-sheet';
@@ -62,7 +61,7 @@ function createStore() {
   return {
     objectives,
     tasks,
-    requestStatus: signal<RequestStatus>('fulfilled'),
+    objectivesLoaded: signal(true),
     error: signal<string | null>(null),
     objectiveOptions: computed(() => rootObjectiveOptions(objectives())),
     objectiveDetail: (id: string) => toObjectiveDetail(id, objectives(), tasks()),
@@ -78,7 +77,7 @@ describe('ObjectivePage', () => {
   let element: HTMLElement;
   let store: ReturnType<typeof createStore>;
   let feuilles: { ouvrir: ReturnType<typeof vi.fn> };
-  let annonces: { annoncer: ReturnType<typeof vi.fn> };
+  let annonces: { annoncer: ReturnType<typeof vi.fn>; aUnSignalement: ReturnType<typeof signal<boolean>> };
   /** La fermeture de la dernière feuille ouverte (ref.closed). */
   let closed: Subject<unknown>;
 
@@ -105,7 +104,7 @@ describe('ObjectivePage', () => {
         return { closed };
       }),
     };
-    annonces = { annoncer: vi.fn() };
+    annonces = { annoncer: vi.fn(), aUnSignalement: signal(false) };
     TestBed.configureTestingModule({
       imports: [ObjectivePage],
       providers: [
@@ -283,6 +282,11 @@ describe('ObjectivePage', () => {
       expect(options.donnees).toEqual(expect.objectContaining({ stageId: null, task: expect.objectContaining({ id: 't5' }) }));
     });
 
+    it('coupe un intitulé sans espace (une adresse) au lieu d’élargir la page', () => {
+      expect(element.querySelector('ul[aria-labelledby="titre-etape"]')?.classList).toContain('ds-break');
+      expect(element.querySelector('ul[aria-labelledby="titre-sans-etape"]')?.classList).toContain('ds-break');
+    });
+
     it("n'a qu'un sceau : la tête de l'arête, aucun bouton sceau", () => {
       expect(element.querySelectorAll('e-arete')).toHaveLength(1);
       expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
@@ -336,6 +340,20 @@ describe('ObjectivePage', () => {
       expect(text('#titre-etape')).toBe('Hiragana');
     });
 
+    it('quand la coque affiche un signalement, garde une seule note : la sienne, et les mêmes actions', () => {
+      // Par exemple : la première étape, ajoutée depuis la note, n'a pas été enregistrée.
+      annonces.aUnSignalement.set(true);
+      fixture.detectChanges();
+      expect(element.querySelector('aside.e-note')).toBeNull();
+      expect(text('p.corps')).toBe('Une arête commence par une étape.');
+      expect(buttonNamed('Ajouter une étape')).toBeDefined();
+      expect(buttonNamed('Proposer des étapes')?.getAttribute('href')).toBe('/objectifs/obj-2/akari');
+
+      annonces.aUnSignalement.set(false); // « Compris »
+      fixture.detectChanges();
+      expect(element.querySelectorAll('aside.e-note')).toHaveLength(1);
+    });
+
     it('« Ajouter une étape » ouvre la feuille, sans doublon dans l’en-tête', () => {
       const addButtons = [...element.querySelectorAll('button')].filter((b) => b.textContent?.trim() === 'Ajouter une étape');
       expect(addButtons).toHaveLength(1);
@@ -358,40 +376,45 @@ describe('ObjectivePage', () => {
     });
 
     it('ne dit rien de faux pendant le chargement', async () => {
-      store.requestStatus.set('pending');
+      store.objectivesLoaded.set(false);
       store.objectives.set([]);
       await render('obj-1');
       expect(element.textContent).not.toContain('introuvable');
       expect(text('[role="status"]')).toBe('Chargement de ton objectif…');
 
       store.objectives.set(OBJECTIVES);
-      store.requestStatus.set('fulfilled');
+      store.objectivesLoaded.set(true);
       fixture.detectChanges();
       expect(text('h1')).toBe('Courir un semi-marathon en mai');
     });
 
-    it("le dit après un chargement vide, même si une écriture repasse à « pending »", async () => {
-      store.requestStatus.set('pending');
+    it('le dit dès que le chargement est fini, sans cet objectif', async () => {
+      store.objectivesLoaded.set(false);
       store.objectives.set([]);
       await render('inconnu');
       expect(element.textContent).not.toContain('introuvable');
 
-      store.requestStatus.set('fulfilled');
-      fixture.detectChanges();
-      expect(text('h1')).toBe('Cet objectif est introuvable');
-
-      store.requestStatus.set('pending');
+      store.objectivesLoaded.set(true);
       fixture.detectChanges();
       expect(text('h1')).toBe('Cet objectif est introuvable');
     });
 
     it("ne le dit pas quand le chargement n'a pas abouti : la coque le signale déjà", async () => {
-      store.requestStatus.set({ error: "Je n'ai pas pu charger tes objectifs." });
+      store.objectivesLoaded.set(false);
       store.error.set("Je n'ai pas pu charger tes objectifs.");
       store.objectives.set([]);
+      annonces.aUnSignalement.set(true);
       await render('obj-1');
       expect(element.textContent).not.toContain('introuvable');
       expect(element.querySelector('[role="status"]')).toBeNull();
+      // La page garde un titre et un chemin ; la note de la coque explique.
+      expect(text('h1')).toBe('Tes objectifs ne sont pas chargés');
+      expect(element.querySelector('p.corps')).toBeNull();
+      expect(buttonNamed('Voir mes objectifs')?.getAttribute('href')).toBe('/');
+
+      annonces.aUnSignalement.set(false); // « Compris » : l'écran dit quoi faire
+      fixture.detectChanges();
+      expect(text('p.corps')).toBe('Vérifie ta connexion, puis recharge la page.');
     });
   });
 
@@ -413,30 +436,23 @@ describe('ObjectivePage', () => {
     collect();
     await render('inconnu');
     collect();
-    store.requestStatus.set('pending');
+    store.objectivesLoaded.set(false);
     store.objectives.set([]);
     await render('autre');
+    collect();
+    store.error.set('chargement non abouti');
+    await render('autre');
+    collect();
+    store.error.set(null);
+    store.objectivesLoaded.set(true);
+    store.objectives.set(OBJECTIVES);
+    annonces.aUnSignalement.set(true);
+    await render('obj-2');
     collect();
 
     for (const value of texts) {
       expect(motsAEviter(value)).toEqual([]);
       expect(voiceIssues(value)).toEqual([]);
     }
-  });
-});
-
-describe('shortTitle', () => {
-  it('garde un titre court tel quel', () => {
-    expect(shortTitle('Semi-marathon en mai')).toBe('Semi-marathon en mai');
-  });
-
-  it('coupe un titre long entre deux mots', () => {
-    expect(shortTitle('Préparer et courir un semi-marathon avant la fin du mois de mai')).toBe(
-      'Préparer et courir un…',
-    );
-  });
-
-  it('coupe un mot sans espace à la longueur maximale', () => {
-    expect(shortTitle('a'.repeat(40), 10)).toBe(`${'a'.repeat(10)}…`);
   });
 });

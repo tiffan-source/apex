@@ -1,6 +1,6 @@
 import { GetConversationsQueryOutput } from "@org/chat"
 import { MessageViewModel, PermissionRequestViewModel } from "./chat.models";
-import { MessageOutput, ToolCall } from "@org/ai-assistant";
+import { ToolCall } from "@org/ai-assistant";
 
 /** Les outils d'écriture du workflow : ceux qui ajoutent une étape ou un pas. */
 export const CREATE_STAGE_TOOL = "createSubObjective";
@@ -14,15 +14,6 @@ export class MessageMapper {
       content: message.content,
       timestamp: new Date(message.createdAt)
     }));
-  }
-
-  static fromMessageOutputToViewModel(message: MessageOutput): MessageViewModel {
-    return {
-      content: message.response,
-      id: message.id,
-      sender: "assistant",
-      timestamp: new Date(message.createdAt)
-    }
   }
 
   /**

@@ -1,11 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
-  NgZone,
+  DOCUMENT,
+  Injector,
+  afterNextRender,
   computed,
   inject,
-  linkedSignal,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -23,9 +23,9 @@ import {
 } from '@empreinte-studio/angular';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
-import { FAILURE_REPORTS } from '../../chore/constants/messages.constante';
 import { isTemporaryId } from '../../chore/stores/utils/map-optimistique-id';
-import type { RequestStatus } from '../../chore/stores/utils/loading-feature';
+import { formatToday, injectToday } from '../../chore/clock/today';
+import { toDateInputValue } from '../../chore/mapper/date-input.mapper';
 import type { NextTaskViewModel, ObjectiveCardViewModel } from '../../chore/models/objective-card.viewmodel';
 
 /** Au-delà de 12 cases, le brand book demande de ne plus allonger la barre : la légende suffit. */
@@ -92,33 +92,8 @@ export function cardProgress(card: ObjectiveCardViewModel): CardProgress {
   return { kind: 'cases', unit: 'pas', done, inProgress, upcoming };
 }
 
-const DAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-
-/** « Lundi 19 octobre ». */
-export function formatToday(date: Date): string {
-  const text = DAY.format(date);
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-/** La date au format AAAA-MM-JJ, en heure locale, pour l'attribut datetime. */
-function localIsoDate(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-/** Toutes les minutes, l'écran vérifie que le repère dit encore la date du jour. */
-export const TODAY_CHECK_INTERVAL = 60_000;
-
-/**
- * Vrai quand requestStatus montre que le premier chargement est fini : il a abouti, ou le statut est
- * celui d'une écriture qui n'a pas abouti (on n'écrit qu'une fois ses objectifs affichés). Un
- * chargement qui n'aboutit pas ne compte pas : la coque affiche déjà son signalement, et l'écran ne
- * prétend pas qu'il n'y a aucun objectif.
- */
-export function loadIsSettled(status: RequestStatus): boolean {
-  if (status === 'fulfilled') return true;
-  return typeof status === 'object' && status.error !== FAILURE_REPORTS.loadObjectives;
-}
+/** L'id du résumé de la liste repliée « Accomplis » (gabarit), où va le focus quand une carte s'y range. */
+const ACCOMPLISHED_SUMMARY_ID = 'accomplis-resume';
 
 /**
  * L'écran Objectifs, l'accueil (maquette « Objectifs ») : les objectifs en marche en cartes, chacun
@@ -133,11 +108,13 @@ export function loadIsSettled(status: RequestStatus): boolean {
 export class Objectives {
   private readonly store = inject(ObjectiveStore);
   private readonly annonces = inject(AnnoncesStore);
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
 
   /** Le jour affiché dans le repère ; il change à minuit, même si l'onglet reste ouvert. */
-  private readonly today = signal(new Date());
+  private readonly today = injectToday();
   protected readonly todayLabel = computed(() => formatToday(this.today()));
-  protected readonly todayIso = computed(() => localIsoDate(this.today()));
+  protected readonly todayIso = computed(() => toDateInputValue(this.today()));
 
   protected readonly cards = computed<ObjectiveCardView[]>(() =>
     this.store.objectiveCards().map((card) => ({
@@ -161,45 +138,64 @@ export class Objectives {
   });
 
   /**
-   * Vrai dès que le premier chargement est fini (loadIsSettled), et pour de bon : pendant ce chargement,
-   * rien ne s'affiche en « vide ». requestStatus est partagé par toutes les écritures, d'où la mémoire :
-   * une écriture qui le repasse à 'pending' ou à 'idle' ne refait pas disparaître l'état vide. L'écran
-   * peut naître après une écriture qui n'a pas abouti (un objectif qui n'a pas pu être créé, puis retour
-   * à l'accueil) : ce statut-là prouve aussi que le chargement est fini.
+   * Aucun objectif en marche, une fois les objectifs chargés (objectivesLoaded : ni pendant le chargement,
+   * ni après un chargement qui n'a pas abouti). Tant que la coque affiche un signalement (une note d'Akari),
+   * la question attend : une seule note à la fois.
    */
-  private readonly settled = linkedSignal<RequestStatus, boolean>({
-    source: this.store.requestStatus,
-    computation: (status, previous) => previous?.value === true || loadIsSettled(status),
-  });
+  protected readonly empty = computed(
+    () => this.store.objectivesLoaded() && this.cards().length === 0 && !this.annonces.aUnSignalement(),
+  );
+
+  /** La coque affiche un signalement (une note d'Akari) : l'écran n'en ajoute pas une seconde. */
+  protected readonly hasReport = this.annonces.aUnSignalement;
+
+  /** Le premier chargement est en cours, et aucune carte n'est encore là : l'écran le dit. */
+  protected readonly loading = computed(
+    () => !this.store.objectivesLoaded() && !this.store.error() && this.cards().length === 0,
+  );
 
   /**
-   * Aucun objectif en marche, une fois les objectifs chargés. Tant que la coque affiche un signalement
-   * (une note d'Akari), la question attend : une seule note à la fois.
+   * Le chargement n'a pas abouti. La coque le signale ; une fois la note lue (« Compris »), l'écran
+   * garde une phrase qui dit quoi faire, au lieu de rester vide.
    */
-  protected readonly empty = computed(() => {
-    // Lu en premier, pour que la mémoire suive chaque changement de requestStatus.
-    const settled = this.settled();
-    return settled && this.cards().length === 0 && !this.annonces.aUnSignalement();
-  });
+  protected readonly loadFailed = computed(
+    () => !this.store.objectivesLoaded() && !!this.store.error() && this.cards().length === 0,
+  );
 
   /** La liste « Accomplis » est repliée au départ. */
   protected readonly accomplishedOpen = signal(false);
 
-  constructor() {
-    // Hors de la zone : un minuteur permanent n'empêche pas l'application d'être stable. Le signal
-    // ne change qu'au changement de jour, et alors dans la zone.
-    const zone = inject(NgZone);
-    const timer = zone.runOutsideAngular(() =>
-      setInterval(() => {
-        const now = new Date();
-        if (localIsoDate(now) !== localIsoDate(this.today())) zone.run(() => this.today.set(now));
-      }, TODAY_CHECK_INTERVAL),
-    );
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+  /**
+   * Coche ou décoche le prochain pas : mise à jour optimiste du store, retour en arrière s'il le faut.
+   * La case cochée disparaît aussitôt (le prochain pas change, ou la carte passe dans « Accomplis ») : le
+   * focus tomberait sur la page, et le clavier repartirait du début. Il va au nouveau prochain pas.
+   */
+  protected toggleTask(cardId: string, taskId: string, done: boolean): void {
+    this.store.updateTaskDone({ taskId, done });
+    afterNextRender({ write: () => this.recoverFocus(cardId) }, { injector: this.injector });
   }
 
-  /** Coche ou décoche le prochain pas : mise à jour optimiste du store, retour en arrière s'il le faut. */
-  protected toggleTask(taskId: string, done: boolean): void {
-    this.store.updateTaskDone({ taskId, done });
+  /**
+   * Si le focus est perdu : le nouveau prochain pas de la carte, sinon son lien « Ouvrir », sinon son titre.
+   * La carte est passée dans « Accomplis » : le résumé de la liste repliée.
+   */
+  private recoverFocus(cardId: string): void {
+    const active = this.document.activeElement;
+    if (active && active !== this.document.body && active.isConnected) return;
+    const card = this.cards().find((item) => item.id === cardId);
+    const targets = card
+      ? [
+          ...card.nextTasks.map((next) => `prochain-pas-${next.id}`),
+          ...(card.openable ? [`ouvrir-${card.id}`] : []),
+          `objectif-${card.id}`,
+        ]
+      : [ACCOMPLISHED_SUMMARY_ID];
+    for (const id of targets) {
+      const target = this.document.getElementById(id);
+      if (target) {
+        target.focus();
+        return;
+      }
+    }
   }
 }

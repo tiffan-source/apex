@@ -97,7 +97,7 @@ Pousser sur le dépôt Empreinte, ouvrir une pull request ou lancer une publicat
 
 ### Vérifier
 
-1. `npx nx lint design-tokens` : aucune violation dans la couche (`libs/design-tokens/src`). Les violations des écrans encore en PrimeNG, pendant la migration, sont un autre sujet : ne pas les masquer.
+1. `npx nx lint design-tokens` : aucune violation, dans la couche (`libs/design-tokens/src`) comme dans les écrans. Une violation dans un écran qu'on ne touche pas se signale : ne jamais la masquer.
 2. `npx nx build apex-client` (et toute autre application qui charge la couche).
 3. Contrôle visuel de **tous** les écrans en Jour, en Nuit et à 375px : une classe ou un token touche tout.
 4. Résumer à l'utilisateur : ce qui change, où, l'impact visuel, la nouvelle version et l'entrée du journal.

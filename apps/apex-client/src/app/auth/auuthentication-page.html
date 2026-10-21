@@ -53,15 +53,18 @@
         </button>
         <p class="detail ds-muted" role="status">{{ status() }}</p>
       </div>
-      <button
-        eBouton="nu"
-        type="button"
-        class="ds-self-start"
-        [attr.aria-disabled]="pending() ? 'true' : null"
-        (click)="switchMode()"
-      >
-        {{ texts().switch }}
-      </button>
+      <div class="ds-row ds-wrap ds-gap-2">
+        <p class="detail ds-muted" id="auth-question">{{ texts().question }}</p>
+        <button
+          eBouton="nu"
+          type="button"
+          aria-describedby="auth-question"
+          [attr.aria-disabled]="pending() ? 'true' : null"
+          (click)="switchMode()"
+        >
+          {{ texts().switch }}
+        </button>
+      </div>
     </div>
   </form>
 </main>

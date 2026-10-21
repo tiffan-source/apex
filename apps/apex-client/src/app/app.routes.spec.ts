@@ -6,6 +6,7 @@ import { motsAEviter } from '@empreinte-studio/angular/core';
 import { voiceIssues } from '../chore/constants/messages.constante';
 import { routes } from './app.routes';
 import { authGuard } from './auth.guard';
+import { present } from '../testing/present';
 
 /** La coque simulée : une sortie pour les écrans. */
 @Component({ template: '<router-outlet />', imports: [RouterOutlet] })
@@ -25,15 +26,16 @@ function withStubs(config: Routes): Routes {
   }));
 }
 
-const shellRoute = routes.find((r) => r.path === '' && r.children)!;
-const childPaths = shellRoute.children!.map((r) => r.path);
+const shellRoute = present(routes.find((r) => r.path === '' && r.children), 'la route de la coque');
+const children = present(shellRoute.children, 'les routes de la coque');
+const childPaths = children.map((r) => r.path);
 
 describe('routes', () => {
   describe('la configuration', () => {
     it('met les quatre écrans de la V1 dans la coque, protégée par authGuard', () => {
       expect(shellRoute.canActivate).toEqual([authGuard]);
       expect(childPaths).toEqual(['', 'objectifs/nouveau', 'objectifs/:id', 'objectifs/:id/akari', 'matrice']);
-      for (const child of shellRoute.children!) expect(child.loadComponent).toBeTypeOf('function');
+      for (const child of children) expect(child.loadComponent).toBeTypeOf('function');
     });
 
     it('fait passer « objectifs/nouveau » avant « objectifs/:id »', () => {
@@ -41,15 +43,15 @@ describe('routes', () => {
     });
 
     it('laisse la connexion hors de la coque, sans garde', () => {
-      const auth = routes.find((r) => r.path === 'auth')!;
+      const auth = present(routes.find((r) => r.path === 'auth'), 'la route /auth');
       expect(auth.canActivate).toBeUndefined();
       expect(auth.loadComponent).toBeTypeOf('function');
     });
 
     it('n’a plus de route Focus ni d’anciennes adresses servies par un écran', () => {
-      const all = [...routes, ...shellRoute.children!];
+      const all = [...routes, ...children];
       for (const path of ['focus', 'matrix', 'objective/:id']) {
-        const route = all.find((r) => r.path === path)!;
+        const route = present(all.find((r) => r.path === path), `la route ${path}`);
         expect(route.redirectTo, path).toBeDefined();
         expect(route.loadComponent, path).toBeUndefined();
       }
@@ -57,7 +59,7 @@ describe('routes', () => {
     });
 
     it('donne un titre dans la voix d’Empreinte à chaque écran', () => {
-      const titles = [...shellRoute.children!, routes.find((r) => r.path === 'auth')!].map((r) => r.title as string);
+      const titles = [...children, present(routes.find((r) => r.path === 'auth'), 'la route /auth')].map((r) => r.title as string);
       expect(titles).toEqual([
         'Objectifs · Apex',
         'Nouvel objectif · Apex',

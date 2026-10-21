@@ -13,7 +13,7 @@ Apex ne dessine rien lui-même. Trois sources, et rien d'autre :
 
 **Aucun CSS dans l'application.** Si un écran semble en exiger, c'est qu'il manque quelque chose : on fait évoluer Empreinte ou la couche Apex (skill `design-system-evolution`), on ne contourne pas.
 
-PrimeNG est retiré (`primeng`, `@primeuix/themes`, `primeicons`, le preset, `[dt]`, les `pi pi-*`, les toasts). Ne l'utilise jamais, même pour retoucher un écran qui n'est pas encore migré : migre plutôt l'élément touché.
+PrimeNG est retiré et désinstallé (`primeng`, `@primeuix/themes`, `primeicons`, le preset, `[dt]`, les `pi pi-*`, les toasts). Ne le réintroduis jamais.
 
 ## 1. Lire avant de coder
 
@@ -104,7 +104,7 @@ Le contrôle refuse aussi une classe `e-*` écrite à la main hors des cas du §
 
 ## 6. Modèles à réutiliser
 
-Les écrans V1 sont en cours d'écriture sous `apps/apex-client/src/app/` : `shell/` (coque et navigation), `objectives/` (Objectifs, l'accueil), `objective/` (l'arête, ses feuilles, Akari), `matrix/` (la matrice), `auth/` (connexion). Le composant d'une route se trouve depuis `app/app.routes.ts` (routes au cahier § 3). Reprendre la structure de l'écran migré le plus proche ; à défaut, ces compositions, toutes vérifiées par le contrôle :
+Les écrans V1 sont sous `apps/apex-client/src/app/` : `shell/` (coque et navigation), `objectives/` (Objectifs, l'accueil), `objective/` (l'arête, ses feuilles, Akari), `matrix/` (la matrice), `auth/` (connexion). Le composant d'une route se trouve depuis `app/app.routes.ts` (routes au cahier § 3). Reprendre la structure de l'écran migré le plus proche ; à défaut, ces compositions, toutes vérifiées par le contrôle :
 
 | Besoin | Où | Structure |
 | --- | --- | --- |
@@ -112,8 +112,8 @@ Les écrans V1 sont en cours d'écriture sous `apps/apex-client/src/app/` : `she
 | Page | tous les écrans | Le gabarit d'un écran affiché dans la coque a une seule racine, `div.ds-page` : `eCoqueContenu` gère déjà les marges et la largeur ; `.ds-page` ramène l'écart entre sections à 32px, comme les maquettes. La connexion, hors de la coque, part de `main.ds-screen-center`. |
 | En-tête de page | `app/objectives/` | `header.ds-page-header` > (`div.ds-stack.ds-gap-2` > `p.repere.ds-muted` + `h1.manifeste.ds-break` + `p.detail.ds-muted`) + l'action |
 | Fil d'Ariane | `app/objective/` | `header.ds-stack.ds-gap-5` > `nav[eFilAriane]` + `div.ds-page-header` |
-| Cartes d'objectifs | `app/objectives/` | `div.ds-panels.ds-cols-2` > `article.ds-panel` (horizon, titre, pourquoi, `div.ds-push-down` > `e-pas`, pied `div.ds-row.ds-wrap.ds-between.ds-rule-top` > `.ds-check.ds-grow` + lien « Ouvrir ») |
-| Bloc replié « Accomplis » | `app/objectives/` | `div.ds-rule-block` > `button[eBouton="nu"][attr.aria-expanded]` (chevron) + `@if (ouvert)` `ul.ds-divided` |
+| Cartes d'objectifs | `app/objectives/` | `div.ds-panels.ds-surfaces.ds-cols-2` > `article[eCarte]` (`div.ds-stack.ds-grow` > horizon, titre, pourquoi ; `e-pas` ; pied `div.ds-row.ds-wrap.ds-between.ds-rule-top` > `.ds-check.ds-grow` + lien « Ouvrir »). `.ds-surfaces` : un seul filet entre deux cartes, qui dessinent déjà le leur. Avec des `article.ds-panel`, pas de `.ds-surfaces`. |
+| Bloc replié « Accomplis » | `app/objectives/` | `details.ds-disclosure.ds-rule-block` > `summary` (chevron, `span.section`, compte) + `ul.ds-divided`. Repli possible (Safari 18.3 et avant peut montrer sa flèche native à côté du chevron) : `div.ds-rule-block` > `button[eBouton="nu"][attr.aria-expanded]` + `@if (ouvert)` `ul.ds-divided`, ci-dessous. |
 | Arête et étape | `app/objective/` | `div.ds-panels.ds-cols-2-1` > `section.ds-panel` (`.ds-title-row`, `div.ds-scroll-x` > `e-arete`) + `section.ds-panel.ds-panel-flush` (en-tête d'étape, `ul[eListe][nue]` > `li[eTache]`, `.ds-actions`) |
 | Feuille (modifier un pas, une étape, l'objectif) | `app/objective/` | `Feuilles.ouvrir(Composant, { donnees, cdk: { injector } })` ; dans le composant ouvert, `e-feuille[titre]` > `form.ds-stack` + `div[eFeuilleActions]`. Catalogue § 2.17. |
 | Formulaire | partout | `form.ds-stack` > `e-champ[libelle]` > `input[eSaisie]`, `textarea[eSaisie][tailleAuto]`, `e-selection`, `input[type=date][eSaisie]` ; erreur par `[erreur]` du champ ; `facultatif` plutôt qu'un astérisque. |
@@ -297,7 +297,7 @@ Les 32 pièges vérifiés sont au catalogue § 8. Les plus fréquents :
 
 Node 24.22 (`nvm use`, ou `export PATH=$HOME/.nvm/versions/node/v24.22.0/bin:$PATH`) ; les commandes passent par `npx nx`.
 
-1. `npx nx lint design-tokens` : aucune violation dans tes fichiers. Corriger chaque violation dans l'esprit de la règle, jamais en contournant le contrôle. Dans Claude Code, un hook lance ce contrôle après chaque modification d'un fichier front-end et en fin de tour : corriger aussitôt ce qui relève de ton travail. Tant que la migration n'est pas finie, les écrans encore en PrimeNG produisent des violations : ne corrige pas les fichiers des autres sans accord, signale-les.
+1. `npx nx lint design-tokens` : aucune violation dans tes fichiers. Corriger chaque violation dans l'esprit de la règle, jamais en contournant le contrôle. Dans Claude Code, un hook lance ce contrôle après chaque modification d'un fichier front-end et en fin de tour : corriger aussitôt ce qui relève de ton travail. Une violation dans un fichier qui n'est pas le tien : ne le corrige pas sans accord, signale-la.
 2. `npx nx typecheck apex-client`, `npx nx vite:test apex-client` (dont le test de voix), puis `npx nx build apex-client`.
 3. Contrôle visuel de chaque écran touché (`npx nx run apex-client:serve --excludeTaskDependencies`) : en Jour et en Nuit (réglages de la coque), à 375px de large, au clavier (ordre de tabulation, focus visible), console sans avertissement du `GardienSceau`.
 4. La liste de vérification du cahier § 10.

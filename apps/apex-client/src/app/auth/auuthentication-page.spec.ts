@@ -13,6 +13,7 @@ import {
   translateAuthError,
   type AuthErrorReport,
 } from './auth.form';
+import { present } from '../../testing/present';
 
 /** Un SessionStore simulé : les signaux que l'écran lit, et les deux actions qu'il appelle. */
 function createSessionStub() {
@@ -61,11 +62,11 @@ describe('AuuthenticationPage', () => {
 
   const input = (id: string) => host.querySelector<HTMLInputElement>(`#${id}`);
   const text = () => host.textContent?.replace(/\s+/g, ' ') ?? '';
-  const submitButton = () => host.querySelector<HTMLButtonElement>('button[type="submit"]')!;
-  const switchButton = () => host.querySelector<HTMLButtonElement>('button[type="button"]')!;
+  const submitButton = () => present(host.querySelector<HTMLButtonElement>('button[type="submit"]'), "le bouton d'envoi");
+  const switchButton = () => present(host.querySelector<HTMLButtonElement>('button[type="button"]'), 'le bouton qui change de formulaire');
 
   function write(id: string, value: string): void {
-    const field = input(id)!;
+    const field = present(input(id), `le champ #${id}`);
     field.value = value;
     field.dispatchEvent(new Event('input'));
     field.dispatchEvent(new Event('blur'));
@@ -84,7 +85,7 @@ describe('AuuthenticationPage', () => {
 
   /** Le message affiché par le champ qui entoure ce contrôle. */
   function fieldMessage(id: string): string {
-    return input(id)!.closest('e-champ')!.querySelector('[aria-live]')?.textContent?.trim() ?? '';
+    return present(present(input(id), `le champ #${id}`).closest('e-champ'), `l'e-champ de #${id}`).querySelector('[aria-live]')?.textContent?.trim() ?? '';
   }
 
   describe('en connexion', () => {
@@ -96,7 +97,10 @@ describe('AuuthenticationPage', () => {
       expect(text()).toContain('Ton mot de passe');
       expect(input('auth-confirm-password')).toBeNull();
       expect(submitButton().textContent?.trim()).toBe('Me connecter');
-      expect(switchButton().textContent?.trim()).toBe('Pas encore de compte ? Crée-le');
+      expect(switchButton().textContent?.trim()).toBe('Créer un compte');
+      // La question est écrite à côté du bouton, qui la fait lire : le bouton garde moins de 4 mots.
+      expect(host.querySelector('#auth-question')?.textContent?.trim()).toBe('Pas encore de compte ?');
+      expect(switchButton().getAttribute('aria-describedby')).toBe('auth-question');
     });
 
     it('relie chaque libellé à son champ, avec les bons autocomplete', () => {
@@ -161,7 +165,7 @@ describe('AuuthenticationPage', () => {
       expect(host.querySelector('aside')).toBeNull();
       // Le focus va au champ concerné, qui décrit le message (aria-describedby) au lecteur d'écran.
       expect(document.activeElement).toBe(input('auth-password'));
-      const describedBy = input('auth-password')!.getAttribute('aria-describedby') ?? '';
+      const describedBy = present(input('auth-password'), 'le champ du mot de passe').getAttribute('aria-describedby') ?? '';
       expect(describedBy.split(' ').map((id) => host.querySelector(`[id="${id}"]`)?.textContent?.trim())).toContain(
         AUTH_SERVER_MESSAGES.wrongCredentials,
       );
@@ -196,7 +200,7 @@ describe('AuuthenticationPage', () => {
       expect(note?.textContent).toContain('Akari');
       expect(note?.querySelector('[role="alert"]')?.textContent?.trim()).toBe(AUTH_SERVER_MESSAGES.unreachable);
       // La note précède le bouton sceau.
-      expect(note!.compareDocumentPosition(submitButton()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(present(note, 'la note').compareDocumentPosition(submitButton()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       // Aucun champ n'est en cause : le focus ne bouge pas vers un champ.
       expect(document.activeElement).not.toBe(input('auth-email'));
       expect(document.activeElement).not.toBe(input('auth-password'));
@@ -240,7 +244,8 @@ describe('AuuthenticationPage', () => {
       expect(text()).toContain('Confirme ton mot de passe');
       expect(text()).toContain('Au moins 6 caractères.');
       expect(submitButton().textContent?.trim()).toBe('Créer mon compte');
-      expect(switchButton().textContent?.trim()).toBe('Déjà un compte ? Connecte-toi');
+      expect(switchButton().textContent?.trim()).toBe('Me connecter');
+      expect(host.querySelector('#auth-question')?.textContent?.trim()).toBe('Déjà un compte ?');
       expect(host.querySelectorAll('.e-btn--sceau')).toHaveLength(1);
     });
 
@@ -346,6 +351,14 @@ describe('AuuthenticationPage', () => {
       expect(motsAEviter(phrase)).toEqual([]);
       expect(voiceIssues(phrase)).toEqual([]);
       expect(phrase).not.toMatch(/erreur|échec|échou|invalide|vous|votre/i);
+    });
+
+    it('chaque bouton garde moins de 4 mots (brand book, Bouton)', () => {
+      for (const mode of [AuthMode.SignIn, AuthMode.CreateUser]) {
+        for (const label of [AUTH_TEXTS[mode].submit, AUTH_TEXTS[mode].switch]) {
+          expect(label.trim().split(/\s+/).length, label).toBeLessThan(4);
+        }
+      }
     });
 
     it('l’écran rendu, dans les deux modes, parle comme Empreinte', async () => {

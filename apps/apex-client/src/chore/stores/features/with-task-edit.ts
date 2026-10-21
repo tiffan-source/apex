@@ -69,7 +69,9 @@ export function withTaskEdit() {
                 importance: input.importance,
                 urgency: input.urgency,
                 done: oldTask.done,
-                objectiveId: input.objectiveId
+                // L'étape choisie a pu être enregistrée pendant que la feuille était ouverte : son id définitif
+                // (sinon le pas resterait rattaché à un id temporaire qui n'existe plus dans l'état).
+                objectiveId: writes.resolve(input.objectiveId)
               };
 
               patchState(store, {

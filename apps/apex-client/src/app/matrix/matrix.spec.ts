@@ -9,12 +9,13 @@ import { motsAEviter } from '@empreinte-studio/angular/core';
 import { EMatrice, QUADRANTS, TITRES_QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
 import { EMenu } from '@empreinte-studio/angular/menu';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
+import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { filterMatrixByObjective, levelsForQuadrant, toMatrix } from '../../chore/mapper/matrix.mapper';
 import { rootObjectiveOptions } from '../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../chore/constants/messages.constante';
 import type { ObjectiveViewModel, TaskViewModel } from '../../chore/models/objective.viewmodel';
 import type { MatrixTaskViewModel } from '../../chore/models/matrix.viewmodel';
-import { MATRIX_DRAG_CONFIG, Matrix, SHORT_TITLE_MAX, shortTitle } from './matrix';
+import { MATRIX_DRAG_CONFIG, Matrix } from './matrix';
 
 registerLocaleData(localeFr);
 
@@ -62,7 +63,8 @@ function createFakeStore(objectives: ObjectiveViewModel[] = OBJECTIVES, tasks: T
     objectiveOptions: computed(() => rootObjectiveOptions(state().objectives)),
     matrix,
     matrixFor: vi.fn((rootObjectiveId: string | null) => filterMatrixByObjective(matrix(), rootObjectiveId)),
-    isFulfilled: signal(true),
+    objectivesLoaded: signal(true),
+    error: signal<string | null>(null),
     updateTaskDone: vi.fn(),
     moveTaskToQuadrant: vi.fn(),
   };
@@ -70,19 +72,27 @@ function createFakeStore(objectives: ObjectiveViewModel[] = OBJECTIVES, tasks: T
 
 type FakeStore = ReturnType<typeof createFakeStore>;
 
+/** AnnoncesStore simulé : les annonces sont espionnées, le signalement de la coque se règle. */
+function createAnnonces() {
+  return { annoncer: vi.fn(), aUnSignalement: signal(false) };
+}
+
 describe('Matrix', () => {
   let store: FakeStore;
+  let annonces: ReturnType<typeof createAnnonces>;
   let fixture: ComponentFixture<Matrix>;
   let element: HTMLElement;
 
   async function render(fake: FakeStore = createFakeStore()): Promise<void> {
     store = fake;
+    annonces = createAnnonces();
     await TestBed.configureTestingModule({
       imports: [Matrix],
       providers: [
         provideRouter([]),
         { provide: LOCALE_ID, useValue: 'fr' },
         { provide: ObjectiveStore, useValue: store },
+        { provide: AnnoncesStore, useValue: annonces },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(Matrix);
@@ -123,13 +133,14 @@ describe('Matrix', () => {
 
     it('donne la date du jour et le nombre de pas, puis le manifeste « La matrice »', () => {
       expect(repere()).toBe('Lundi 19 octobre · 5 pas');
+      expect(element.querySelector('header p.repere time')?.getAttribute('datetime')).toBe('2026-10-19');
       expect(text(element.querySelector('h1.manifeste'))).toBe('La matrice');
     });
 
     it('propose « Tous les objectifs » puis un filtre par objectif racine, au titre court', () => {
       expect(filterButtons().map(text)).toEqual([
         'Tous les objectifs',
-        shortTitle('Courir un semi-marathon en mai'),
+        'Courir un semi-marathon…',
         'Licence',
         'Guitare',
       ]);
@@ -161,8 +172,8 @@ describe('Matrix', () => {
       expect(taskLabels('laisser-filer')).toEqual(['Recopier mes fiches au propre']);
 
       const detailOf = (taskId: string) => text(label(taskId)?.parentElement?.querySelector('span.detail'));
-      expect(detailOf('t1')).toBe('Courir un semi-marathon en mai · Endurance');
-      expect(detailOf('t5')).toBe('Licence · Statistiques');
+      expect(detailOf('t1')).toBe('Courir un semi-marathon en mai · étape Endurance');
+      expect(detailOf('t5')).toBe('Licence · étape Statistiques');
       // Un pas posé sur l'objectif, sans étape : l'objectif seul.
       expect(detailOf('t4')).toBe('Guitare');
     });
@@ -301,6 +312,17 @@ describe('Matrix', () => {
       expect(repere()).toBe('Lundi 19 octobre · 5 pas');
     });
 
+    it('annonce aux lecteurs d’écran l’objectif choisi, en entier, et ce qui reste dans la matrice', () => {
+      filterButtons()[1].click(); // Courir un semi-marathon…
+      fixture.detectChanges();
+      expect(annonces.annoncer).toHaveBeenLastCalledWith('Courir un semi-marathon en mai · 2 pas');
+
+      filterButtons()[0].click();
+      fixture.detectChanges();
+      expect(annonces.annoncer).toHaveBeenLastCalledWith('Tous les objectifs · 5 pas');
+      expect(annonces.annoncer).toHaveBeenCalledTimes(2);
+    });
+
     it('retombe sur tous les objectifs quand l’objectif choisi n’existe plus', () => {
       filterButtons()[3].click(); // Guitare
       fixture.detectChanges();
@@ -317,6 +339,18 @@ describe('Matrix', () => {
     });
   });
 
+  describe('deux objectifs au début identique', () => {
+    it('gardent des filtres aux noms différents : le nom du bouton est son seul nom', async () => {
+      await render(
+        createFakeStore(
+          [objective('c1', "Préparer le concours d'entrée 2027"), objective('c2', "Préparer le concours d'entrée 2028")],
+          [task('t1', 'Réviser', 'c1', 4, 4), task('t2', 'Réviser', 'c2', 4, 4)],
+        ),
+      );
+      expect(filterButtons().map(text)).toEqual(['Tous les objectifs', 'Préparer le… 2027', 'Préparer le… 2028']);
+    });
+  });
+
   describe('états vides', () => {
     it('sans aucun pas : quatre quadrants à « 0 pas » et une invitation vers les objectifs', async () => {
       await render(createFakeStore([objective('o1', 'Licence')], []));
@@ -325,7 +359,7 @@ describe('Matrix', () => {
       expect(all('.e-quadrant__compte').map(text)).toEqual(['0 pas', '0 pas', '0 pas', '0 pas']);
       expect(all('.e-quadrant__element')).toHaveLength(0);
       expect(text(element.querySelector('p.corps'))).toBe(
-        "Aucun pas pour l'instant. Ajoute des pas à tes objectifs : ils viendront se ranger ici.",
+        "Aucun pas pour l'instant. Ajoute des pas à tes objectifs : ils viennent se ranger ici.",
       );
       const link = element.querySelector<HTMLAnchorElement>('a[href="/"]');
       expect(text(link)).toBe('Voir mes objectifs');
@@ -337,24 +371,44 @@ describe('Matrix', () => {
       expect(element.querySelector('p.corps')).toBeNull();
     });
 
-    it('tant que les objectifs ne sont pas chargés : ni invitation, ni « 0 pas » dans le repère', async () => {
+    it('tant que les objectifs ne sont pas chargés : une ligne d’état, ni invitation, ni « 0 pas » nulle part', async () => {
       const fake = createFakeStore([], []);
-      fake.isFulfilled.set(false);
+      fake.objectivesLoaded.set(false);
       await render(fake);
       expect(element.querySelector('p.corps')).toBeNull();
       expect(element.querySelector('e-filtres')).toBeNull();
       expect(repere()).toBe('Lundi 19 octobre');
+      expect(element.querySelector('e-matrice')).toBeNull();
+      expect(text(element.querySelector('[role="status"]'))).toBe('Chargement de tes pas…');
 
-      // Le chargement aboutit, sans aucun pas : le compte et l'invitation arrivent.
-      fake.isFulfilled.set(true);
+      // Le chargement aboutit, sans aucun pas : le compte, les quadrants et l'invitation arrivent.
+      fake.objectivesLoaded.set(true);
       fixture.detectChanges();
       expect(repere()).toBe('Lundi 19 octobre · 0 pas');
       expect(element.querySelector('p.corps')).not.toBeNull();
+      expect(all('.e-quadrant__compte').map(text)).toEqual(['0 pas', '0 pas', '0 pas', '0 pas']);
+      expect(element.querySelector('[role="status"]')).toBeNull();
     });
 
-    it('des pas déjà là comptent, même pendant qu’une autre écriture occupe le store', async () => {
+    it('après un chargement qui n’aboutit pas : rien tant que la note de la coque est là, puis quoi faire', async () => {
+      const fake = createFakeStore([], []);
+      fake.objectivesLoaded.set(false);
+      fake.error.set("Je n'ai pas pu charger tes objectifs.");
+      await render(fake);
+      annonces.aUnSignalement.set(true);
+      fixture.detectChanges();
+      expect(element.querySelector('[role="status"]')).toBeNull();
+      expect(element.querySelector('e-matrice')).toBeNull();
+      expect(element.querySelector('p.corps')).toBeNull();
+
+      annonces.aUnSignalement.set(false); // « Compris »
+      fixture.detectChanges();
+      expect(text(element.querySelector('p.corps'))).toBe('Tes pas ne sont pas chargés. Vérifie ta connexion, puis recharge la page.');
+    });
+
+    it('des pas déjà là comptent, même avant la fin du chargement', async () => {
       const fake = createFakeStore();
-      fake.isFulfilled.set(false);
+      fake.objectivesLoaded.set(false);
       await render(fake);
       expect(repere()).toBe('Lundi 19 octobre · 5 pas');
     });
@@ -363,14 +417,23 @@ describe('Matrix', () => {
   describe('la voix', () => {
     it('aucun texte de l’écran ne sort de la voix d’Empreinte', async () => {
       await render();
+      filterButtons()[2].click(); // l'annonce d'un filtre choisi
+      fixture.detectChanges();
       const texts = [
         text(element),
         ...all('[aria-label]').map((node) => node.getAttribute('aria-label') ?? ''),
         ...QUADRANTS.map((quadrant) => TITRES_QUADRANTS[quadrant]),
+        ...annonces.annoncer.mock.calls.map(([phrase]) => phrase as string),
       ];
-      // L'état vide a ses propres phrases.
+      // L'état vide, le chargement et le chargement non abouti ont leurs propres phrases.
       TestBed.resetTestingModule();
       await render(createFakeStore([], []));
+      texts.push(text(element));
+      store.objectivesLoaded.set(false);
+      fixture.detectChanges();
+      texts.push(text(element));
+      store.error.set('chargement non abouti');
+      fixture.detectChanges();
       texts.push(text(element));
 
       for (const sentence of texts) {
@@ -379,24 +442,5 @@ describe('Matrix', () => {
       }
       expect(texts.join(' ')).not.toMatch(/Éliminer|Supprimer/i);
     });
-  });
-});
-
-describe('shortTitle', () => {
-  it('garde un titre court tel quel, sans espaces superflus', () => {
-    expect(shortTitle('  Licence  ')).toBe('Licence');
-    expect(shortTitle('Semi-marathon')).toBe('Semi-marathon');
-  });
-
-  it('coupe un titre long au dernier mot entier, avec « … »', () => {
-    const short = shortTitle('Courir un semi-marathon en mai');
-    expect(short).toBe('Courir un semi-marathon…');
-    expect(short.length).toBeLessThanOrEqual(SHORT_TITLE_MAX);
-  });
-
-  it('coupe un mot trop long au milieu plutôt que de déborder', () => {
-    const short = shortTitle('Anticonstitutionnellementissime et la suite');
-    expect(short.length).toBeLessThanOrEqual(SHORT_TITLE_MAX);
-    expect(short.endsWith('…')).toBe(true);
   });
 });

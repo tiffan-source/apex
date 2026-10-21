@@ -1,15 +1,13 @@
 import type { EtatEtape } from '@empreinte-studio/angular/arete';
 import type { OptionSelection } from '@empreinte-studio/angular/selection';
 
-/*
- * Les libellés d'une étape, partagés par l'écran de l'arête et ses feuilles.
- */
+import { UNTITLED_STAGE } from '../../chore/mapper/objective-view.mapper';
 
-/**
- * Le nom d'une étape qui n'en a pas (données d'avant la migration : l'ancien écran affichait
- * « Sous-objectif sans titre ») : elle reste lisible sur l'arête et dans les choix, et modifiable.
+/*
+ * Les libellés d'une étape, partagés par l'écran de l'arête, ses feuilles et Akari. Le nom d'une étape sans
+ * nom (UNTITLED_STAGE, stageName) vient du mapper des vues, qui le pose aussi sur l'arête.
  */
-export const UNTITLED_STAGE = 'Étape sans nom';
+export { UNTITLED_STAGE, stageName } from '../../chore/mapper/objective-view.mapper';
 
 /** L'état d'une étape dans son repère : « Étape 3 · en cours ». */
 export const STAGE_STATE_LABELS: Readonly<Record<EtatEtape, string>> = {
@@ -18,10 +16,12 @@ export const STAGE_STATE_LABELS: Readonly<Record<EtatEtape, string>> = {
   'a-venir': 'à venir',
 };
 
-/** Le nom affiché d'une étape. */
-export function stageName(title: string): string {
-  return title.trim() || UNTITLED_STAGE;
-}
+/** L'état d'une étape seul sur sa ligne (la liste des étapes d'Akari) : « En cours ». */
+export const STAGE_STATE_TITLES: Readonly<Record<EtatEtape, string>> = {
+  faite: 'Faite',
+  'en-cours': 'En cours',
+  'a-venir': 'À venir',
+};
 
 /** Les étapes d'un objectif pour e-selection, sans option vide. */
 export function namedStageOptions(options: readonly OptionSelection<string>[]): OptionSelection<string>[] {

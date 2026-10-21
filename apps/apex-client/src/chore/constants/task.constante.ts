@@ -25,17 +25,8 @@ export const URGENCY_OPTIONS: readonly OptionSelection<number>[] = [
 ];
 
 /**
- * @deprecated Ancienne forme { label, value } des anciennes listes, gardée le temps que les écrans
- * passent à e-selection. Utilise IMPORTANCE_OPTIONS.
+ * Les niveaux d'un nouveau pas : important, pas urgent, donc « À planifier ». Le brand book d'Empreinte en
+ * fait le cœur de la progression : c'est là qu'on place les pas des objectifs. La personne les change dans
+ * la feuille « Ajouter un pas », ou plus tard en déplaçant le pas dans la matrice (cahier de migration, § 4).
  */
-export const ImportanceValueOption: { label: string; value: number }[] = IMPORTANCE_OPTIONS.map(
-  ({ valeur, libelle }) => ({ label: libelle, value: valeur }),
-);
-
-/**
- * @deprecated Ancienne forme { label, value } des anciennes listes, gardée le temps que les écrans
- * passent à e-selection. Utilise URGENCY_OPTIONS.
- */
-export const UrgencyValueOption: { label: string; value: number }[] = URGENCY_OPTIONS.map(
-  ({ valeur, libelle }) => ({ label: libelle, value: valeur }),
-);
+export const NEW_TASK_LEVELS: Readonly<{ importance: number; urgency: number }> = { importance: 3, urgency: 2 };

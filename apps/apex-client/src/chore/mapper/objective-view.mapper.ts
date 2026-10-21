@@ -27,6 +27,17 @@ import { quadrantOf } from './matrix.mapper';
 /** Le texte d'une étape sans pas. */
 export const EMPTY_STAGE_DETAIL = "Aucun pas pour l'instant";
 
+/**
+ * Le nom d'une étape qui n'en a pas (données d'avant la migration : l'ancien écran affichait
+ * « Sous-objectif sans titre ») : elle reste lisible sur l'arête, dans les listes et dans les choix.
+ */
+export const UNTITLED_STAGE = 'Étape sans nom';
+
+/** Le nom affiché d'une étape : son titre, ou « Étape sans nom » s'il est vide (ou fait d'espaces). */
+export function stageName(title: string): string {
+  return title.trim() || UNTITLED_STAGE;
+}
+
 const MONTH = new Intl.DateTimeFormat('fr-FR', { month: 'long' });
 
 /**
@@ -267,7 +278,8 @@ export function toObjectiveDetail(
 
   const aretes: AreteStageViewModel[] = stages.map((stage) => {
     const detail = areteDetail(stage.state, stage.progress);
-    return { id: stage.id, nom: stage.title, etat: stage.state, ...(detail ? { detail } : {}) };
+    // Le nom affiché (« Étape sans nom ») : stages[].title garde le vrai titre, que la feuille « Modifier l'étape » préremplit.
+    return { id: stage.id, nom: stageName(stage.title), etat: stage.state, ...(detail ? { detail } : {}) };
   });
 
   return {
@@ -284,8 +296,6 @@ export function toObjectiveDetail(
     aretes,
     defaultStageId: current?.stage.id ?? (stages.length > 0 ? stages[stages.length - 1].id : null),
     taskCount: countTasks(objectiveTasks),
-    nextTask: nextTaskOf(current?.tasks ?? null, objectiveTasks),
-    accomplished: isAccomplished(objectiveTasks),
   };
 }
 

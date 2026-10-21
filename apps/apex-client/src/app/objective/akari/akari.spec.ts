@@ -3,12 +3,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { motsAEviter } from '@empreinte-studio/angular/core';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
+import { AnnoncesStore } from '../../../chore/stores/annonces.store';
 import { SessionStore } from '../../../chore/stores/session.store';
-import type { RequestStatus } from '../../../chore/stores/utils/loading-feature';
 import type { ObjectiveViewModel, TaskViewModel } from '../../../chore/models/objective.viewmodel';
 import { rootObjectiveOptions, toObjectiveDetail } from '../../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
-import { Akari, STAGE_STATE_LABELS, UNTITLED_STAGE, objectiveInvitation, permissionPrompt, stageInvitation } from './akari';
+import { Akari, objectiveInvitation, permissionPrompt, stageInvitation } from './akari';
+import { STAGE_STATE_TITLES, UNTITLED_STAGE } from '../stage-labels';
 import { AKARI_REPLIED, AKARI_REPORTS, AKARI_STATUS, ChatStore } from './chat.store';
 import type { MessageViewModel, PermissionRequestViewModel } from './chat.models';
 
@@ -60,15 +61,11 @@ function fakeChat() {
 function fakeObjectives() {
   const objectives = signal<ObjectiveViewModel[]>(OBJECTIVES);
   const tasks = signal<TaskViewModel[]>(TASKS);
-  const requestStatus = signal<RequestStatus>('fulfilled');
   return {
     objectives,
     tasks,
-    requestStatus,
-    error: computed(() => {
-      const status = requestStatus();
-      return typeof status === 'object' ? status.error : null;
-    }),
+    objectivesLoaded: signal(true),
+    error: signal<string | null>(null),
     objectiveOptions: computed(() => rootObjectiveOptions(objectives())),
     objectiveDetail: (id: string) => toObjectiveDetail(id, objectives(), tasks()),
   };
@@ -160,6 +157,15 @@ describe('Akari : l’en-tête', () => {
     expect(crumbs[1].querySelector('a')?.getAttribute('href')).toBe('/objectifs/semi');
     expect(crumbs[2].getAttribute('aria-current')).toBe('page');
   });
+
+  it('coupe un long titre dans le fil d’Ariane, comme l’arête, et le garde entier dans le titre', async () => {
+    const title = 'Préparer et courir un semi-marathon avant la fin du mois de mai';
+    const { root } = await setup({
+      configure: (_, store) => store.objectives.update((list) => list.map((o) => (o.id === 'semi' ? { ...o, title } : o))),
+    });
+    expect(text(root.querySelectorAll('nav[eFilAriane] li')[1])).toBe('Préparer et courir un…');
+    expect(text(root.querySelector('h1'))).toBe(title);
+  });
 });
 
 describe('Akari : l’ouverture de la conversation', () => {
@@ -180,14 +186,14 @@ describe('Akari : l’ouverture de la conversation', () => {
     const { fixture, chat, objectives, root } = await setup({
       configure: (_, store) => {
         store.objectives.set([]);
-        store.requestStatus.set('pending');
+        store.objectivesLoaded.set(false);
       },
     });
     expect(text(statusLine(root))).toBe('Akari retrouve ton objectif…');
     expect(chat.loadChatHistory).not.toHaveBeenCalled();
 
     objectives.objectives.set(OBJECTIVES);
-    objectives.requestStatus.set('fulfilled');
+    objectives.objectivesLoaded.set(true);
     await refresh(fixture);
     expect(text(root.querySelector('h1'))).toBe('Semi-marathon');
     expect(chat.loadChatHistory).toHaveBeenCalledWith({ objectifId: 'semi' });
@@ -204,23 +210,30 @@ describe('Akari : l’ouverture de la conversation', () => {
     expect(root.querySelector('e-arete')).toBeNull();
   });
 
-  it('reconnaît un objectif inconnu même pendant une écriture (requestStatus partagé)', async () => {
-    const { root } = await setup({ id: 'inconnu', configure: (_, store) => store.requestStatus.set('pending') });
-    expect(text(root.querySelector('h1'))).toBe('Cet objectif est introuvable');
-    expect(statusLine(root)).toBeNull();
-  });
 
   it('ne prétend pas chercher quand les objectifs n’ont pas pu être chargés', async () => {
-    const { chat, root } = await setup({
+    const { fixture, chat, root } = await setup({
       configure: (_, store) => {
         store.objectives.set([]);
-        store.requestStatus.set({ error: 'Je n’ai pas pu charger tes objectifs.' });
+        store.objectivesLoaded.set(false);
+        store.error.set('Je n’ai pas pu charger tes objectifs.');
       },
     });
-    // La coque affiche le signalement : l'écran ne dit ni « introuvable », ni « Akari retrouve… ».
+    const annonces = TestBed.inject(AnnoncesStore);
+    annonces.signaler('Je n’ai pas pu charger tes objectifs.');
+    await refresh(fixture);
+    // La coque affiche le signalement : l'écran ne dit ni « introuvable », ni « Akari retrouve… », mais garde
+    // un titre et un chemin.
     expect(statusLine(root)).toBeNull();
-    expect(root.querySelector('h1')).toBeNull();
+    expect(text(root)).not.toContain('introuvable');
+    expect(text(root.querySelector('h1'))).toBe('Tes objectifs ne sont pas chargés');
+    expect(root.querySelector('p.corps')).toBeNull();
+    expect(buttonNamed(root, 'Voir mes objectifs')?.getAttribute('href')).toBe('/');
     expect(chat.loadChatHistory).not.toHaveBeenCalled();
+
+    annonces.compris(); // la note est lue : l'écran dit quoi faire
+    await refresh(fixture);
+    expect(text(root.querySelector('p.corps'))).toBe('Vérifie ta connexion, puis recharge la page.');
   });
 });
 
@@ -571,7 +584,45 @@ describe('Akari : l’arête à droite', () => {
       configure: (_, store) => store.objectives.set(OBJECTIVES.map((o) => (o.id === 'vitesse' ? { ...o, title: '' } : o))),
     });
     expect(Array.from(root.querySelectorAll('li.ds-entry')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Étape sans nom']);
+    // Sur l'arête aussi, et un titre fait d'espaces compte comme vide.
+    expect(Array.from(root.querySelectorAll('e-arete .etape .nom')).map(text)).toEqual(['Endurance', 'Étape sans nom']);
     expect(text(root)).toContain("Je peux te proposer des pas pour l'étape « Étape sans nom ».");
+  });
+
+  it('nomme aussi une étape au titre fait d’espaces, dans la liste et sur l’arête', async () => {
+    const { root } = await setup({
+      configure: (_, store) => store.objectives.set(OBJECTIVES.map((o) => (o.id === 'vitesse' ? { ...o, title: '   ' } : o))),
+    });
+    expect(Array.from(root.querySelectorAll('li.ds-entry')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Étape sans nom']);
+    expect(Array.from(root.querySelectorAll('e-arete .etape .nom')).map(text)).toEqual(['Endurance', 'Étape sans nom']);
+  });
+
+  it('mène la vue de l’arête à sa fin (sa tête, la dernière étape), dans une zone qui défile au clavier', async () => {
+    // jsdom ne mesure rien : une arête plus large que sa colonne.
+    vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+    try {
+      const { fixture, objectives, root } = await setup();
+      const scroller = root.querySelector('.ds-scroll-x') as HTMLElement;
+      expect(scroller.scrollLeft).toBe(900);
+      expect(scroller.getAttribute('tabindex')).toBe('0');
+      expect(scroller.getAttribute('role')).toBe('region');
+      expect(scroller.getAttribute('aria-label')).toBe("L'arête de l'objectif");
+      // Comme l'aperçu de la maquette, masquée sur mobile ; la liste des étapes suit.
+      expect(scroller.classList).toContain('ds-hide-mobile');
+
+      // La personne fait défiler ; un pas qui change ne la ramène pas à la fin.
+      scroller.scrollLeft = 0;
+      objectives.tasks.update((list) => list.map((t) => (t.id === 't1' ? { ...t, done: true } : t)));
+      await refresh(fixture);
+      expect(scroller.scrollLeft).toBe(0);
+
+      // Akari ajoute une étape : la vue va à la fin, où elle arrive.
+      objectives.objectives.update((list) => [...list, { id: 'recup', title: 'Récupération', why: '', description: '', dueDate: '', parentId: 'semi' }]);
+      await refresh(fixture);
+      expect(scroller.scrollLeft).toBe(900);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it('garde un seul sceau : la tête de l’arête', async () => {
@@ -597,7 +648,7 @@ describe('Akari : la voix', () => {
     permissionPrompt({ kind: 'task', title: 'Courir 10 km', objectiveId: 'endurance' }, () => 'Endurance'),
     permissionPrompt({ kind: 'task', title: '', objectiveId: null }),
     permissionPrompt({ kind: 'other' }),
-    ...Object.values(STAGE_STATE_LABELS),
+    ...Object.values(STAGE_STATE_TITLES),
     UNTITLED_STAGE,
     ...Object.values(AKARI_STATUS),
     ...Object.values(AKARI_REPORTS),
@@ -616,7 +667,8 @@ describe('Akari : la voix', () => {
       { history: HISTORY, configure: (c) => { c.isAwaitingPermission.set(true); c.permissionRequest.set({ kind: 'task', title: 'Courir 10 km', objectiveId: 'endurance' }); } },
       { history: HISTORY, configure: (c) => { c.isStreaming.set(true); c.canSendMessage.set(false); } },
       { configure: (c) => { c.isLoading.set(true); c.historyLoaded.set(false); } },
-      { configure: (_, store) => { store.objectives.set([]); store.requestStatus.set('pending'); } },
+      { configure: (_, store) => { store.objectives.set([]); store.objectivesLoaded.set(false); } },
+      { configure: (_, store) => { store.objectives.set([]); store.objectivesLoaded.set(false); store.error.set('chargement non abouti'); } },
       { id: 'inconnu' },
       { history: HISTORY, configure: (c) => { c.isAwaitingPermission.set(true); c.permissionRequest.set({ kind: 'other' }); } },
     ];

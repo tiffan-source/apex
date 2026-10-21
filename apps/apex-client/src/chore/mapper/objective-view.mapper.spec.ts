@@ -1,6 +1,7 @@
 import type { ObjectiveViewModel, TaskViewModel } from '../models/objective.viewmodel';
 import {
   EMPTY_STAGE_DETAIL,
+  UNTITLED_STAGE,
   areteDetail,
   formatHorizon,
   isAccomplished,
@@ -9,6 +10,7 @@ import {
   stageDetail,
   stageIdFromArete,
   stageOptions,
+  stageName,
   stageStates,
   taskStates,
   toObjectiveCard,
@@ -214,15 +216,23 @@ describe('cartes et vue détaillée', () => {
       { id: 'mental', nom: 'Mental', etat: 'a-venir' },
     ]);
     expect(detail?.defaultStageId).toBe('endurance');
-    expect(detail?.nextTask?.title).toBe('Sortie de 30 minutes');
     expect(detail?.taskCount).toEqual({ done: 4, total: 7 });
+  });
+
+  it('nomme sur l’arête une étape sans nom, sans toucher à son titre (la feuille « Modifier l’étape » le préremplit)', () => {
+    const list = [objective('o', 'Objectif'), objective('e1', 'Une', 'o'), objective('e2', '', 'o'), objective('e3', '   ', 'o')];
+    const detail = toObjectiveDetail('o', list, [], NOW);
+    expect(detail?.aretes.map((arete) => arete.nom)).toEqual(['Une', UNTITLED_STAGE, UNTITLED_STAGE]);
+    expect(detail?.stages.map((stage) => stage.title)).toEqual(['Une', '', '   ']);
+    expect(stageName('  ')).toBe('Étape sans nom');
+    expect(stageName(' Portfolio ')).toBe('Portfolio');
   });
 
   it('toutes les étapes faites : la dernière est ouverte ; aucune étape : null', () => {
     const done = [objective('o', 'Objectif'), objective('e1', 'Une', 'o'), objective('e2', 'Deux', 'o')];
     const doneTasks = [task('e1', true), task('e2', true)];
     expect(toObjectiveDetail('o', done, doneTasks, NOW)?.defaultStageId).toBe('e2');
-    expect(toObjectiveDetail('o', done, doneTasks, NOW)?.accomplished).toBe(true);
+    expect(toObjectiveDetail('o', done, doneTasks, NOW)?.stages.map((stage) => stage.state)).toEqual(['faite', 'faite']);
     expect(toObjectiveDetail('guitare', objectives, tasks, NOW)?.defaultStageId).toBeNull();
   });
 
@@ -346,7 +356,7 @@ describe('cas limites du cahier (§ 4)', () => {
     expect(detail?.stages[0].progress).toEqual({ done: 2, inProgress: true, upcoming: 1 });
     expect(detail?.tasksWithoutStage).toEqual([]);
     expect(detail?.taskCount).toEqual({ done: 2, total: 5 });
-    expect(detail?.nextTask?.id).toBe('b');
+    expect(toObjectiveCard(objectives[0], objectives, tasks, NOW).nextTask?.id).toBe('b');
     expect(stageOptions('o', objectives).map((option) => option.valeur)).toEqual(['e1', 'e2']);
     expect(toObjectiveCards(objectives, tasks, NOW).map((card) => card.id)).toEqual(['o']);
   });

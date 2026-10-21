@@ -1,7 +1,7 @@
 import type { EtatPas } from '@empreinte-studio/angular/core';
 import type { EtapeArete, EtatEtape } from '@empreinte-studio/angular/arete';
 import type { Quadrant } from '@empreinte-studio/angular/matrice';
-import type { NextTaskViewModel, TaskCountViewModel } from './objective-card.viewmodel';
+import type { TaskCountViewModel } from './objective-card.viewmodel';
 
 /*
  * La vue détaillée d'un objectif pour l'écran de l'arête (cahier de migration, § 4).
@@ -69,11 +69,9 @@ export type ObjectiveDetailViewModel = {
   stages: StageViewModel[];
   /** Les pas posés directement sur l'objectif, à ranger dans une étape. */
   tasksWithoutStage: StageTaskViewModel[];
-  /** Les étapes pour <e-arete [etapes]>, dans le même ordre que stages. */
+  /** Les étapes pour <e-arete [etapes]>, dans le même ordre que stages ; une étape sans nom y est « Étape sans nom ». */
   aretes: AreteStageViewModel[];
   /** L'étape ouverte par défaut : celle en cours, sinon la dernière, sinon null (aucune étape). */
   defaultStageId: string | null;
   taskCount: TaskCountViewModel;
-  nextTask: NextTaskViewModel | null;
-  accomplished: boolean;
 };

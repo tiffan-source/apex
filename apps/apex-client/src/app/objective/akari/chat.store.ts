@@ -10,8 +10,8 @@ import { CREATE_STAGE_TOOL, CREATE_TASK_TOOL, MessageMapper } from "./message.ma
 import { withOwnerId } from "../../../chore/stores/utils/filter-auth-operation";
 import { RegisteredMessage, SendMessageToAIWorkflow, ToolCall, WorkflowStateValue, WORKFLOW_READY_FOR_NEW_MESSAGE } from "@org/ai-assistant";
 import { isTemporaryId, withOptimistiqueId } from "../../../chore/stores/utils/map-optimistique-id";
-import { ObjectiveStore } from "../../../chore/stores/objective.store";
 import { AnnoncesStore } from "../../../chore/stores/annonces.store";
+import { AkariWritesStore } from "../../../chore/stores/akari-writes.store";
 
 export type ChatState = {
   messages: MessageViewModel[];
@@ -22,7 +22,6 @@ export type ChatState = {
   interactionId?: string;
   workflowState: WorkflowStateValue;
   pendingToolCall: ToolCall | null;
-  pendingReload: boolean;
 }
 
 const initialState: ChatState = {
@@ -32,8 +31,7 @@ const initialState: ChatState = {
   historyLoaded: false,
   interactionId: undefined,
   workflowState: "",
-  pendingToolCall: null,
-  pendingReload: false
+  pendingToolCall: null
 };
 
 
@@ -89,9 +87,9 @@ export const ChatStore = signalStore(
     queryConversation = inject(GetConversationsQuery),
     sessionStore = inject(SessionStore),
     workflow = inject(SendMessageToAIWorkflow),
-    // Instance partagée fournie par la coque : la recharger met à jour l'arête de l'objectif
-    // (qui dérive de ses signaux) sans câblage supplémentaire.
-    objectiveStore = inject(ObjectiveStore),
+    // Fourni par la coque (comme ObjectiveStore) : le rechargement après une écriture acceptée survit au
+    // départ de l'écran Akari, que ChatStore quitte avec lui.
+    akariWrites = inject(AkariWritesStore),
     annonces = inject(AnnoncesStore)
   )=> {
     // Affiche un message que le workflow vient d'enregistrer (de la personne ou d'Akari) sans
@@ -159,16 +157,6 @@ export const ChatStore = signalStore(
                 if (added?.sender === "assistant" && wasRunning) {
                   annonces.annoncer(AKARI_REPLIED);
                 }
-              }
-
-              // Fin de tour : si un outil d'écriture a été accepté, on recharge les objectifs
-              // pour que l'arête montre ce qu'Akari vient d'ajouter.
-              if (isReady && store.pendingReload()) {
-                const ownerId = sessionStore.currentUserId();
-                if (ownerId) {
-                  objectiveStore.loadObjectives({ ownerId });
-                }
-                patchState(store, { pendingReload: false });
               }
             })
           )
@@ -254,9 +242,9 @@ export const ChatStore = signalStore(
         })
       )
     ),
-    // Transmet la décision de la personne à l'outil en attente. Si une écriture est acceptée,
-    // on programme le rechargement des objectifs en fin de tour (le résultat de l'outil est
-    // effacé du contexte avant le retour au repos).
+    // Transmet la décision de la personne à l'outil en attente. Si une écriture est acceptée
+    // (une étape, un pas), AkariWritesStore recharge les objectifs dès qu'elle est faite : l'arête
+    // se remplit au fil des ajouts, même si la personne quitte l'écran avant la fin du tour.
     respondToPermission: (permission: boolean) => {
       const id = store.interactionId?.();
       if (!id) {
@@ -267,10 +255,10 @@ export const ChatStore = signalStore(
       const willMutate = permission && !!call && WRITE_TOOLS.has(call.name);
 
       workflow.respondToPermission(id, permission);
-      patchState(store, {
-        pendingToolCall: null,
-        pendingReload: store.pendingReload() || willMutate,
-      });
+      patchState(store, { pendingToolCall: null });
+      if (willMutate) {
+        akariWrites.reloadAfterWrite(id);
+      }
       // On relance l'interrogation jusqu'au retour au repos.
       watchWorkflowState(id);
     }

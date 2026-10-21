@@ -56,7 +56,7 @@
 }
 
 /* ============================================================================
- *  1. Page
+ *  1. Page et coque
  * ========================================================================== */
 
 /* Conteneur d'une page : sections empilées, séparées de pas-8, largeur max
@@ -130,6 +130,22 @@
 
 .ds-skip-link:focus {
   inset-block-start: var(--pas-2);
+}
+
+/* L'initiale de la personne en bas de la navigation (maquettes : « L » à
+   côté de « Léa ») : un carré de pas-8 sur le fond creux, la lettre centrée.
+   Contournement du catalogue (§ 9 : Empreinte n'a ni avatar ni initiale) ;
+   le fond creux suit la maquette. À retirer quand Empreinte aura son
+   composant. La lettre prend un des 8 styles typographiques (class="voix") ;
+   elle est décorative (aria-hidden), le nom est écrit à côté. */
+.ds-initial {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--pas-8);
+  block-size: var(--pas-8);
+  background: var(--creux);
 }
 
 /* ============================================================================
@@ -229,6 +245,17 @@
   grid-column: 1 / -1;
 }
 
+/* Trame de surfaces (avec .ds-panels) : les enfants sont des surfaces
+   d'Empreinte (article[eCarte], [eSurface]) qui dessinent déjà leur propre
+   filet trame. Chacune déborde d'un trait-fin sur l'écart et le bord de la
+   trame : son filet se pose sur celui de la trame, et deux cartes voisines
+   restent séparées d'un seul filet de trait-fin, comme dans les maquettes
+   (sans cette classe : trois traits entre deux cartes, deux au bord). Cartes
+   de l'écran Objectifs. */
+.ds-surfaces > * {
+  margin: calc(-1 * var(--trait-fin));
+}
+
 /* ============================================================================
  *  4. Panneaux
  * ========================================================================== */
@@ -317,6 +344,20 @@
   box-shadow:
     inset 0 var(--trait-fin) 0 var(--trame),
     inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
+}
+
+/* Bloc repliable natif (details), comme « Accomplis » sur l'écran Objectifs
+   (catalogue § 9 : Empreinte n'a pas de repli générique) : son résumé
+   (summary) est une rangée (chevron, titre, compte) haute d'une cible
+   tactile, sans la puce du navigateur ; le contenu suit. Les filets viennent
+   de .ds-rule-block. */
+.ds-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--pas-3);
+  min-height: var(--pas-12);
+  list-style: none;
+  cursor: pointer;
 }
 
 /* Case et intitulé : la case (input[eCase]) dans une colonne de 20px,
@@ -562,6 +603,22 @@
   gap: var(--pas-12);
 }
 
+/* --- Retraits (marges intérieures) ----------------------------------------- */
+
+/* Air de pas-1 au-dessus et au-dessous : une ligne posée dans une liste
+   serrée qu'Apex ne règle pas (un pas de la matrice : e-matrice n'espace ses
+   éléments que de pas-1). */
+.ds-pad-block-1 {
+  padding-block: var(--pas-1);
+}
+
+/* Retrait de pas-3 à gauche et à droite : aligne un bloc sur le texte des
+   entrées de navigation, qui ont ce même retrait (bas de la coque : initiale,
+   nom, réglages). */
+.ds-pad-inline-3 {
+  padding-inline: var(--pas-3);
+}
+
 /* --- Texte (la typographie elle-même vient des 8 styles d'Empreinte) -------- */
 
 /* Texte secondaire en encre douce : dates, horizons, comptes, « pourquoi ». */
@@ -679,61 +736,4 @@
   .ds-show-mobile {
     display: none;
   }
-}
-
-/* ============================================================================
- *  Ajouts des écrans (à ranger dans leur section à l'intégration)
- * ========================================================================== */
-
-/* Air de pas-1 au-dessus et au-dessous d'une ligne posée dans une liste
-   serrée qu'Apex ne règle pas (pas d'une matrice : e-matrice n'espace ses
-   éléments que de pas-1). */
-.ds-pad-block-1 {
-  padding-block: var(--pas-1);
-}
-
-/* Bloc repliable natif (details), comme « Accomplis » sur l'écran Objectifs :
-   son résumé (summary) est une rangée (chevron, titre, compte) haute d'une
-   cible tactile, sans la puce du navigateur ; le contenu suit. Les filets
-   viennent de .ds-rule-block. */
-.ds-disclosure > summary {
-  display: flex;
-  align-items: center;
-  gap: var(--pas-3);
-  min-height: var(--pas-12);
-  list-style: none;
-  cursor: pointer;
-}
-
-/* Retrait de pas-3 à gauche et à droite : aligne un bloc sur le texte des
-   entrées de navigation, qui ont ce même retrait (bas de la coque : initiale,
-   nom, réglages). */
-.ds-pad-inline-3 {
-  padding-inline: var(--pas-3);
-}
-
-/* L'initiale de la personne en bas de la navigation (maquettes : « L » à côté
-   de « Léa ») : un carré de pas-8 sur le fond creux, la lettre centrée.
-   Empreinte n'a ni avatar ni initiale (catalogue § 9). La lettre prend un des
-   8 styles typographiques, en « sens » (class="voix") ; elle est décorative
-   (aria-hidden), le nom est écrit à côté. */
-.ds-initial {
-  box-sizing: border-box;
-  display: grid;
-  place-items: center;
-  flex: none;
-  inline-size: var(--pas-8);
-  block-size: var(--pas-8);
-  background: var(--creux);
-}
-
-/* Trame de surfaces (avec .ds-panels) : les enfants sont des surfaces
-   d'Empreinte (article[eCarte], [eSurface]) qui dessinent déjà leur propre
-   filet trame. Chacune déborde d'un trait-fin sur l'écart et le bord de la
-   trame : son filet se pose sur celui de la trame, et deux cartes voisines
-   restent séparées d'un seul filet de trait-fin, comme dans les maquettes
-   (sans cette classe : trois traits entre deux cartes, deux au bord). Cartes
-   d'objectifs de l'écran Objectifs. */
-.ds-surfaces > * {
-  margin: calc(-1 * var(--trait-fin));
 }

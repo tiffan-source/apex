@@ -11,6 +11,7 @@ import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { SessionStore, type UserViewModel } from '../../chore/stores/session.store';
 import { CHOSEN_SUFFIX, Shell, THEME_ANNOUNCEMENTS, THEME_CHOICES } from './shell';
+import { present } from '../../testing/present';
 
 /** Une page de la coque, qui lit ObjectiveStore comme le font les vrais écrans. */
 @Component({ template: '<p>Page des objectifs</p>' })
@@ -73,9 +74,12 @@ describe('Shell', () => {
 
   const shellOf = (harness: RouterTestingHarness) => harness.fixture.nativeElement.querySelector('app-shell') as HTMLElement;
   const navLink = (root: HTMLElement, label: string) =>
-    [...root.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Navigation principale"] a[href]')].find(
-      (a) => a.textContent?.trim() === label,
-    )!;
+    present(
+      [...root.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Navigation principale"] a[href]')].find(
+        (a) => a.textContent?.trim() === label,
+      ),
+      `l'entrée « ${label} »`,
+    );
   const menus = (harness: RouterTestingHarness) =>
     harness.fixture.debugElement.queryAll(By.directive(EMenu)).map((d) => d.componentInstance as EMenu<PreferenceTheme>);
   const labels = (entries: readonly unknown[]) => (entries as ElementMenu<PreferenceTheme>[]).map((e) => e.libelle);
@@ -83,7 +87,7 @@ describe('Shell', () => {
   describe('la navigation', () => {
     it('affiche la marque « Apex » et deux entrées : Objectifs et Matrice, avec leurs icônes', async () => {
       const root = shellOf(await open());
-      const marque = root.querySelector<HTMLAnchorElement>('nav a.e-nav__marque')!;
+      const marque = present(root.querySelector<HTMLAnchorElement>('nav a.e-nav__marque'), 'la marque');
       expect(marque.textContent?.trim()).toBe('Apex');
       expect(marque.getAttribute('href')).toBe('/');
 
@@ -127,26 +131,26 @@ describe('Shell', () => {
   describe('la personne, en bas de la navigation', () => {
     it('montre l’initiale et le nom', async () => {
       const root = shellOf(await open());
-      const initial = root.querySelector('[eNavBas] .ds-initial')!;
+      const initial = present(root.querySelector('[eNavBas] .ds-initial'), "l'initiale");
       expect(initial.textContent?.trim()).toBe('L');
       expect(initial.getAttribute('aria-hidden')).toBe('true');
-      expect(root.querySelector('[eNavBas]')!.textContent).toContain('Léa');
+      expect(present(root.querySelector('[eNavBas]'), 'le bas de la navigation').textContent).toContain('Léa');
     });
 
     it('prend l’adresse quand le nom manque, et met l’initiale en capitale', async () => {
       currentUser.set({ id: 'u-2', name: '  ', email: 'élise@exemple.fr' });
       const root = shellOf(await open());
-      expect(root.querySelector('[eNavBas] .ds-initial')!.textContent?.trim()).toBe('É');
-      expect(root.querySelector('[eNavBas]')!.textContent).toContain('élise@exemple.fr');
+      expect(present(root.querySelector('[eNavBas] .ds-initial'), "l'initiale").textContent?.trim()).toBe('É');
+      expect(present(root.querySelector('[eNavBas]'), 'le bas de la navigation').textContent).toContain('élise@exemple.fr');
     });
 
     it('coupe une adresse longue sans élargir la navigation (grille minmax(0, 1fr) autour du texte)', async () => {
       currentUser.set({ id: 'u-3', name: '', email: 'une.adresse.vraiment.longue@exemple-de-domaine.fr' });
       const root = shellOf(await open());
-      const text = root.querySelector('[eNavBas] .ds-truncate')!;
+      const text = present(root.querySelector('[eNavBas] .ds-truncate'), "le nom ou l'adresse");
       expect(text.textContent?.trim()).toBe('une.adresse.vraiment.longue@exemple-de-domaine.fr');
       // Mesuré dans Chrome : sans la grille, la navigation passait de 232 à 350px pour une adresse de 25 lettres.
-      expect(text.parentElement!.matches('.ds-grid.ds-grow')).toBe(true);
+      expect(present(text.parentElement, 'son conteneur').matches('.ds-grid.ds-grow')).toBe(true);
     });
 
     it('ne dessine pas d’initiale vide sans session', async () => {
@@ -206,7 +210,10 @@ describe('Shell', () => {
 
     it('déplie le menu au clic et applique l’entrée choisie', async () => {
       const harness = await open();
-      const trigger = shellOf(harness).querySelector<HTMLButtonElement>('[eNavBas] e-menu button[aria-label="Réglages"]')!;
+      const trigger = present(
+        shellOf(harness).querySelector<HTMLButtonElement>('[eNavBas] e-menu button[aria-label="Réglages"]'),
+        'le bouton « Réglages »',
+      );
       trigger.click();
       harness.detectChanges();
       await harness.fixture.whenStable();
@@ -231,17 +238,17 @@ describe('Shell', () => {
 
     it('garde les paramètres de la page (?etape=…)', async () => {
       const root = shellOf(await open('/objectifs/42/akari?etape=7'));
-      expect(root.querySelector('a.ds-skip-link')!.getAttribute('href')).toBe('/objectifs/42/akari?etape=7#contenu');
+      expect(present(root.querySelector('a.ds-skip-link'), "le lien d'évitement").getAttribute('href')).toBe('/objectifs/42/akari?etape=7#contenu');
     });
 
     it('donne le focus au contenu et reste sur la page', async () => {
       const harness = await open('/matrice');
       const root = shellOf(harness);
-      root.querySelector<HTMLAnchorElement>('a.ds-skip-link')!.click();
+      present(root.querySelector<HTMLAnchorElement>('a.ds-skip-link'), "le lien d'évitement").click();
       await harness.fixture.whenStable();
       harness.detectChanges();
 
-      const main = root.querySelector<HTMLElement>('main#contenu')!;
+      const main = present(root.querySelector<HTMLElement>('main#contenu'), 'main#contenu');
       expect(main.getAttribute('tabindex')).toBe('-1');
       expect(document.activeElement).toBe(main);
       const router = TestBed.inject(Router);
@@ -253,7 +260,7 @@ describe('Shell', () => {
   describe('le contenu', () => {
     it('rend la page dans le contenu de la coque, sans note quand tout va bien', async () => {
       const root = shellOf(await open());
-      const content = root.querySelector('main [eCoqueContenu]')!;
+      const content = present(root.querySelector('main [eCoqueContenu]'), 'le contenu de la coque');
       expect(content.textContent).toContain('Page des objectifs');
       expect(root.querySelector('aside[eNote]')).toBeNull();
     });
@@ -271,15 +278,15 @@ describe('Shell', () => {
       harness.detectChanges();
 
       const root = shellOf(harness);
-      const content = root.querySelector('main [eCoqueContenu]')!;
-      const note = content.querySelector('aside[eNote]')!;
+      const content = present(root.querySelector('main [eCoqueContenu]'), 'le contenu de la coque');
+      const note = present(content.querySelector('aside[eNote]'), 'la note');
       expect(note).not.toBeNull();
       expect(content.firstElementChild).toBe(note);
-      expect(note.querySelector('.e-note__qui')!.textContent?.trim()).toBe('Akari');
+      expect(present(note.querySelector('.e-note__qui'), 'la signature').textContent?.trim()).toBe('Akari');
       expect(note.getAttribute('aria-label')).toBe("Message d'Akari");
       expect(note.textContent).toContain(FAILURE_REPORTS.moveTask);
 
-      const understood = [...note.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Compris')!;
+      const understood = present([...note.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Compris'), '« Compris »');
       understood.focus();
       understood.click();
       harness.detectChanges();
@@ -294,10 +301,47 @@ describe('Shell', () => {
       const harness = await open();
       TestBed.inject(AnnoncesStore).signaler(FAILURE_REPORTS.loadObjectives);
       harness.detectChanges();
-      const note = shellOf(harness).querySelector('aside[eNote]')!;
+      const note = present(shellOf(harness).querySelector('aside[eNote]'), 'la note');
       const page: HTMLElement = harness.fixture.debugElement.query(By.directive(HomeStub)).nativeElement;
       expect(note.compareDocumentPosition(page) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(note.contains(page)).toBe(false);
+    });
+  });
+
+  describe('le changement de page', () => {
+    it('ne prend pas le focus à l’ouverture de la première page', async () => {
+      (document.activeElement as HTMLElement | null)?.blur();
+      const root = shellOf(await open('/'));
+      expect(document.activeElement).not.toBe(root.querySelector('main#contenu'));
+    });
+
+    it('donne le focus au contenu quand ce qui a mené à la page est parti avec l’ancienne', async () => {
+      const harness = await open('/');
+      // « Ouvrir », un fil d'Ariane… : le lien disparaît avec la page, le focus tombe sur le document.
+      (document.activeElement as HTMLElement | null)?.blur();
+      await harness.navigateByUrl('/objectifs/42');
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+      expect(document.activeElement).toBe(shellOf(harness).querySelector('main#contenu'));
+    });
+
+    it('laisse le focus sur une entrée de la navigation, qui reste à l’écran', async () => {
+      const harness = await open('/');
+      const matrice = navLink(shellOf(harness), 'Matrice');
+      matrice.focus();
+      await harness.navigateByUrl('/matrice');
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+      expect(document.activeElement).toBe(matrice);
+    });
+
+    it('ne bouge pas quand seuls la requête ou le fragment changent', async () => {
+      const harness = await open('/objectifs/42/akari?etape=7');
+      (document.activeElement as HTMLElement | null)?.blur();
+      await harness.navigateByUrl('/objectifs/42/akari?etape=8');
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+      expect(document.activeElement).not.toBe(shellOf(harness).querySelector('main#contenu'));
     });
   });
 

@@ -468,8 +468,8 @@ Formulaires : `ControlValueAccessor` (fourni par `NG_VALUE_ACCESSOR`), donc `for
 Clavier : flèches, Entrée, Échap, saisie pour atteindre une option. La liste s'ouvre dans un overlay CDK en popover natif (`usePopover: 'inline'`, largeur de l'origine) : rien à configurer, pas d'équivalent d'`appendTo` nécessaire, y compris dans une feuille. Hôte : `e-selection-hote` (bloc). Rendu : `div.e-selection` (le combobox, avec `e-selection__valeur` et un chevron), `div.e-liste-options` > `div.e-option` (coche sur l'option choisie).
 
 ```ts
-// à partir des constantes existantes { label, value } de chore/constants/task.constante.ts
-protected readonly importances: OptionSelection<number>[] = ImportanceValueOption.map((o) => ({ valeur: o.value, libelle: o.label }));
+// les niveaux d'Apex, déjà en { valeur, libelle } : chore/constants/task.constante.ts
+protected readonly importances = IMPORTANCE_OPTIONS;
 ```
 ```html
 <e-champ libelle="Importance">
@@ -1075,10 +1075,10 @@ Relevé en comparant les maquettes `Objectifs`, `Arete`, `Matrice`, `Akari` au c
 | Maquette | Manque | Contournement possible |
 | --- | --- | --- |
 | Toutes | Aucune classe utilitaire de couleur (`encre-douce`) ni de remise à zéro des marges | Classes `.ds-*` de la couche de mise en page. |
-| Toutes (coque) | Pas d'avatar ni d'initiale (bas de navigation « L · Léa ») ; `eNavBas` masqué sous 760px | Initiale en `.ds-*` ; réglages accessibles autrement sur mobile. |
+| Toutes (coque) | Pas d'avatar ni d'initiale (bas de navigation « L · Léa ») ; `eNavBas` masqué sous 760px | Initiale en `.ds-initial` (fond creux de la maquette) ; réglages dans un `e-menu` en `.ds-show-mobile`. À proposer à Empreinte : un composant d'initiale. |
 | Toutes | Pas d'indicateur de chargement (bouton, zone), pas d'infobulle, pas de panneau latéral, pas de sélecteur de date | Texte d'état en `role="status"` ; `input[type=date][eSaisie]` ; feuilles centrées. |
 | Objectifs | `ECarteObjectif` ne suit pas la maquette (horizon, pourquoi, pas, prochain pas avec case dans le pied) | Composer avec `article[eCarte]` (§ 2.5). Une `li[eTache]` dans le pied garde son padding de ligne (`--pas-4 --pas-6`). |
-| Objectifs | Pas de repli générique (`<details>` « Accomplis ») ; `ECarnet` n'est pas un accordéon générique | Classe `.ds-*` pour un `<details>/<summary>` natif, ou demande d'ajout à Empreinte. |
+| Objectifs | Pas de repli générique (`<details>` « Accomplis ») ; `ECarnet` n'est pas un accordéon générique | `details.ds-disclosure` natif (fait), ou demande d'ajout à Empreinte. |
 | Arête | Rendu d'`EArete` différent de la maquette : bornes carrées au lieu d'empreintes pour les étapes faites, pas d'étiquette encadrée avec corne pour l'étape en cours, pas de légende (Faite / En cours / À venir), troncatures (18 / 22 / 2×15 caractères), `choisir` sans identifiant | Utiliser `EArete` tel quel ; légende avec `<e-empreinte [taille]="20" decorative />` pour « Faite », les deux autres repères demandent une classe `.ds-*` ; passer un nom d'objectif court. |
 | Matrice | Compte de quadrant non personnalisable (« Important · urgent · 4 pas aujourd'hui » impossible, seulement « 4 pas ») ; titres `h3` figés | Accepter « N pas ». |
 | Matrice | Sous 640px, les axes « Urgent / Pas urgent » restent au-dessus d'une grille passée sur une colonne (la maquette masque les axes) — lu dans la feuille, **non vérifié à l'écran** | À vérifier à 375px ; sinon demande de correction à Empreinte. |

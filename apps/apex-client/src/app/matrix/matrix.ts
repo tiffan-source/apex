@@ -3,13 +3,11 @@ import {
   Component,
   DOCUMENT,
   Injector,
-  LOCALE_ID,
   afterNextRender,
   computed,
   inject,
   signal,
 } from '@angular/core';
-import { formatDate } from '@angular/common';
 import { CDK_DRAG_CONFIG, type DragDropConfig } from '@angular/cdk/drag-drop';
 import { RouterLink } from '@angular/router';
 import { EBouton } from '@empreinte-studio/angular/bouton';
@@ -26,10 +24,14 @@ import {
 } from '@empreinte-studio/angular/matrice';
 import { EMenu, type EntreeMenu } from '@empreinte-studio/angular/menu';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
+import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import type { MatrixTaskViewModel } from '../../chore/models/matrix.viewmodel';
+import { FILTER_TITLE_MAX, distinctShortTitles } from '../../chore/mapper/title.mapper';
+import { toDateInputValue } from '../../chore/mapper/date-input.mapper';
+import { formatToday, injectToday } from '../../chore/clock/today';
 
-/** Longueur maximale d'un titre d'objectif dans la rangée de filtres (lisible sur un téléphone). */
-export const SHORT_TITLE_MAX = 24;
+/** Le nom du filtre qui garde tous les objectifs (e-filtres, et l'annonce d'un choix). */
+export const ALL_OBJECTIVES = 'Tous les objectifs';
 
 /**
  * Au toucher, un pas ne se saisit qu'après un appui d'un moment (en millisecondes) : sans ce délai, le doigt
@@ -38,19 +40,6 @@ export const SHORT_TITLE_MAX = 24;
  * par la configuration du glisser-déposer du CDK, que ses pas lisent.
  */
 export const MATRIX_DRAG_CONFIG: DragDropConfig = { dragStartDelay: { touch: 300, mouse: 0 } };
-
-/**
- * Le titre court d'un objectif, pour un filtre : coupé au dernier mot entier qui tient, suivi de « … ».
- * Un bouton d'Empreinte ne passe pas à la ligne : un titre long déborderait sur un téléphone.
- */
-export function shortTitle(title: string, max = SHORT_TITLE_MAX): string {
-  const text = title.trim().replace(/\s+/g, ' ');
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max - 1);
-  const lastSpace = cut.lastIndexOf(' ');
-  const head = lastSpace >= max / 2 ? cut.slice(0, lastSpace) : cut;
-  return `${head.replace(/[\s,;:·.-]+$/, '')}…`;
-}
 
 /** Les quadrants vers lesquels un pas peut aller : les trois autres. */
 function moveTargetsFrom(quadrant: Quadrant): readonly EntreeMenu<Quadrant>[] {
@@ -74,20 +63,32 @@ function moveTargetsFrom(quadrant: Quadrant): readonly EntreeMenu<Quadrant>[] {
 })
 export class Matrix {
   private readonly store = inject(ObjectiveStore);
-  private readonly locale = inject(LOCALE_ID);
+  private readonly annonces = inject(AnnoncesStore);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
 
-  /** « Lundi 19 octobre » : la date du jour, à l'ouverture de la page. */
-  protected readonly today = capitalize(formatDate(new Date(), 'EEEE d MMMM', this.locale));
+  /** « Lundi 19 octobre » : la date du jour, qui change à minuit, comme sur l'écran Objectifs. */
+  private readonly today = injectToday();
+  protected readonly todayLabel = computed(() => formatToday(this.today()));
+  protected readonly todayIso = computed(() => toDateInputValue(this.today()));
+
+  protected readonly allObjectives = ALL_OBJECTIVES;
 
   /** L'objectif racine choisi dans les filtres, ou null pour « Tous les objectifs ». */
   protected readonly filter = signal<string | null>(null);
 
-  /** Un filtre par objectif racine, au titre court. */
-  protected readonly filterOptions = computed<OptionFiltre<string>[]>(() =>
-    this.store.objectiveOptions().map(({ valeur, libelle }) => ({ valeur, libelle: shortTitle(libelle) })),
-  );
+  /**
+   * Un filtre par objectif racine, au titre court. Ce titre est le seul nom du bouton (e-filtres n'a pas de nom
+   * accessible par option) : deux objectifs au début identique gardent des noms différents.
+   */
+  protected readonly filterOptions = computed<OptionFiltre<string>[]>(() => {
+    const options = this.store.objectiveOptions();
+    const labels = distinctShortTitles(
+      options.map((option) => option.libelle),
+      FILTER_TITLE_MAX,
+    );
+    return options.map(({ valeur }, index) => ({ valeur, libelle: labels[index] }));
+  });
 
   /** Un seul objectif (ou aucun) : filtrer ne changerait rien, la rangée n'est pas montrée. */
   protected readonly showFilters = computed(() => this.filterOptions().length > 1);
@@ -108,10 +109,11 @@ export class Matrix {
   });
 
   /**
-   * Les pas sont connus : le chargement a abouti, ou des pas sont déjà là. Avant (premier chargement, ou
-   * chargement qui n'a pas abouti, que la coque signale), l'écran ne prétend pas qu'il y a « 0 pas ».
+   * Les pas sont connus : les objectifs sont chargés (objectivesLoaded), ou des pas sont déjà là. Avant
+   * (premier chargement, ou chargement qui n'a pas abouti, que la coque signale), l'écran ne prétend pas
+   * qu'il y a « 0 pas ».
    */
-  protected readonly loaded = computed(() => this.store.isFulfilled() || this.hasTasks());
+  protected readonly loaded = computed(() => this.store.objectivesLoaded() || this.hasTasks());
 
   /** « 14 pas » : tous les pas affichés, faits compris. */
   protected readonly taskCount = computed(() => {
@@ -120,7 +122,18 @@ export class Matrix {
   });
 
   /** Aucun pas du tout, une fois les objectifs chargés : on invite à en poser depuis les objectifs. */
-  protected readonly isEmpty = computed(() => this.store.isFulfilled() && !this.hasTasks());
+  protected readonly isEmpty = computed(() => this.store.objectivesLoaded() && !this.hasTasks());
+
+  /** Le premier chargement est en cours : l'écran le dit, au lieu de quatre quadrants à « 0 pas ». */
+  protected readonly loading = computed(() => !this.loaded() && !this.store.error());
+
+  /**
+   * Le chargement n'a pas abouti, et la note de la coque a été lue (« Compris ») : l'écran dit encore quoi
+   * faire. Tant que la note est là, elle suffit (une note à la fois).
+   */
+  protected readonly loadFailedHint = computed(
+    () => !this.loaded() && !!this.store.error() && !this.annonces.aUnSignalement(),
+  );
 
   /** La clé d'un pas pour e-matrice : son id (le store recrée les objets à chaque mise à jour). */
   protected readonly trackById = (task: MatrixTaskViewModel) => task.id;
@@ -141,9 +154,21 @@ export class Matrix {
     return `matrix-task-${task.id}`;
   }
 
-  /** « Licence · Statistiques » : l'objectif, puis l'étape s'il y en a une. */
+  /** « Licence · étape Statistiques » : l'objectif, puis l'étape s'il y en a une (maquette « Matrice »). */
   protected taskDetail(task: MatrixTaskViewModel): string {
-    return [task.rootObjectiveTitle, task.stageTitle].filter((part) => !!part).join(' · ');
+    return [task.rootObjectiveTitle, task.stageTitle ? `étape ${task.stageTitle}` : ''].filter((part) => !!part).join(' · ');
+  }
+
+  /**
+   * Un filtre choisi : la matrice et le compte du repère changent, ce que le bouton enfoncé ne dit pas aux
+   * lecteurs d'écran. On leur annonce l'objectif, en entier, et ce qui reste dans la matrice.
+   */
+  protected chooseFilter(id: string | null): void {
+    if (id === this.activeFilter()) return;
+    this.filter.set(id);
+    const name =
+      id === null ? ALL_OBJECTIVES : (this.store.objectiveOptions().find((option) => option.valeur === id)?.libelle ?? ALL_OBJECTIVES);
+    this.annonces.annoncer(`${name} · ${this.taskCount()}`);
   }
 
   /** Coche ou décoche un pas : mise à jour optimiste du store, retour en arrière s'il n'est pas enregistré. */
@@ -167,8 +192,4 @@ export class Matrix {
     this.store.moveTaskToQuadrant(task.id, quadrant);
     afterNextRender({ write: () => this.document.getElementById(id)?.focus() }, { injector: this.injector });
   }
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toLocaleUpperCase('fr') + text.slice(1);
 }

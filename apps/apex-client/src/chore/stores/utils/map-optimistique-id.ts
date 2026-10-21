@@ -40,3 +40,18 @@ export function swapObjectiveId(
 export function swapTaskId(tasks: TaskViewModel[], temporaryId: string, realId: string): TaskViewModel[] {
   return tasks.map((task) => (task.id === temporaryId ? { ...task, id: realId } : task));
 }
+
+/**
+ * Le résultat d'un chargement, plus les éléments encore optimistes de l'état (objectifs, étapes et pas à
+ * l'id temporaire) : leur création est en cours, ils ne sont pas encore en base. Ils viennent après les
+ * éléments chargés, comme un élément ajouté vient après les autres.
+ */
+export function keepOptimistic(
+  loaded: { objectives: ObjectiveViewModel[]; tasks: TaskViewModel[] },
+  current: { objectives: ObjectiveViewModel[]; tasks: TaskViewModel[] },
+): { objectives: ObjectiveViewModel[]; tasks: TaskViewModel[] } {
+  return {
+    objectives: [...loaded.objectives, ...current.objectives.filter((objective) => isTemporaryId(objective.id))],
+    tasks: [...loaded.tasks, ...current.tasks.filter((task) => isTemporaryId(task.id))],
+  };
+}

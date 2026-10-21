@@ -24,7 +24,10 @@ import {
   type AuthErrorField,
 } from './auth.form';
 
-/** Les textes de l'écran qui changent avec le mode (les libellés fixes sont dans le gabarit). */
+/**
+ * Les textes de l'écran qui changent avec le mode (les libellés fixes sont dans le gabarit). La bascule est un
+ * bouton : moins de 4 mots (brand book, Bouton) ; la question qui l'amène est écrite à côté, en détail.
+ */
 export const AUTH_TEXTS = {
   tagline: 'Chaque pas laisse une empreinte.',
   passwordHelp: `Au moins ${PASSWORD_MIN_LENGTH} caractères.`,
@@ -32,13 +35,15 @@ export const AUTH_TEXTS = {
     title: 'Te revoilà.',
     submit: 'Me connecter',
     pending: 'Je te connecte…',
-    switch: 'Pas encore de compte ? Crée-le',
+    question: 'Pas encore de compte ?',
+    switch: 'Créer un compte',
   },
   [AuthMode.CreateUser]: {
     title: 'Crée ton compte',
     submit: 'Créer mon compte',
     pending: 'Je crée ton compte…',
-    switch: 'Déjà un compte ? Connecte-toi',
+    question: 'Déjà un compte ?',
+    switch: 'Me connecter',
   },
 } as const;
 

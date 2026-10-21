@@ -21,7 +21,8 @@
             @if (card.horizon) {
               <p class="detail ds-muted">{{ card.horizon }}</p>
             }
-            <h2 class="objectif ds-break" [id]="'objectif-' + card.id">{{ card.title }}</h2>
+            <!-- tabindex="-1" : le focus y revient quand la case cochée disparaît (dernier recours). -->
+            <h2 class="objectif ds-break" [id]="'objectif-' + card.id" tabindex="-1">{{ card.title }}</h2>
             @if (card.why) {
               <p class="voix ds-muted ds-break">«&nbsp;{{ card.why }}&nbsp;»</p>
             }
@@ -29,7 +30,9 @@
 
           @let progress = card.progress;
           @if (progress.kind === 'cases') {
+            <!-- ds-break : la légende reprend le nom de l'étape en cours, qui peut être un mot très long. -->
             <e-pas
+              class="ds-break"
               [faits]="progress.done"
               [enCours]="progress.inProgress"
               [aVenir]="progress.upcoming"
@@ -38,7 +41,7 @@
               [legende]="progress.legend"
             />
           } @else if (progress.kind === 'legend') {
-            <p class="detail ds-muted">{{ progress.text }}</p>
+            <p class="detail ds-muted ds-break">{{ progress.text }}</p>
           } @else {
             <p class="detail ds-muted">Aucune étape pour l'instant. Pose la première quand tu veux.</p>
           }
@@ -53,14 +56,21 @@
                   [id]="'prochain-pas-' + next.id"
                   [attr.aria-describedby]="'prochain-pas-detail-' + next.id"
                   [checked]="next.done"
-                  (change)="toggleTask(next.id, box.checked)"
+                  (change)="toggleTask(card.id, next.id, box.checked)"
                 />
                 <label class="corps ds-break" [for]="'prochain-pas-' + next.id">{{ next.title }}</label>
                 <span class="detail ds-muted" [id]="'prochain-pas-detail-' + next.id">Prochain pas</span>
               </div>
             }
             @if (card.openable) {
-              <a eBouton="trait" petit [routerLink]="['/objectifs', card.id]" [attr.aria-describedby]="'objectif-' + card.id">Ouvrir</a>
+              <a
+                eBouton="trait"
+                petit
+                [id]="'ouvrir-' + card.id"
+                [routerLink]="['/objectifs', card.id]"
+                [attr.aria-describedby]="'objectif-' + card.id"
+                >Ouvrir</a
+              >
             } @else {
               <!-- Pas encore enregistré : son adresse n'existe pas encore. -->
               <button eBouton="trait" petit type="button" disabled>Ouvrir</button>
@@ -72,11 +82,16 @@
   } @else if (empty()) {
     <aside eNote>
       <p>Qu'est-ce que tu veux construire ?</p>
-      <p>Dis-le-moi en une phrase. On trouvera les étapes ensemble.</p>
+      <p>Dis-le-moi en une phrase : on trouve les étapes ensemble.</p>
       <div eNoteActions>
         <a eBouton="trait" petit routerLink="/objectifs/nouveau">Commencer</a>
       </div>
     </aside>
+  } @else if (loading()) {
+    <p class="detail ds-muted" role="status">Chargement de tes objectifs…</p>
+  } @else if (loadFailed() && !hasReport()) {
+    <!-- La note de la coque a été lue (« Compris ») : l'écran dit encore quoi faire. -->
+    <p class="corps ds-measure">Tes objectifs ne sont pas chargés. Vérifie ta connexion, puis recharge la page.</p>
   }
 
   @if (accomplished().length > 0) {
@@ -86,7 +101,7 @@
       [open]="accomplishedOpen()"
       (toggle)="accomplishedOpen.set(accomplishedDetails.open)"
     >
-      <summary>
+      <summary id="accomplis-resume">
         <e-icone [nom]="accomplishedOpen() ? 'chevron-bas' : 'chevron-droite'" />
         <span class="section">Accomplis</span>
         <span class="detail ds-muted">{{ accomplished().length }}</span>

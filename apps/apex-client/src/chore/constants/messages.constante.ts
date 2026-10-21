@@ -36,7 +36,6 @@ export const FAILURE_REPORTS = {
   toggleTask: "Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.",
   moveTask: "Je n'ai pas pu déplacer ce pas. Vérifie ta connexion, puis réessaie.",
   loadObjectives: "Je n'ai pas pu charger tes objectifs. Vérifie ta connexion, puis recharge la page.",
-  loadFocus: "Je n'ai pas pu charger tes pas du jour. Vérifie ta connexion, puis recharge la page.",
   objectiveNotFound: 'Je ne retrouve plus cet objectif. Recharge la page, puis réessaie.',
   taskNotFound: 'Je ne retrouve plus ce pas. Recharge la page, puis réessaie.',
 } as const;

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import type { WritableSignal } from '@angular/core';
 import { motsAEviter } from '@empreinte-studio/angular/core';
+import { quadrantOf } from '../../../chore/mapper/matrix.mapper';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
 import { AddTaskSheet, TASK_STAGE_REQUIRED, TASK_TITLE_REQUIRED, type AddTaskSheetData } from './add-task-sheet';
@@ -53,7 +54,8 @@ describe('AddTaskSheet', () => {
   it("propose les étapes de l'objectif, l'étape choisie par défaut, et les niveaux", () => {
     expect(element.querySelector('.e-feuille__titre')?.textContent?.trim()).toBe('Ajouter un pas');
     expect(store.stageOptions).toHaveBeenCalledWith('obj-1');
-    expect(selections()).toEqual(['Endurance', 'Accessoire', 'Rien ne presse']);
+    // Un nouveau pas naît « À planifier » : important, pas urgent.
+    expect(selections()).toEqual(['Endurance', 'Important', 'Pas urgent']);
     const labels = [...element.querySelectorAll('.e-champ__libelle')].map((label) => label.textContent?.trim());
     expect(labels).toEqual(['Le pas', 'Étape', 'Importance', 'Urgence']);
   });
@@ -63,9 +65,16 @@ describe('AddTaskSheet', () => {
     await submit();
     expect(store.addTaskToObjective).toHaveBeenCalledWith({
       objectiveId: 'stage-2',
-      task: { title: 'Courir 8 km', importance: 1, urgency: 1 },
+      task: { title: 'Courir 8 km', importance: 3, urgency: 2 },
     });
     expect(ref.close).toHaveBeenCalled();
+  });
+
+  it('un pas ajouté sans toucher aux niveaux tombe dans « À planifier »', async () => {
+    type('Courir 8 km');
+    await submit();
+    const [{ task }] = store.addTaskToObjective.mock.calls[0];
+    expect(quadrantOf(task)).toBe('planifier');
   });
 
   it("range le pas dans l'étape et aux niveaux choisis", async () => {

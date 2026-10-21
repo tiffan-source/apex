@@ -1,9 +1,8 @@
-import { CreateObjectiveOutput, ObjectiveOutput, TaskOutput, GetAllObjectiveAndTaskOutput, WhatIsTodayFocusOutput } from "@org/objective";
-import { ObjectiveOverviewViewModel, ObjectiveViewModel, ObjectiveWithProgressViewModel, TaskViewModel, TaskViewModelWithCategory } from "../models/objective.viewmodel";
-import { ApexLibsMetier } from "@org/apex-library"
+import { ObjectiveOutput, TaskOutput, GetAllObjectiveAndTaskOutput } from "@org/objective";
+import { ObjectiveViewModel, TaskViewModel } from "../models/objective.viewmodel";
 import { ObjectiveState } from "../stores/objective.store";
 
-
+/** Du résultat du chargement (domaine) aux modèles de l'état d'ObjectiveStore. */
 export class ObjectiveMapper {
 
   private static toTaskViewModel(task: TaskOutput): TaskViewModel {
@@ -36,117 +35,4 @@ export class ObjectiveMapper {
       tasks: input.tasks.map(ObjectiveMapper.toTaskViewModel),
     };
   }
-
-  private static isATaskObjective(
-    task: TaskViewModel,
-    objectiveId: string,
-    allObjectives: ObjectiveViewModel[]
-  ): boolean {
-    let currentId: string | null = task.objectiveId;
-
-    while (currentId) {
-      if (currentId === objectiveId) {
-        return true;
-      }
-
-      const parent = allObjectives.find(o => o.id === currentId);
-      currentId = parent?.parentId ?? null;
-    }
-
-    return false;
-  }
-
-  public static toObjectivesWithProgress(
-    objectives: ObjectiveViewModel[],
-    tasks: TaskViewModel[]
-  ): ObjectiveWithProgressViewModel[] {
-    return objectives
-    .filter((obj) => obj.parentId === null)
-    .map((obj) => {
-      const objWithTasks = { ...obj, tasks: tasks.filter((t) => ObjectiveMapper.isATaskObjective(t, obj.id, objectives)) };
-      return {
-        ...objWithTasks,
-        totalTasks: objWithTasks.tasks.length,
-        doneTasks: objWithTasks.tasks.filter((t) => t.done).length,
-        progress: objWithTasks.tasks.length > 0 ? objWithTasks.tasks.filter((t) => t.done).length / objWithTasks.tasks.length : 0,
-      };
-    });
-  }
-
-  public static fromCreateObjectiveOutputToObjectiveViewModel(output: CreateObjectiveOutput): ObjectiveViewModel {
-    return {
-      id: output.id,
-      title: output.title,
-      description: output.description || '',
-      why: output.why || '',
-      dueDate: output.dueDate ? output.dueDate.toISOString() : '',
-      parentId: null
-    };
-  }
-
-  public static fromTaskViewModelToCategorizedTaskViewModel(task: TaskViewModel): TaskViewModelWithCategory {
-
-    return {
-      ...task,
-      category: ApexLibsMetier.getEisenhowerCategory({
-        importance: task.importance,
-        urgency: task.urgency,
-      }),
-    };
-  }
-
-  public static objectiveOverviewDetail(
-    id: string,
-    objectives: ObjectiveViewModel[],
-    tasks: TaskViewModel[]
-  ): ObjectiveOverviewViewModel | undefined {
-
-    const objective = objectives.find(o => o.id === id);
-    if (!objective) return undefined;
-
-    const subObjectives = ObjectiveMapper.getAllSubObjectives(id, objectives);
-    const allObjectiveIds = [id, ...subObjectives.map(o => o.id)];
-
-    const tasksWithCategory = tasks
-      .filter(t => allObjectiveIds.includes(t.objectiveId))
-      .map( (t)=>({
-        ...ObjectiveMapper.fromTaskViewModelToCategorizedTaskViewModel(t),
-        objectiveTitle: objectives.find(o => o.id === t.objectiveId)?.title || 'Objectif inconnu'
-      }));
-
-    return {
-      id: objective.id,
-      title: objective.title,
-      why: objective.why,
-      description: objective.description,
-      dueDate: objective.dueDate,
-      tasks: tasksWithCategory,
-      subObjectives: subObjectives,
-    };
-  }
-
-  private static getAllSubObjectives(
-    parentId: string,
-    allObjectives: ObjectiveViewModel[]
-  ): ObjectiveViewModel[] {
-    const directChildren = allObjectives.filter(o => o.parentId === parentId);
-
-    return directChildren.flatMap(child => [
-      child,
-      ...ObjectiveMapper.getAllSubObjectives(child.id, allObjectives),
-    ]);
-  }
-
-  public static fromFocusOutputToTaskViewModel(output: WhatIsTodayFocusOutput): TaskViewModel[] {
-    return output.map((task) => ({
-      id: task.id,
-      title: task.title,
-      importance: task.important,
-      urgency: task.urgent,
-      done: task.done,
-      objectiveId: task.objectiveId,
-    }));
-  }
 }
-
-

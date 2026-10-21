@@ -11,6 +11,7 @@ import { FAILURE_REPORTS, voiceIssues } from '../../../chore/constants/messages.
 import { fromDateInputValue, toDateInputValue } from '../../../chore/mapper/date-input.mapper';
 import { formatHorizon } from '../../../chore/mapper/objective-view.mapper';
 import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
+import { present } from '../../../testing/present';
 
 type RequestStatus = 'idle' | 'pending' | 'fulfilled' | { error: string };
 
@@ -105,14 +106,14 @@ describe('NewObjective', () => {
     await fixture.whenStable();
   }
 
-  const titleInput = () => element.querySelector<HTMLInputElement>('input[aria-labelledby^="question-title"]')!;
-  const whyInput = () => element.querySelector<HTMLTextAreaElement>('textarea[aria-labelledby^="question-why"]')!;
-  const dueDateInput = () => element.querySelector<HTMLInputElement>('input[type="date"]')!;
+  const titleInput = () => present(element.querySelector<HTMLInputElement>('input[aria-labelledby^="question-title"]'), 'le champ du titre');
+  const whyInput = () => present(element.querySelector<HTMLTextAreaElement>('textarea[aria-labelledby^="question-why"]'), 'le champ du pourquoi');
+  const dueDateInput = () => present(element.querySelector<HTMLInputElement>('input[type="date"]'), 'le champ de la date');
   const descriptionInput = () =>
-    element.querySelector<HTMLTextAreaElement>('textarea[aria-labelledby^="question-description"]')!;
-  const engageButton = () => element.querySelector<HTMLButtonElement>('button[type="submit"]')!;
-  const draftTitle = () => element.querySelector<HTMLElement>('#draft-title')!;
-  const status = () => element.querySelector<HTMLElement>('[role="status"]')!;
+    present(element.querySelector<HTMLTextAreaElement>('textarea[aria-labelledby^="question-description"]'), 'le champ de la description');
+  const engageButton = () => present(element.querySelector<HTMLButtonElement>('button[type="submit"]'), "« Je m'y engage »");
+  const draftTitle = () => present(element.querySelector<HTMLElement>('#draft-title'), 'le titre du brouillon');
+  const status = () => present(element.querySelector<HTMLElement>('[role="status"]'), "la ligne d'état");
 
   /** Écrit dans un champ comme au clavier. */
   function write(control: HTMLInputElement | HTMLTextAreaElement, value: string) {
@@ -153,7 +154,7 @@ describe('NewObjective', () => {
     beforeEach(() => setup());
 
     it("présente l'écran dans l'en-tête de la maquette", () => {
-      const header = element.querySelector('header')!;
+      const header = present(element.querySelector('header'), "l'en-tête");
       expect(clean(header.querySelector('.repere')?.textContent)).toBe('Akari');
       expect(clean(header.querySelector('h1.manifeste')?.textContent)).toBe('Nouvel objectif');
       expect(clean(header.querySelector('p.detail')?.textContent)).toBe(
@@ -204,7 +205,7 @@ describe('NewObjective', () => {
     });
 
     it("montre un brouillon vide, pas encore enregistré, avec un seul sceau et sans arête", () => {
-      const draft = element.querySelector('section[aria-labelledby="draft-title"]')!;
+      const draft = present(element.querySelector('section[aria-labelledby="draft-title"]'), 'le brouillon');
       expect(clean(draft.querySelector('.repere')?.textContent)).toBe('Brouillon · pas encore enregistré');
       expect(clean(draftTitle().textContent)).toBe(NEW_OBJECTIVE_TEXTS.untitled);
       expect(draftTitle().classList).toContain('ds-muted');
@@ -221,7 +222,7 @@ describe('NewObjective', () => {
       expect(clean(engageButton().textContent)).toBe("Je m'y engage");
       expect(engageButton().classList).toContain('e-btn--sceau');
       expect(engageButton().disabled).toBe(true);
-      const later = Array.from(element.querySelectorAll('a')).find((a) => clean(a.textContent) === 'Plus tard')!;
+      const later = present(Array.from(element.querySelectorAll('a')).find((a) => clean(a.textContent) === 'Plus tard'), '« Plus tard »');
       expect(later.classList).toContain('e-btn--nu');
       expect(later.getAttribute('href')).toBe('/');
       expect(clean(status().textContent)).toBe('');
@@ -245,7 +246,7 @@ describe('NewObjective', () => {
 
       expect(clean(draftTitle().textContent)).toBe('Décrocher un stage cet été');
       expect(draftTitle().classList).not.toContain('ds-muted');
-      const draft = element.querySelector('section[aria-labelledby="draft-title"]')!;
+      const draft = present(element.querySelector('section[aria-labelledby="draft-title"]'), 'le brouillon');
       expect(clean(draft.querySelector('p.voix')?.textContent)).toBe('« Savoir si ce métier me plaît. »');
       expect(clean(draft.querySelector('p.corps')?.textContent)).toBe('Un stage de développement web.');
       expect(draft.textContent).toContain(formatHorizon(fromDateInputValue(due)));

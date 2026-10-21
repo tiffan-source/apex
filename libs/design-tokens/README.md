@@ -78,6 +78,7 @@ Dans tout conteneur `.ds-*`, les enfants directs perdent leurs marges par défau
 | `.ds-screen-center` | Écran plein au contenu centré (connexion).                                                         |
 | `.ds-narrow`        | Bloc étroit (440px max), pleine largeur sur mobile.                                                |
 | `.ds-skip-link`     | Lien d'évitement « Aller au contenu » : hors de l'écran, visible en haut à gauche au focus.        |
+| `.ds-initial`       | Initiale de la personne en bas de la navigation : carré de pas-8 sur le fond creux, lettre centrée (contournement du catalogue § 9, en attendant un composant d'Empreinte). |
 
 **Empilements, rangées, grilles**
 
@@ -92,6 +93,7 @@ Dans tout conteneur `.ds-*`, les enfants directs perdent leurs marges par défau
 | `.ds-cols-2`, `.ds-cols-3`                | 2 ou 3 colonnes égales ; une seule sous 900px.                                               |
 | `.ds-cols-2-1`, `.ds-cols-7-6`            | 2fr/1fr (arête et étape) ou 7fr/6fr (conversation et brouillon) ; une seule sous 1100px.     |
 | `.ds-span-2`, `.ds-span-all`              | Occupe deux colonnes (dans `.ds-cols-3`), ou toute la largeur.                               |
+| `.ds-surfaces`                            | Avec `.ds-panels`, quand les enfants sont des surfaces d'Empreinte (`article[eCarte]`, `[eSurface]`) : un seul filet entre deux cartes. |
 
 Dans une trame `.ds-panels.ds-cols-2`, un dernier panneau seul occupe toute la largeur : la trame ne laisse jamais de case vide.
 
@@ -105,6 +107,7 @@ Dans une trame `.ds-panels.ds-cols-2`, un dernier panneau seul occupe toute la l
 | `.ds-divided`      | Lignes séparées par des filets trame (dessus de chaque ligne, dessous de la dernière), espacées de pas-3.             |
 | `.ds-rule-top`     | Filet trame au-dessus, avec pas-4 d'air (pied de carte, prochain pas, zone de réponse).                               |
 | `.ds-rule-block`   | Filets dessus et dessous (bloc replié).                                                                               |
+| `.ds-disclosure`   | Bloc repliable natif (`details`) : le `summary` est une rangée haute d'une cible tactile, sans la puce du navigateur.  |
 | `.ds-check`        | Case (`input[eCase]`) dans une colonne de 20px, intitulé à côté, détail et action dessous.                            |
 | `.ds-entry`        | Repère étroit (numéro), texte, valeur à droite ; la suite passe sous le texte.                                        |
 
@@ -129,6 +132,7 @@ Dans une trame `.ds-panels.ds-cols-2`, un dernier panneau seul occupe toute la l
 | `.ds-grow`, `.ds-no-shrink`                                                                  | Prend la place restante / ne rétrécit jamais.       |
 | `.ds-push-down`, `.ds-push-right`                                                            | Poussé en bas d'un empilement / à droite.           |
 | `.ds-gap-0`, `-0-5`, `-1`, `-2`, `-3`, `-4`, `-5`, `-6`, `-8`, `-10`, `-12`                  | Écart entre enfants : N × 4px (0-5 = 2px).          |
+| `.ds-pad-block-1`, `.ds-pad-inline-3`                                                        | Air de pas-1 dessus et dessous / retrait de pas-3 à gauche et à droite. |
 | `.ds-muted`                                                                                  | Texte en encre douce.                               |
 | `.ds-link`                                                                                   | Lien dans le texte, dans l'encre du texte qui l'entoure (pas de bleu du navigateur). |
 | `.ds-break`, `.ds-nowrap`, `.ds-truncate`                                                    | Coupe les mots longs / jamais à la ligne / une ligne avec « … ». |

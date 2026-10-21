@@ -8,14 +8,25 @@ import { Injectable } from "@angular/core";
  * - Aucune réponse n'est perdue : chaque geste reçoit la sienne (id définitif, retour en arrière, annonce).
  * - Un geste fait sur un élément optimiste (id temporaire) part avec l'id définitif : sa création passe
  *   avant lui dans la file, et link() retient la correspondance que resolve() retrouve.
+ * - Le chargement des objectifs (loadObjectives) y prend place lui aussi : il lit la base après les écritures
+ *   déjà parties. Un geste fait pendant qu'il attend n'est écrit qu'après sa lecture : une création garde son
+ *   élément optimiste (keepOptimistic), et un rechargement voit par `enqueued` qu'un geste est passé derrière
+ *   lui, et relit la base au lieu de l'effacer de l'écran.
  */
 @Injectable({ providedIn: 'root' })
 export class WriteQueue {
   private tail: Promise<unknown> = Promise.resolve();
   private readonly realIds = new Map<string, string>();
+  private count = 0;
+
+  /** Le nombre d'écritures (et de lectures) mises dans la file depuis le début : il change à chaque run(). */
+  get enqueued(): number {
+    return this.count;
+  }
 
   /** Lance l'écriture après les précédentes, qu'elles aient abouti ou non. */
   run<T>(write: () => Promise<T>): Promise<T> {
+    this.count++;
     const result = this.tail.then(() => write());
     this.tail = result.catch(() => undefined);
     return result;

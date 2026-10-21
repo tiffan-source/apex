@@ -63,11 +63,7 @@ export function withUpdateTaskDone() {
           )
         );
 
-      return {
-        updateTaskDone,
-        /** @deprecated Ancienne orthographe, gardée le temps que les écrans passent à updateTaskDone. */
-        udpateTaskDone: updateTaskDone,
-      };
+      return { updateTaskDone };
     })
   );
 }

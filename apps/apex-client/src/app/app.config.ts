@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideEmpreinte } from '@empreinte-studio/angular/core';
 import { ChoreProviders } from '../chore/providers/chore.providers';
 import { ObjectiveProviders } from '../chore/providers/objective.providers';
@@ -37,7 +37,9 @@ export const appConfig: ApplicationConfig = {
     // Empreinte : thème Jour au premier lancement, puis le choix retenu (clé « empreinte:theme »,
     // lue aussi par le script d'index.html pour éviter un éclair de Jour en Nuit).
     provideEmpreinte({ theme: 'jour' }),
-    provideRouter(routes, withComponentInputBinding()),
+    // Une nouvelle page s'ouvre en haut (sinon elle garderait le défilement de la précédente, sur mobile au
+    // milieu de son contenu) ; Précédent et Suivant retrouvent la position quittée. La coque déplace le focus.
+    provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })),
     ...provideSupabase(env.SUPABASE_CONFIG),
     ...provideFirebase(env.FIREBASE_CONFIG),
     ...provideGemini(),

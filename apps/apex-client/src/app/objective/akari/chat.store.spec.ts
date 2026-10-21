@@ -3,14 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import { GetConversationsQuery } from '@org/chat';
 import { SendMessageToAIWorkflow, WORKFLOW_READY_FOR_NEW_MESSAGE } from '@org/ai-assistant';
 import { SessionStore } from '../../../chore/stores/session.store';
-import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../../chore/stores/annonces.store';
+import { AkariWritesStore } from '../../../chore/stores/akari-writes.store';
 import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
 import { AKARI_REPLIED, AKARI_REPORTS, AKARI_STATUS, ChatStore } from './chat.store';
 
 /*
  * La conversation avec Akari, workflow et requêtes simulés : historique, envoi optimiste,
- * interrogation toutes les secondes, demande d'accord, rechargement de l'arête, annonces.
+ * interrogation toutes les secondes, demande d'accord, écriture acceptée confiée à AkariWritesStore, annonces.
  */
 
 type Snapshot = { value: unknown; context: Record<string, unknown> } | undefined;
@@ -34,7 +34,7 @@ function setup() {
       ],
     }),
   };
-  const objectives = { loadObjectives: vi.fn() };
+  const akariWrites = { reloadAfterWrite: vi.fn() };
   const annonces = { annoncer: vi.fn(), signaler: vi.fn() };
 
   TestBed.configureTestingModule({
@@ -43,7 +43,7 @@ function setup() {
       { provide: SessionStore, useValue: { currentUserId: signal('u1') } },
       { provide: GetConversationsQuery, useValue: conversations },
       { provide: SendMessageToAIWorkflow, useValue: workflow },
-      { provide: ObjectiveStore, useValue: objectives },
+      { provide: AkariWritesStore, useValue: akariWrites },
       { provide: AnnoncesStore, useValue: annonces },
     ],
   });
@@ -52,7 +52,7 @@ function setup() {
     store: TestBed.inject(ChatStore),
     workflow,
     conversations,
-    objectives,
+    akariWrites,
     annonces,
     setSnapshot: (next: Snapshot) => (snapshot = next),
   };
@@ -166,8 +166,8 @@ describe('ChatStore : le workflow', () => {
     expect(store.messages()).toHaveLength(2);
   });
 
-  it('demande l’accord, puis recharge l’arête après une étape acceptée', async () => {
-    const { store, workflow, objectives, setSnapshot } = setup();
+  it('demande l’accord, puis confie l’étape acceptée à AkariWritesStore, qui recharge l’arête dès qu’elle est écrite', async () => {
+    const { store, workflow, akariWrites, setSnapshot } = setup();
     store.initWorkflow('semi');
     await tick();
 
@@ -186,16 +186,15 @@ describe('ChatStore : le workflow', () => {
     store.respondToPermission(true);
     expect(workflow.respondToPermission).toHaveBeenCalledWith('semi', true);
     expect(store.isAwaitingPermission()).toBe(false);
-    await tick();
-    expect(objectives.loadObjectives).not.toHaveBeenCalled();
+    expect(akariWrites.reloadAfterWrite).toHaveBeenCalledWith('semi');
 
     setSnapshot({ value: READY, context: {} });
     await tick(1000);
-    expect(objectives.loadObjectives).toHaveBeenCalledWith({ ownerId: 'u1' });
+    expect(akariWrites.reloadAfterWrite).toHaveBeenCalledTimes(1);
   });
 
-  it('ne recharge rien quand la personne refuse', async () => {
-    const { store, workflow, objectives, setSnapshot } = setup();
+  it('ne confie rien quand la personne refuse', async () => {
+    const { store, workflow, akariWrites, setSnapshot } = setup();
     store.initWorkflow('semi');
     await tick();
     setSnapshot({
@@ -210,7 +209,7 @@ describe('ChatStore : le workflow', () => {
     store.respondToPermission(false);
     expect(workflow.respondToPermission).toHaveBeenCalledWith('semi', false);
     await tick(1000);
-    expect(objectives.loadObjectives).not.toHaveBeenCalled();
+    expect(akariWrites.reloadAfterWrite).not.toHaveBeenCalled();
   });
 
   it('retire le message et signale quand le workflow ne répond pas à l’envoi', async () => {

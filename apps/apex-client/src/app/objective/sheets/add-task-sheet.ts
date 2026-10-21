@@ -6,7 +6,7 @@ import { EChamp, ESaisie } from '@empreinte-studio/angular/champ';
 import { EFeuille, EFeuilleActions } from '@empreinte-studio/angular/feuille';
 import { ESelection } from '@empreinte-studio/angular/selection';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
-import { IMPORTANCE_OPTIONS, URGENCY_OPTIONS } from '../../../chore/constants/task.constante';
+import { IMPORTANCE_OPTIONS, NEW_TASK_LEVELS, URGENCY_OPTIONS } from '../../../chore/constants/task.constante';
 import { namedStageOptions } from '../stage-labels';
 import { requireText, visibleError } from './sheet-validation';
 
@@ -25,7 +25,8 @@ export const TASK_STAGE_REQUIRED = "Choisis l'étape où ranger ce pas.";
 
 /**
  * La feuille « Ajouter un pas » : son intitulé, son étape (jamais l'objectif lui-même), son importance
- * et son urgence, qui le placent dans la matrice. L'ajout est optimiste : la feuille se ferme tout de suite.
+ * et son urgence, qui le placent dans la matrice (par défaut « À planifier », NEW_TASK_LEVELS). L'ajout
+ * est optimiste : la feuille se ferme tout de suite.
  */
 @Component({
   selector: 'app-add-task-sheet',
@@ -46,8 +47,9 @@ export class AddTaskSheet {
   protected readonly model = signal<{ title: string; stageId: string | null; importance: number; urgency: number }>({
     title: '',
     stageId: this.data.stageId,
-    importance: 1,
-    urgency: 1,
+    // Un nouveau pas naît « À planifier » (important, pas urgent) : là où vont les pas des objectifs.
+    importance: NEW_TASK_LEVELS.importance,
+    urgency: NEW_TASK_LEVELS.urgency,
   });
 
   protected readonly fields = form(

@@ -43,7 +43,10 @@ export function withAddTaskToObjective() {
               importance: task.importance,
               urgency: task.urgency,
               done: false,
-              objectiveId: objectiveId,
+              // L'étape a pu être enregistrée pendant que la feuille était ouverte (avec son id temporaire) :
+              // le pas va à son id définitif, sinon il resterait rattaché à un id qui n'existe plus dans l'état.
+              // Encore temporaire, swapObjectiveId le fera suivre à l'enregistrement.
+              objectiveId: writes.resolve(objectiveId),
             };
 
             patchState(store, {

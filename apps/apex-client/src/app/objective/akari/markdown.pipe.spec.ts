@@ -48,6 +48,19 @@ describe('renderMarkdown', () => {
     expect(media).not.toMatch(/<img|<video|<audio|<picture|<source|exemple\.fr|v\.mp4|a\.mp3|s\.png/);
   });
 
+  it('ne charge pas non plus d’image de fond : l’attribut background d’un tableau part', () => {
+    const html = renderMarkdown('<table background="https://exemple.fr/p.gif"><tr><td background="https://exemple.fr/t.gif">x</td></tr></table>');
+    expect(html).not.toMatch(/background|exemple\.fr/);
+    expect(html).toContain('x');
+  });
+
+  it('n’écrit rien en italique, ni de titre écrit en HTML : le texte reste, droit', () => {
+    const html = renderMarkdown('*a* _b_ <i>c</i> <em>d</em> <h2>e</h2>');
+    expect(html).not.toMatch(/<em|<i>|<i |<h\d/);
+    for (const letter of ['a', 'b', 'c', 'd', 'e']) expect(html).toContain(letter);
+    expect(renderMarkdown('Voici une *première* étape, _vraiment_ simple.')).toBe('<p>Voici une première étape, vraiment simple.</p>\n');
+  });
+
   it('ne laisse pas passer une image javascript:', () => {
     expect(renderMarkdown('![clic](javascript:alert(1))')).not.toMatch(/javascript:/);
   });

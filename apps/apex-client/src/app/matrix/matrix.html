@@ -2,7 +2,7 @@
   <header class="ds-stack ds-gap-5">
     <div class="ds-stack ds-gap-2">
       <p class="repere ds-muted">
-        {{ today }}
+        <time [attr.datetime]="todayIso()">{{ todayLabel() }}</time>
         @if (loaded()) {
           · {{ taskCount() }}
         }
@@ -12,57 +12,66 @@
     @if (showFilters()) {
       <e-filtres
         libelle="Filtrer par objectif"
-        libelleTous="Tous les objectifs"
+        [libelleTous]="allObjectives"
         [options]="filterOptions()"
         [selection]="activeFilter()"
-        (selectionChange)="filter.set($event)"
+        (selectionChange)="chooseFilter($event)"
       />
     }
   </header>
 
   @if (isEmpty()) {
     <div class="ds-stack ds-gap-3">
-      <p class="corps ds-muted ds-measure">Aucun pas pour l'instant. Ajoute des pas à tes objectifs : ils viendront se ranger ici.</p>
+      <p class="corps ds-muted ds-measure">Aucun pas pour l'instant. Ajoute des pas à tes objectifs : ils viennent se ranger ici.</p>
       <div class="ds-actions">
         <a eBouton="trait" petit routerLink="/">Voir mes objectifs</a>
       </div>
     </div>
   }
 
-  <section aria-labelledby="matrix-title">
-    <h2 class="e-masque" id="matrix-title">Tes pas, par urgence et importance</h2>
-    <e-matrice
-      courant="maintenant"
-      [quadrants]="matrix()"
-      [piste]="trackById"
-      [unite]="taskUnit"
-      (deplacement)="move($event)"
-    >
-      <ng-template [eMatriceElement]="matrix()" let-task let-quadrant="quadrant">
-        <div class="ds-row ds-items-start ds-pad-block-1">
-          <div class="ds-check ds-grow">
-            <input
-              #box
-              type="checkbox"
-              eCase
-              [id]="checkboxId(task)"
-              [checked]="task.done"
-              (change)="toggle(task, box.checked)"
+  @if (loading()) {
+    <p class="detail ds-muted" role="status">Chargement de tes pas…</p>
+  } @else if (loadFailedHint()) {
+    <p class="corps ds-measure">Tes pas ne sont pas chargés. Vérifie ta connexion, puis recharge la page.</p>
+  }
+
+  <!-- Seulement une fois les pas connus : avant, e-matrice écrirait « 0 pas » dans chaque quadrant. -->
+  @if (loaded()) {
+    <section aria-labelledby="matrix-title">
+      <h2 class="e-masque" id="matrix-title">Tes pas, par urgence et importance</h2>
+      <e-matrice
+        courant="maintenant"
+        [quadrants]="matrix()"
+        [piste]="trackById"
+        [unite]="taskUnit"
+        (deplacement)="move($event)"
+      >
+        <ng-template [eMatriceElement]="matrix()" let-task let-quadrant="quadrant">
+          <div class="ds-row ds-items-start ds-pad-block-1">
+            <div class="ds-check ds-grow">
+              <input
+                #box
+                type="checkbox"
+                eCase
+                [id]="checkboxId(task)"
+                [checked]="task.done"
+                (change)="toggle(task, box.checked)"
+              />
+              <label class="corps ds-break" [class.ds-muted]="task.done" [for]="checkboxId(task)">{{ task.title }}</label>
+              @if (taskDetail(task); as detail) {
+                <span class="detail ds-muted ds-break">{{ detail }}</span>
+              }
+            </div>
+            <e-menu
+              icone="deplacer"
+              petit
+              [libelle]="'Déplacer « ' + task.title + ' » vers…'"
+              [entrees]="moveTargets[quadrant]"
+              (choix)="moveTo(task, $event)"
             />
-            <label class="corps ds-break" [class.ds-muted]="task.done" [for]="checkboxId(task)">{{ task.title }}</label>
-            @if (taskDetail(task); as detail) {
-              <span class="detail ds-muted ds-break">{{ detail }}</span>
-            }
           </div>
-          <e-menu
-            icone="deplacer"
-            petit
-            [libelle]="'Déplacer « ' + task.title + ' » vers…'"
-            [entrees]="moveTargets[quadrant]"
-            (choix)="moveTo(task, $event)"
-          />
-        </div>
-      </ng-template>
-    </e-matrice>
-  </section>
+        </ng-template>
+      </e-matrice>
+    </section>
+  }
 </div>

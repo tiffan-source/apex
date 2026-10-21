@@ -28,28 +28,15 @@ import { EListe, ETache, ETacheActions } from '@empreinte-studio/angular/tache';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { stageIdFromArete } from '../../chore/mapper/objective-view.mapper';
+import { CRUMB_TITLE_MAX, shortTitle } from '../../chore/mapper/title.mapper';
 import { isTemporaryId } from '../../chore/stores/utils/map-optimistique-id';
-import type { RequestStatus } from '../../chore/stores/utils/loading-feature';
-import type { AreteStageViewModel, StageTaskViewModel, StageViewModel } from '../../chore/models/objective-detail.viewmodel';
+import type { StageTaskViewModel, StageViewModel } from '../../chore/models/objective-detail.viewmodel';
 import { AddStageSheet, type AddStageSheetData } from './sheets/add-stage-sheet';
 import { AddTaskSheet, type AddTaskSheetData } from './sheets/add-task-sheet';
 import { EditObjectiveSheet, type EditObjectiveSheetData } from './sheets/edit-objective-sheet';
 import { EditStageSheet, type EditStageSheetData } from './sheets/edit-stage-sheet';
 import { EditTaskSheet, type EditTaskSheetData } from './sheets/edit-task-sheet';
-import { STAGE_STATE_LABELS, UNTITLED_STAGE, stageName } from './stage-labels';
-
-/** Au-delà, le titre de l'objectif est coupé dans le fil d'Ariane. */
-export const SHORT_TITLE_MAX = 32;
-
-/** Le titre court d'un objectif pour le fil d'Ariane : coupé entre deux mots, suivi de « … ». */
-export function shortTitle(title: string, max = SHORT_TITLE_MAX): string {
-  const clean = title.trim().replace(/\s+/g, ' ');
-  if (clean.length <= max) return clean;
-  const head = clean.slice(0, max + 1);
-  const lastSpace = head.lastIndexOf(' ');
-  const cut = lastSpace > max / 2 ? head.slice(0, lastSpace) : clean.slice(0, max);
-  return `${cut.trimEnd()}…`;
-}
+import { STAGE_STATE_LABELS, stageName } from './stage-labels';
 
 /** Ce que l'étape ouverte suit : l'objectif, ses étapes et celle en cours. */
 type OpenStageSource = {
@@ -94,6 +81,8 @@ export class ObjectivePage {
   private readonly document = inject(DOCUMENT);
 
   protected readonly stageStateLabels = STAGE_STATE_LABELS;
+  /** La coque affiche un signalement (une note d'Akari) : l'écran n'en pose pas une seconde. */
+  protected readonly hasReport = this.annonces.aUnSignalement;
   protected readonly quadrantTitles = TITRES_QUADRANTS;
   protected readonly stageName = stageName;
 
@@ -112,35 +101,16 @@ export class ObjectivePage {
   });
 
   /**
-   * Vrai dès que le store a fini un chargement (ou une écriture) avec succès, et pour de bon.
-   * requestStatus est partagé par toutes les écritures, d'où la mémoire : une écriture qui le repasse
-   * à 'pending' ne fait pas oublier que les objectifs sont là. Un chargement qui n'aboutit pas le laisse
-   * faux : la coque affiche déjà le signalement, l'écran ne prétend pas que l'objectif n'existe pas.
+   * Introuvable une fois les objectifs chargés (objectivesLoaded) ; jamais pendant le chargement, ni après
+   * un chargement qui n'a pas abouti : la coque affiche alors le signalement.
    */
-  private readonly loadSettled = linkedSignal<RequestStatus, boolean>({
-    source: this.store.requestStatus,
-    computation: (status, previous) => previous?.value === true || status === 'fulfilled',
-  });
-
-  /** Introuvable une fois les objectifs chargés ; jamais pendant le chargement. */
-  protected readonly notFound = computed(() => {
-    // Lu en premier : tant que l'objectif n'est pas affiché, la mémoire suit chaque changement de requestStatus.
-    const settled = this.loadSettled();
-    // Des objectifs déjà là prouvent que le chargement a eu lieu (une écriture peut être en cours).
-    const loaded = settled || this.store.objectiveOptions().length > 0;
-    return loaded && !this.detail();
-  });
+  protected readonly notFound = computed(() => this.store.objectivesLoaded() && !this.detail());
 
   /** Le titre de l'objectif dans le fil d'Ariane. */
-  protected readonly crumb = computed(() => shortTitle(this.detail()?.objective.title ?? ''));
+  protected readonly crumb = computed(() => shortTitle(this.detail()?.objective.title ?? '', CRUMB_TITLE_MAX));
 
   /** « 6 étapes », pour le titre de l'arête. */
   protected readonly stageCount = computed(() => compter(this.detail()?.stages.length ?? 0, 'étape'));
-
-  /** Les étapes pour l'arête ; une étape sans nom y reste lisible. */
-  protected readonly aretes = computed<AreteStageViewModel[]>(() =>
-    (this.detail()?.aretes ?? []).map((arete) => (arete.nom.trim() ? arete : { ...arete, nom: UNTITLED_STAGE })),
-  );
 
   /**
    * L'id de l'étape ouverte à droite de l'arête : d'abord celle en cours. Elle reste ouverte tant qu'elle
