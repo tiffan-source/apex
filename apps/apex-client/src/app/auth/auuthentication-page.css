@@ -1,0 +1,27 @@
+/*
+ * La connexion, hors de la coque.
+ */
+
+/* Les enfants directs perdent leurs marges par défaut : l'espacement vient de
+   l'écart du conteneur. Spécificité nulle : une marge propre à un composant
+   d'Empreinte l'emporte. */
+:where(.screen > *, .form > *) {
+  margin: 0;
+}
+
+/* Un écran plein, le formulaire centré ; 100dvh compte la barre d'adresse
+   d'un mobile. */
+.screen {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--pas-6) var(--pas-4);
+}
+
+/* Le formulaire : un bloc étroit de 440px, pleine largeur sur mobile. */
+.form {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 440px;
+}

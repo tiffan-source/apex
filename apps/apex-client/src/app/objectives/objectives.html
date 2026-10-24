@@ -12,8 +12,8 @@
   </header>
 
   @if (cards().length > 0) {
-    <!-- ds-surfaces : chaque carte dessine déjà son filet ; un seul filet de trait-fin entre deux cartes. -->
-    <div class="ds-panels ds-surfaces ds-cols-2">
+    <!-- cards : chaque carte dessine déjà son filet ; un seul filet de trait-fin entre deux cartes. -->
+    <div class="ds-panels ds-cols-2 cards">
       @for (card of cards(); track card.id) {
         <article eCarte [attr.aria-labelledby]="'objectif-' + card.id">
           <!-- Grandit pour pousser la progression et le prochain pas en bas de la carte. -->
@@ -97,7 +97,7 @@
   @if (accomplished().length > 0) {
     <details
       #accomplishedDetails
-      class="ds-disclosure ds-rule-block"
+      class="accomplished"
       [open]="accomplishedOpen()"
       (toggle)="accomplishedOpen.set(accomplishedDetails.open)"
     >

@@ -8,12 +8,12 @@
   <!-- Le formulaire porte la trame : les réponses à gauche, le brouillon et « Je m'y engage » à droite. -->
   <form class="ds-panels ds-cols-7-6" [formRoot]="draft">
     <section class="ds-panel" aria-label="Conversation avec Akari">
-      <ol class="ds-conversation">
+      <ol class="conversation">
         <li>
           <aside eNote><p id="question-title">Qu'est-ce que tu veux construire&nbsp;?</p></aside>
         </li>
-        <li class="ds-reply">
-          <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+        <li class="reply">
+          <p class="repere ds-muted reply-author">{{ personName() }}</p>
           <e-champ #titleField libelle="Ton objectif">
             <input
               eSaisie
@@ -28,8 +28,8 @@
         <li>
           <aside eNote><p id="question-why">Pourquoi est-ce que ça compte pour toi&nbsp;?</p></aside>
         </li>
-        <li class="ds-reply">
-          <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+        <li class="reply">
+          <p class="repere ds-muted reply-author">{{ personName() }}</p>
           <e-champ #whyField libelle="Ton pourquoi" facultatif>
             <textarea
               eSaisie
@@ -45,8 +45,8 @@
         <li>
           <aside eNote><p id="question-due-date">Pour quand&nbsp;?</p></aside>
         </li>
-        <li class="ds-reply">
-          <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+        <li class="reply">
+          <p class="repere ds-muted reply-author">{{ personName() }}</p>
           <e-champ #dueDateField libelle="Ton horizon" facultatif aide="Une date, même approximative.">
             <input
               eSaisie
@@ -61,8 +61,8 @@
         <li>
           <aside eNote><p id="question-description">Tu veux en dire plus&nbsp;?</p></aside>
         </li>
-        <li class="ds-reply">
-          <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+        <li class="reply">
+          <p class="repere ds-muted reply-author">{{ personName() }}</p>
           <e-champ #descriptionField libelle="En quelques mots" facultatif>
             <textarea
               eSaisie

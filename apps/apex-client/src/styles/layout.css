@@ -1,27 +1,57 @@
 /*
  * ============================================================================
- *  La mise en page d'Apex, posée sur Empreinte — classes .ds-*
+ *  Apex — utilitaires de mise en page partagés (classes .ds-*)
  * ============================================================================
  *
- *  Empreinte dessine (composants e-*, typographie, couleurs, focus, page) ;
- *  ce fichier ne fait QUE placer : empiler, aligner, mettre en grille,
- *  composer la trame de panneaux des maquettes. Il ne recrée jamais
- *  l'apparence d'un composant d'Empreinte (bouton, carte, case…), ne touche
- *  ni à la typographie ni aux formes.
+ *  Empreinte (@empreinte-studio/tokens, chargé avant ce fichier par
+ *  styles.css) donne l'identité : couleurs Jour et Nuit (--fond, --encre…),
+ *  typographie (manifeste, objectif, voix…), pas (--pas-1 à --pas-16),
+ *  traits, cornes, et l'apparence de ses composants.
  *
- *  Règles (vérifiées par `npx nx lint design-tokens`) :
- *  - chaque règle part d'une classe .ds-* ; une classe e-* ou un élément ne se
- *    cible que sous une .ds-* ;
- *  - valeurs en tokens d'Empreinte (var(--pas-4), var(--trame)…) ou --ds-*
- *    (tokens.css), plus 0, %, fr, nombres sans unité et mots-clés CSS ;
- *  - media queries : valeur exacte d'un --ds-breakpoint-*, annoncée par le
- *    commentaire du token juste au-dessus ;
- *  - l'ordre compte : à spécificité égale, la règle la plus basse l'emporte.
- *    D'où l'ordre : conteneurs, compositions, modificateurs, puis responsive.
+ *  Ce fichier rassemble ce qui sert à plusieurs écrans d'Apex : la page, les
+ *  empilements et rangées, la trame de panneaux, quelques modificateurs.
+ *  Ce qui n'appartient qu'à un écran (la coque, la conversation avec Akari,
+ *  le bloc « Accomplis », la connexion…) vit dans la feuille du composant,
+ *  à côté de son gabarit.
  *
- *  Charger après @empreinte-studio/tokens/empreinte.css et tokens.css.
- *  Ajouter une classe : skill .claude/skills/design-system-evolution.
+ *  Points de rupture d'Apex (les variables CSS ne marchent pas dans @media :
+ *  recopier la valeur) :
+ *  - 760px : mobile ;
+ *  - 900px : les grilles de 2 colonnes égales passent à une colonne ;
+ *  - 1100px : les panneaux asymétriques (2fr/1fr, 7fr/6fr) passent à une colonne.
+ *
+ *  L'ordre compte : à spécificité égale, la règle la plus basse l'emporte.
+ *  D'où l'ordre : conteneurs, compositions, modificateurs, puis responsive.
  */
+
+/* ============================================================================
+ *  Valeurs de mise en page
+ *  Construites sur les pas d'Empreinte quand c'est possible ; les largeurs
+ *  viennent des maquettes du canvas « Apex ».
+ * ========================================================================== */
+:root {
+  /* Pas intermédiaires : l'échelle d'Empreinte (--pas-1 = 4px … --pas-16 =
+     64px) saute certaines valeurs des maquettes. Même numérotation : N × 4px. */
+  --ds-space-0-5: calc(var(--pas-1) / 2); /* 2px : entre un intitulé et son détail */
+  --ds-space-5: calc(var(--pas-4) + var(--pas-1)); /* 20px */
+  --ds-space-7: calc(var(--pas-6) + var(--pas-1)); /* 28px */
+  --ds-space-10: calc(var(--pas-8) + var(--pas-2)); /* 40px */
+
+  /* Largeurs */
+  --ds-page-max-width: 1120px; /* contenu d'une page */
+  --ds-page-title-basis: 480px; /* sous cette largeur, l'action d'un en-tête passe sous le titre */
+  --ds-measure: 760px; /* longueur de ligne confortable */
+  --ds-grid-min-width: 280px; /* colonne minimale de la grille automatique */
+
+  /* Marges intérieures d'un panneau de la trame */
+  --ds-panel-padding-block: var(--ds-space-7);
+  --ds-panel-padding-inline: var(--pas-8);
+  --ds-panel-padding-block-mobile: var(--pas-6);
+  --ds-panel-padding-inline-mobile: var(--ds-space-5);
+
+  /* Colonne de la case d'une ligne .ds-check : largeur de e-case d'Empreinte */
+  --ds-check-lead: 20px;
+}
 
 /* ============================================================================
  *  0. Marges des enfants
@@ -43,12 +73,6 @@
     .ds-list-bare,
     .ds-divided,
     .ds-check,
-    .ds-entry,
-    .ds-conversation,
-    .ds-reply,
-    .ds-composer,
-    .ds-screen-center,
-    .ds-narrow,
     .ds-prose
   )
   > * {
@@ -56,11 +80,11 @@
 }
 
 /* ============================================================================
- *  1. Page et coque
+ *  1. Page
  * ========================================================================== */
 
 /* Conteneur d'une page : sections empilées, séparées de pas-8, largeur max
-   centrée (comme e-coque__contenu, qu'il peut habiter sans rien changer). */
+   centrée. */
 .ds-page {
   box-sizing: border-box;
   display: flex;
@@ -97,55 +121,6 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--pas-2) var(--pas-4);
-}
-
-/* Écran plein au contenu centré (connexion, hors de la coque). */
-.ds-screen-center {
-  box-sizing: border-box;
-  display: grid;
-  place-items: center;
-  min-height: var(--ds-screen-height);
-  padding: var(--pas-6) var(--pas-4);
-}
-
-/* Bloc étroit, pleine largeur sur mobile (formulaire de connexion). */
-.ds-narrow {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: var(--ds-narrow-width);
-}
-
-/* Lien d'évitement « Aller au contenu », premier élément de la coque : hors
-   de l'écran tant qu'il n'a pas le focus, puis posé en haut à gauche sur un
-   panneau. (.e-masque ne convient pas : il reste masqué même au focus.) */
-.ds-skip-link {
-  position: fixed;
-  inset-block-start: calc(-1 * var(--pas-16));
-  inset-inline-start: var(--pas-2);
-  z-index: 10;
-  padding: var(--pas-2) var(--pas-4);
-  background: var(--panneau);
-  color: var(--encre);
-}
-
-.ds-skip-link:focus {
-  inset-block-start: var(--pas-2);
-}
-
-/* L'initiale de la personne en bas de la navigation (maquettes : « L » à
-   côté de « Léa ») : un carré de pas-8 sur le fond creux, la lettre centrée.
-   Contournement du catalogue (§ 9 : Empreinte n'a ni avatar ni initiale) ;
-   le fond creux suit la maquette. À retirer quand Empreinte aura son
-   composant. La lettre prend un des 8 styles typographiques (class="voix") ;
-   elle est décorative (aria-hidden), le nom est écrit à côté. */
-.ds-initial {
-  box-sizing: border-box;
-  display: grid;
-  place-items: center;
-  flex: none;
-  inline-size: var(--pas-8);
-  block-size: var(--pas-8);
-  background: var(--creux);
 }
 
 /* ============================================================================
@@ -206,30 +181,29 @@
   grid-template-columns: repeat(auto-fill, minmax(min(var(--ds-grid-min-width), 100%), 1fr));
 }
 
-/* Deux colonnes égales ; une seule sous --ds-breakpoint-md. */
+/* Deux colonnes égales ; une seule sous 900px. */
 .ds-cols-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-/* Trois colonnes égales ; une seule sous --ds-breakpoint-md. */
+/* Trois colonnes égales ; une seule sous 900px. */
 .ds-cols-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* Deux tiers / un tiers (l'arête et son étape) ; une colonne sous
-   --ds-breakpoint-lg. */
+/* Deux tiers / un tiers (l'arête et son étape) ; une colonne sous 1100px. */
 .ds-cols-2-1 {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
 }
 
 /* Sept / six (la conversation et le brouillon d'Akari) ; une colonne sous
-   --ds-breakpoint-lg. */
+   1100px. */
 .ds-cols-7-6 {
   grid-template-columns: minmax(0, 7fr) minmax(0, 6fr);
 }
 
 /* Occupe deux colonnes (dans .ds-cols-3 seulement) ; revient à une colonne
-   sous --ds-breakpoint-md. */
+   sous 900px. */
 .ds-span-2 {
   grid-column: span 2;
 }
@@ -245,17 +219,6 @@
   grid-column: 1 / -1;
 }
 
-/* Trame de surfaces (avec .ds-panels) : les enfants sont des surfaces
-   d'Empreinte (article[eCarte], [eSurface]) qui dessinent déjà leur propre
-   filet trame. Chacune déborde d'un trait-fin sur l'écart et le bord de la
-   trame : son filet se pose sur celui de la trame, et deux cartes voisines
-   restent séparées d'un seul filet de trait-fin, comme dans les maquettes
-   (sans cette classe : trois traits entre deux cartes, deux au bord). Cartes
-   de l'écran Objectifs. */
-.ds-surfaces > * {
-  margin: calc(-1 * var(--trait-fin));
-}
-
 /* ============================================================================
  *  4. Panneaux
  * ========================================================================== */
@@ -263,7 +226,8 @@
 /* Panneau de la trame : fond panneau, marges intérieures des maquettes
    (28px / 32px, 24px / 20px sur mobile), contenu empilé (écart pas-4).
    Sur une surface d'Empreinte (eSurface, eCorne), le fond reste celui de la
-   surface, pour que la corne se découpe sur la trame. */
+   surface, pour que la corne se découpe sur la trame. --ds-panel-inset est
+   la marge latérale, reprise par les panneaux à bord perdu. */
 .ds-panel {
   --ds-panel-inset: var(--ds-panel-padding-inline);
   box-sizing: border-box;
@@ -281,25 +245,6 @@
 /* Les tâches d'une liste nue s'alignent sur le texte du panneau. */
 .ds-panel .e-tache {
   padding-inline: 0;
-}
-
-/* Panneau à bord perdu : les listes de tâches (ul[eListe] nue) vont d'un
-   bord à l'autre, leurs tâches gardant la marge du panneau ; les autres
-   enfants directs (titre, rangée d'actions…) gardent la marge du panneau. */
-.ds-panel-flush {
-  padding-inline: 0;
-}
-
-.ds-panel-flush > * {
-  margin-inline: var(--ds-panel-inset);
-}
-
-.ds-panel-flush > .e-liste {
-  margin-inline: 0;
-}
-
-.ds-panel-flush .e-tache {
-  padding-inline: var(--ds-panel-inset);
 }
 
 /* ============================================================================
@@ -332,32 +277,11 @@
     inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
 }
 
-/* Filet trame au-dessus, avec un pas-4 d'air : pied de carte, prochain pas,
-   zone de réponse. */
+/* Filet trame au-dessus, avec un pas-4 d'air : pied de carte, zone de
+   réponse, bas de la navigation. */
 .ds-rule-top {
   padding-block-start: var(--pas-4);
   box-shadow: inset 0 var(--trait-fin) 0 var(--trame);
-}
-
-/* Filets trame dessus et dessous : un bloc replié (« Accomplis »). */
-.ds-rule-block {
-  box-shadow:
-    inset 0 var(--trait-fin) 0 var(--trame),
-    inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
-}
-
-/* Bloc repliable natif (details), comme « Accomplis » sur l'écran Objectifs
-   (catalogue § 9 : Empreinte n'a pas de repli générique) : son résumé
-   (summary) est une rangée (chevron, titre, compte) haute d'une cible
-   tactile, sans la puce du navigateur ; le contenu suit. Les filets viennent
-   de .ds-rule-block. */
-.ds-disclosure > summary {
-  display: flex;
-  align-items: center;
-  gap: var(--pas-3);
-  min-height: var(--pas-12);
-  list-style: none;
-  cursor: pointer;
 }
 
 /* Case et intitulé : la case (input[eCase]) dans une colonne de 20px,
@@ -375,66 +299,17 @@
   grid-column: 2;
 }
 
-/* Ligne à repère : un repère étroit (numéro d'étape), le texte, une valeur à
-   droite (« 4 pas ») ; les enfants suivants passent sous le texte. */
-.ds-entry {
-  display: grid;
-  grid-template-columns: var(--ds-entry-lead) minmax(0, 1fr) auto;
-  gap: var(--ds-space-0-5) var(--pas-3);
-  align-items: baseline;
-}
-
-.ds-entry > :nth-child(n + 4) {
-  grid-column: 2 / -1;
-}
-
 /* ============================================================================
- *  6. Conversation avec Akari
+ *  6. Texte rendu depuis le Markdown
+ *  Le HTML inséré par [innerHTML] ne reçoit pas l'attribut d'encapsulation
+ *  d'Angular : ses styles restent ici, globaux, et pas dans la feuille du
+ *  composant qui l'affiche.
  * ========================================================================== */
 
-/* Le fil des répliques : liste nue, répliques séparées de 28px. */
-.ds-conversation {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-conversation-gap);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Une réplique : le nom dans une colonne de 96px, la phrase à côté, sur la
-   même ligne de base ; empilés sur mobile. */
-.ds-reply {
-  display: grid;
-  grid-template-columns: var(--ds-reply-author-width) minmax(0, 1fr);
-  gap: var(--pas-1) var(--pas-4);
-  align-items: baseline;
-}
-
-/* Le nom de la personne, décalé pour s'aligner sur celui d'Akari, écrit
-   après son losange (p.e-note__qui). */
-.ds-reply-author {
-  padding-inline-start: var(--ds-reply-author-indent);
-}
-
-/* Zone de réponse : la saisie (textarea[eSaisie]) prend la place, le bouton
-   d'envoi reste à sa taille, aligné en bas. */
-.ds-composer {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--pas-3);
-}
-
-.ds-composer > textarea {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* Texte rendu depuis le Markdown (réponses d'Akari) : blocs espacés de pas-3,
-   listes en retrait de pas-6, mots trop longs coupés, bloc de code qui défile
-   au lieu de déborder. La typographie reste celle du conteneur (voix,
-   corps) : un titre Markdown garde la taille du navigateur, le rendre plutôt
-   en paragraphe. */
+/* Blocs espacés de pas-3, listes en retrait de pas-6, mots trop longs coupés,
+   bloc de code qui défile au lieu de déborder. La typographie reste celle du
+   conteneur (voix, corps) : un titre Markdown garde la taille du navigateur,
+   le rendre plutôt en paragraphe. */
 .ds-prose {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -603,22 +478,6 @@
   gap: var(--pas-12);
 }
 
-/* --- Retraits (marges intérieures) ----------------------------------------- */
-
-/* Air de pas-1 au-dessus et au-dessous : une ligne posée dans une liste
-   serrée qu'Apex ne règle pas (un pas de la matrice : e-matrice n'espace ses
-   éléments que de pas-1). */
-.ds-pad-block-1 {
-  padding-block: var(--pas-1);
-}
-
-/* Retrait de pas-3 à gauche et à droite : aligne un bloc sur le texte des
-   entrées de navigation, qui ont ce même retrait (bas de la coque : initiale,
-   nom, réglages). */
-.ds-pad-inline-3 {
-  padding-inline: var(--pas-3);
-}
-
 /* --- Texte (la typographie elle-même vient des 8 styles d'Empreinte) -------- */
 
 /* Texte secondaire en encre douce : dates, horizons, comptes, « pourquoi ». */
@@ -626,8 +485,8 @@
   color: var(--encre-douce);
 }
 
-/* Lien dans le texte (« Accomplis », réponses d'Akari) : dans l'encre du texte
-   qui l'entoure, souligné par le navigateur. Le bleu par défaut n'existe pas
+/* Lien dans le texte (réponses d'Akari) : dans l'encre du texte qui
+   l'entoure, souligné par le navigateur. Le bleu par défaut n'existe pas
    dans Empreinte, dont la base ne règle pas les liens. */
 .ds-link {
   color: inherit;
@@ -675,18 +534,11 @@
   overflow-x: auto;
 }
 
-/* L'arête d'Empreinte prend 100 % de la largeur : sur mobile, elle
-   rétrécirait jusqu'à rendre ses noms illisibles. Dans .ds-scroll-x, elle
-   garde la largeur de la maquette et défile. */
-.ds-scroll-x > .e-arete-hote {
-  min-width: var(--ds-arete-min-width);
-}
-
 /* ============================================================================
  *  8. Responsive (en dernier : ces règles l'emportent sur les précédentes)
  * ========================================================================== */
 
-/* --ds-breakpoint-lg */
+/* 1100px */
 @media (max-width: 1100px) {
   /* Les panneaux asymétriques passent à une colonne. */
   .ds-cols-2-1,
@@ -695,7 +547,7 @@
   }
 }
 
-/* --ds-breakpoint-md */
+/* 900px */
 @media (max-width: 900px) {
   /* Les grilles de 2 ou 3 colonnes égales passent à une colonne. */
   .ds-cols-2,
@@ -708,31 +560,25 @@
   }
 }
 
-/* --ds-breakpoint-sm */
+/* 760px : mobile */
 @media (max-width: 760px) {
-  /* Mobile : panneaux plus serrés, comme la coque d'Empreinte. */
+  /* Panneaux plus serrés. */
   .ds-panel {
     --ds-panel-inset: var(--ds-panel-padding-inline-mobile);
     padding-block: var(--ds-panel-padding-block-mobile);
   }
 
-  /* Le nom passe au-dessus de la phrase. */
-  .ds-reply {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Masqué sur mobile (aperçu de l'arête du brouillon). À poser sur un
-     élément simple, pas sur l'hôte d'un composant d'Empreinte. */
+  /* Masqué sur mobile. À poser sur un élément simple, pas sur l'hôte d'un
+     composant d'Empreinte (sa feuille pourrait reprendre le display). */
   .ds-hide-mobile {
     display: none;
   }
 }
 
-/* --ds-breakpoint-sm */
+/* 760px : au-dessus du mobile */
 @media (width > 760px) {
-  /* Visible seulement sur mobile (l'accès aux réglages, quand le bas de la
-     navigation disparaît). Comme .ds-hide-mobile : sur un élément simple,
-     pas sur l'hôte d'un composant d'Empreinte. */
+  /* Visible seulement sur mobile. Comme .ds-hide-mobile : sur un élément
+     simple, pas sur l'hôte d'un composant d'Empreinte. */
   .ds-show-mobile {
     display: none;
   }

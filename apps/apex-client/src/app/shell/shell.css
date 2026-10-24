@@ -1,0 +1,42 @@
+/*
+ * La coque d'Apex : ce qui n'appartient qu'à elle.
+ */
+
+/* Lien d'évitement « Aller au contenu », premier élément de la coque : hors de
+   l'écran tant qu'il n'a pas le focus, puis posé en haut à gauche sur un
+   panneau. (.e-masque d'Empreinte ne convient pas : il reste masqué même au
+   focus.) */
+.skip-link {
+  position: fixed;
+  inset-block-start: calc(-1 * var(--pas-16));
+  inset-inline-start: var(--pas-2);
+  z-index: 10;
+  padding: var(--pas-2) var(--pas-4);
+  background: var(--panneau);
+  color: var(--encre);
+}
+
+.skip-link:focus {
+  inset-block-start: var(--pas-2);
+}
+
+/* La personne, en bas de la navigation : un retrait de pas-3 à gauche et à
+   droite l'aligne sur le texte des entrées de navigation, qui ont ce même
+   retrait. */
+.person {
+  padding-inline: var(--pas-3);
+}
+
+/* L'initiale de la personne (« L » à côté de « Léa ») : un carré de pas-8 sur
+   le fond creux, la lettre centrée. La lettre prend un des 8 styles
+   typographiques (class="voix") ; elle est décorative (aria-hidden), le nom
+   est écrit à côté. */
+.initial {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--pas-8);
+  block-size: var(--pas-8);
+  background: var(--creux);
+}

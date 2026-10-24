@@ -1,0 +1,31 @@
+/*
+ * L'écran Objectifs (l'accueil).
+ */
+
+/* La trame des cartes : chaque article[eCarte] dessine déjà son propre filet
+   trame. Il déborde d'un trait-fin sur l'écart et le bord de la trame : son
+   filet se pose sur celui de la trame, et deux cartes voisines restent
+   séparées d'un seul filet de trait-fin, comme dans les maquettes (sinon :
+   trois traits entre deux cartes, deux au bord). */
+.cards > * {
+  margin: calc(-1 * var(--trait-fin));
+}
+
+/* « Accomplis » : un bloc repliable natif (details) entre deux filets trame
+   (Empreinte n'a pas de repli générique). */
+.accomplished {
+  box-shadow:
+    inset 0 var(--trait-fin) 0 var(--trame),
+    inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
+}
+
+/* Son résumé : une rangée (chevron, titre, compte) haute d'une cible tactile,
+   sans la puce du navigateur ; la liste suit. */
+.accomplished > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--pas-3);
+  min-height: var(--pas-12);
+  list-style: none;
+  cursor: pointer;
+}

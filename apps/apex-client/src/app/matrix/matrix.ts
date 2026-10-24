@@ -60,6 +60,7 @@ function moveTargetsFrom(quadrant: Quadrant): readonly EntreeMenu<Quadrant>[] {
   providers: [{ provide: CDK_DRAG_CONFIG, useValue: MATRIX_DRAG_CONFIG }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './matrix.html',
+  styleUrl: './matrix.css',
 })
 export class Matrix {
   private readonly store = inject(ObjectiveStore);

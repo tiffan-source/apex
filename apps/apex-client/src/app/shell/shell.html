@@ -1,7 +1,7 @@
 <!-- Lien d'évitement : hors de l'écran tant qu'il n'a pas le focus. Pas de href="#contenu" écrit en dur :
      avec <base href="/">, il renverrait vers l'accueil. Le routeur garde l'adresse de la page. -->
 <a
-  class="ds-skip-link"
+  class="skip-link"
   [routerLink]="[]"
   fragment="contenu"
   queryParamsHandling="preserve"
@@ -23,9 +23,9 @@
     </ul>
 
     <div eNavBas>
-      <div class="ds-row ds-rule-top ds-pad-inline-3">
+      <div class="ds-row ds-rule-top person">
         @if (initial()) {
-          <span class="ds-initial voix" aria-hidden="true">{{ initial() }}</span>
+          <span class="initial voix" aria-hidden="true">{{ initial() }}</span>
         }
         <!-- Une grille à une piste minmax(0, 1fr) ne réclame aucune largeur : sans elle, une adresse longue
              élargirait toute la navigation (232px dans les maquettes) au lieu d'être coupée. -->

@@ -42,6 +42,8 @@ export const NEW_OBJECTIVE_TEXTS = {
   selector: 'app-new-objective',
   imports: [RouterLink, FormField, FormRoot, EBouton, EChamp, ECorne, EIcone, ENote, ESaisie, ESurface, ETailleAuto],
   templateUrl: './new-objective.html',
+  // Le fil des répliques est celui de l'écran Akari.
+  styleUrl: '../../objective/akari/conversation.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewObjective {

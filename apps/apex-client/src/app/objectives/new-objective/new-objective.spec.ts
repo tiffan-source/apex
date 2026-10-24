@@ -174,7 +174,7 @@ describe('NewObjective', () => {
     });
 
     it('donne la parole à la personne, par son prénom, dans des champs Empreinte', () => {
-      const authors = Array.from(element.querySelectorAll('.ds-reply-author')).map((p) => clean(p.textContent));
+      const authors = Array.from(element.querySelectorAll('.reply-author')).map((p) => clean(p.textContent));
       expect(authors).toEqual(['Léa', 'Léa', 'Léa', 'Léa']);
       expect(element.querySelectorAll('e-champ')).toHaveLength(4);
       expect(titleInput().classList).toContain('e-saisie');
@@ -474,7 +474,7 @@ describe('NewObjective', () => {
     await setup();
     currentUser.set({ id: 'u1', name: '', email: 'lea@example.com' });
     fixture.detectChanges();
-    const authors = Array.from(element.querySelectorAll('.ds-reply-author')).map((p) => clean(p.textContent));
+    const authors = Array.from(element.querySelectorAll('.reply-author')).map((p) => clean(p.textContent));
     expect(authors).toEqual(['Toi', 'Toi', 'Toi', 'Toi']);
   });
 

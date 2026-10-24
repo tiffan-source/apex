@@ -1,0 +1,9 @@
+/*
+ * La matrice.
+ */
+
+/* Un pas dans un quadrant : de l'air de pas-1 dessus et dessous
+   (e-matrice n'espace ses éléments que de pas-1). */
+.task {
+  padding-block: var(--pas-1);
+}

@@ -131,7 +131,7 @@ describe('Shell', () => {
   describe('la personne, en bas de la navigation', () => {
     it('montre l’initiale et le nom', async () => {
       const root = shellOf(await open());
-      const initial = present(root.querySelector('[eNavBas] .ds-initial'), "l'initiale");
+      const initial = present(root.querySelector('[eNavBas] .initial'), "l'initiale");
       expect(initial.textContent?.trim()).toBe('L');
       expect(initial.getAttribute('aria-hidden')).toBe('true');
       expect(present(root.querySelector('[eNavBas]'), 'le bas de la navigation').textContent).toContain('Léa');
@@ -140,7 +140,7 @@ describe('Shell', () => {
     it('prend l’adresse quand le nom manque, et met l’initiale en capitale', async () => {
       currentUser.set({ id: 'u-2', name: '  ', email: 'élise@exemple.fr' });
       const root = shellOf(await open());
-      expect(present(root.querySelector('[eNavBas] .ds-initial'), "l'initiale").textContent?.trim()).toBe('É');
+      expect(present(root.querySelector('[eNavBas] .initial'), "l'initiale").textContent?.trim()).toBe('É');
       expect(present(root.querySelector('[eNavBas]'), 'le bas de la navigation').textContent).toContain('élise@exemple.fr');
     });
 
@@ -156,7 +156,7 @@ describe('Shell', () => {
     it('ne dessine pas d’initiale vide sans session', async () => {
       currentUser.set(null);
       const root = shellOf(await open());
-      expect(root.querySelector('.ds-initial')).toBeNull();
+      expect(root.querySelector('.initial')).toBeNull();
     });
   });
 
@@ -230,7 +230,7 @@ describe('Shell', () => {
     it('est le premier élément de la coque et vise la page courante, pas l’accueil', async () => {
       const root = shellOf(await open('/matrice'));
       const skip = root.firstElementChild as HTMLAnchorElement;
-      expect(skip.matches('a.ds-skip-link')).toBe(true);
+      expect(skip.matches('a.skip-link')).toBe(true);
       expect(skip.textContent?.trim()).toBe('Aller au contenu');
       expect(skip.getAttribute('href')).toBe('/matrice#contenu');
       expect(skip.getAttribute('href')).not.toBe('/#contenu');
@@ -238,13 +238,13 @@ describe('Shell', () => {
 
     it('garde les paramètres de la page (?etape=…)', async () => {
       const root = shellOf(await open('/objectifs/42/akari?etape=7'));
-      expect(present(root.querySelector('a.ds-skip-link'), "le lien d'évitement").getAttribute('href')).toBe('/objectifs/42/akari?etape=7#contenu');
+      expect(present(root.querySelector('a.skip-link'), "le lien d'évitement").getAttribute('href')).toBe('/objectifs/42/akari?etape=7#contenu');
     });
 
     it('donne le focus au contenu et reste sur la page', async () => {
       const harness = await open('/matrice');
       const root = shellOf(harness);
-      present(root.querySelector<HTMLAnchorElement>('a.ds-skip-link'), "le lien d'évitement").click();
+      present(root.querySelector<HTMLAnchorElement>('a.skip-link'), "le lien d'évitement").click();
       await harness.fixture.whenStable();
       harness.detectChanges();
 

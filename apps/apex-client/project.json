@@ -20,7 +20,7 @@
             "input": "apps/apex-client/public"
           }
         ],
-        "styles": ["apps/apex-client/src/styles.css", "libs/design-tokens/src/tokens.css", "libs/design-tokens/src/layout.css"],
+        "styles": ["apps/apex-client/src/styles.css", "apps/apex-client/src/styles/layout.css"],
         "outputMode": "static"
       },
       "configurations": {

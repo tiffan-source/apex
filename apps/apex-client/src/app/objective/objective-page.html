@@ -46,13 +46,13 @@
               <li class="ds-row ds-gap-2"><e-pas aria-hidden="true" [aVenir]="1" legende="" />À venir</li>
             </ul>
           </div>
-          <div class="ds-scroll-x">
+          <div class="ds-scroll-x arete">
             <!-- La tête de l'arête est le sceau de l'écran : aucun bouton sceau ailleurs. -->
             <e-arete [objectif]="d.objective.title" [etapes]="d.aretes" interactive (choisir)="chooseStage($event)" />
           </div>
         </section>
 
-        <section class="ds-panel ds-panel-flush" aria-labelledby="titre-etape">
+        <section class="ds-panel panel-flush" aria-labelledby="titre-etape">
           @if (stage(); as s) {
             <div class="ds-stack ds-gap-2">
               <p class="repere ds-muted">Étape {{ s.index }} · {{ stageStateLabels[s.state] }}</p>
@@ -137,7 +137,7 @@
 
     @if (d.tasksWithoutStage.length > 0) {
       <div class="ds-panels">
-        <section class="ds-panel ds-panel-flush" aria-labelledby="titre-sans-etape">
+        <section class="ds-panel panel-flush" aria-labelledby="titre-sans-etape">
           <div class="ds-stack ds-gap-2">
             <h2 class="section" id="titre-sans-etape">Pas sans étape</h2>
             <p class="detail ds-muted">{{ looseTasksHint() }}</p>

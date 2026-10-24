@@ -85,6 +85,7 @@ const PATHS_ONLY: Partial<IsActiveMatchOptions> = { queryParams: 'ignored', matr
     EBouton,
   ],
   templateUrl: './shell.html',
+  styleUrl: './shell.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ObjectiveStore, AkariWritesStore],
 })
