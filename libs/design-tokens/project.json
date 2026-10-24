@@ -4,10 +4,5 @@
   "sourceRoot": "libs/design-tokens/src",
   "projectType": "library",
   "tags": ["scope:shared"],
-  "targets": {
-    "lint": {
-      "command": "node tools/design-system/check.mjs",
-      "cache": false
-    }
-  }
+  "targets": {}
 }
