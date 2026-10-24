@@ -5,23 +5,32 @@
  * courante) et la marque (a[eMarque]) viennent d'Empreinte.
  */
 
+/* Deux colonnes : la navigation (232px dans les maquettes) et la page. Un seul
+   seuil, 760px, fait passer la navigation en bandeau. */
 .shell {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--fond);
   color: var(--encre);
 }
 
-/* La navigation : 232px dans les maquettes, un filet trame à droite. */
+/* La navigation tient toute la hauteur de l'écran et y reste quand la page
+   défile : son filet trame va jusqu'en bas, et le bas de la navigation (la
+   personne, ses réglages) reste au pied de l'écran. Sur un écran trop bas
+   pour elle, elle défile seule. */
 .nav {
-  flex: 1 1 232px;
+  position: sticky;
+  top: 0;
+  align-self: start;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 40px;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
   padding: var(--pas-8) 20px var(--pas-6);
   box-shadow: inset calc(-1 * var(--trait-fin)) 0 0 var(--trame);
 }
@@ -55,7 +64,6 @@
 
 /* La page, à côté de la navigation. */
 .page {
-  flex: 999 1 560px;
   min-width: 0;
   box-sizing: border-box;
   padding: var(--pas-12) 56px 72px;
@@ -110,17 +118,27 @@
 
 /* 760px : mobile */
 @media (max-width: 760px) {
+  /* Une seule colonne : le bandeau garde sa hauteur, la page prend le reste,
+     même quand elle est courte. */
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
   .page {
     padding: var(--pas-6) var(--pas-4) var(--pas-12);
   }
 
-  /* La navigation devient un bandeau, avec un filet trame dessous. */
+  /* La navigation devient un bandeau, avec un filet trame dessous, qui part
+     avec la page quand elle défile. */
   .nav {
+    position: static;
+    height: auto;
+    overflow-y: visible;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--pas-2);
-    height: auto;
     padding: var(--pas-3) var(--pas-4);
     box-shadow: inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
   }
