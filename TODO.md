@@ -31,9 +31,6 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [] `motsAEviter` rate les mots accentués (`\b`) et ne connaît ni « erreur » ni les emoji
 - [] `formaterAttente` pour une date future
 - [] Un composant « réplique » pour Akari (une `aside[eNote]` par réplique crée des régions en double)
-- [] `.e-nav { height: 100% }` empêche la navigation de s'étirer (le bas de la navigation n'est pas au pied de l'écran)
-- [] Coque mobile qui grandit sur une page courte
-- [] Coque entre 761 et 791px : elle s'enroule (232 + 560px) avant que la navigation passe en rangée (760px) : bandeau de 330px de haut, en colonne
 - [] `ELienNav` ne pose la corne que pour `aria-current="page"`
 - [] `e-menu` sans état choisi
 - [] `e-matrice` : axes faux sous 640px, compte non personnalisable, titres figés, glisser qui bloque le défilement tactile
@@ -45,4 +42,5 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [] Contrôle visuel de chaque écran dans le navigateur (Jour, Nuit, 375px, clavier, `GardienSceau`), avec une session sur le Supabase local
 - [] Un état de réussite ou d'échec propre à chaque action d'`ObjectiveStore` (`requestStatus` est partagé)
 - [] Un état « injoignable » dans `ChatStore`
-- [] Décider du sort des 18 classes `.ds-*` inutilisées de `libs/design-tokens` (`node tools/design-system/check.mjs --unused`)
+- [] Décider du sort des 18 utilitaires `.ds-*` inutilisés (`apps/apex-client/src/styles/layout.css`)
+- [] La coque dans `shell.css`, sans `eCoque`, `eNav`, `eNavBas`, `eCoquePrincipal` ni `eCoqueContenu` d'Empreinte, en corrigeant ses trois défauts : navigation qui ne s'étire pas jusqu'au pied de l'écran, bandeau mobile qui grandit sur une page courte, enroulement entre 761 et 791px (bandeau de 330px de haut, en colonne)
