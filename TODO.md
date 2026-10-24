@@ -43,4 +43,3 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [] Un état de réussite ou d'échec propre à chaque action d'`ObjectiveStore` (`requestStatus` est partagé)
 - [] Un état « injoignable » dans `ChatStore`
 - [] Décider du sort des 18 utilitaires `.ds-*` inutilisés (`apps/apex-client/src/styles/layout.css`)
-- [] La coque dans `shell.css`, sans `eCoque`, `eNav`, `eNavBas`, `eCoquePrincipal` ni `eCoqueContenu` d'Empreinte, en corrigeant ses trois défauts : navigation qui ne s'étire pas jusqu'au pied de l'écran, bandeau mobile qui grandit sur une page courte, enroulement entre 761 et 791px (bandeau de 330px de haut, en colonne)

@@ -1,6 +1,6 @@
 # Catalogue : les composants Empreinte pour Apex
 
-Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.1.1** et **`@empreinte-studio/tokens` 0.1.1**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
+Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.1.1** et **`@empreinte-studio/tokens` 0.1.1**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt), sauf la coque de navigation, qu'Apex n'utilise plus (§ 2.16). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
 
 Le cahier de la migration (`docs/features/migration-empreinte.md`) fixe le périmètre, le vocabulaire et les règles d'écran ; ce catalogue dit **avec quoi** les construire.
 
@@ -548,43 +548,39 @@ Vues qui sont des routes (liens, sans rôle d'onglet) : **`nav[eVues]`** (`e-ong
 </div>
 ```
 
-### 2.16 `navigation` : `ECoque`, `ECoquePrincipal`, `ECoqueContenu`, `ENav`, `ENavListe`, `ENavBas`, `ELienNav`, `EMarque`, `EFilAriane`
+### 2.16 `navigation` : `ELienNav`, `EMarque`, `EFilAriane`
 
 | Sélecteur | Entrées | Hôte | Rôle |
 | --- | --- | --- | --- |
-| `[eCoque]` | — | `e-coque` | Flex avec retour à la ligne, `min-height: 100dvh`, fond `--fond`. Charge la feuille de navigation. |
-| `nav[eNav]` | — | `e-nav e-coque__nav` | Colonne (base 232px), `gap: 40px`, filet `trame` à droite. |
-| `ul[eNavListe]` | — | `e-nav__liste` | Liste des entrées. Chaque `li` est en flex. |
-| `a[eLienNav]` | `icone: string \| null` (défaut `null`) | `e-nav__lien` | Lien 44px avec `e-icone` 20px et `span.e-nav__libelle`. L'entrée qui porte `aria-current="page"` devient un panneau éclairé avec corne `s`. |
-| `[eNavBas]` | — | `e-nav__bas` | Bas de la navigation (`margin-top: auto`, colonne). **Masqué sous 760px.** |
+| `a[eLienNav]` | `icone: string \| null` (défaut `null`) | `e-nav__lien` | Lien 44px avec `e-icone` 20px, puis le contenu projeté dans `span.e-nav__libelle`. L'entrée qui porte `aria-current="page"` devient un panneau éclairé avec corne `s`. |
 | `e-marque`, `a[eMarque]` | — | `e-marque` | Petit sceau à corne (non compté par le gardien) + nom en `sens` 26/32 semi-gras, 44px. |
-| `main[eCoquePrincipal]` (tout élément) | — | `e-coque__principal` | La page : `padding: 48px 56px 72px` (sous 760px : `24px 16px 48px`). |
-| `[eCoqueContenu]` | — | `e-coque__contenu` | Centré, 1120px au plus, colonne, `gap: 40px`. |
 | `nav[eFilAriane]` | `libelle: string` (défaut « Fil d'Ariane ») | `e-fil-ariane`, `aria-label` | Fil d'Ariane : `ol > li`, séparateurs « / » dessinés, liens soulignés `encre-douce`, page courante `[aria-current=page]` en encre. |
 
-Sous 760px : la navigation passe en haut, en rangée ; les libellés des liens deviennent invisibles (restent lus) ; `eNavBas` disparaît. La classe `e-nav__marque` (padding `0 --pas-3`) existe dans la feuille mais aucune directive ne la pose : l'ajouter à la main sur la marque (§ 5.4).
+**La coque est celle d'Apex**, dans `app/shell/shell.html` et `shell.css` : une grille de deux colonnes, la navigation (232px, à hauteur d'écran, qui reste à l'écran quand la page défile, un filet `trame` à droite) et la page (`padding: 48px 56px 72px`, contenu centré de 1120px au plus, sections espacées de 40px). Sous 760px, une seule colonne : la navigation devient un bandeau au-dessus de la page (`padding: 24px 16px 48px`), ses entrées ne gardent que leur icône (le libellé, dans un `span.link-label` d'Apex, est caché visuellement mais reste lu) et son bas (la personne, les réglages) disparaît au profit d'un `e-menu` en `.ds-show-mobile`. La version 0.1.1 d'Empreinte livre encore une coque (`ECoque`, `ECoquePrincipal`, `ECoqueContenu`, `ENav`, `ENavListe`, `ENavBas`) : Apex ne s'en sert plus, et elle quitte Empreinte à la version suivante.
 
-Structure complète attendue (coque d'Apex, entrées V1 : Objectifs, Matrice) :
+Structure de la coque d'Apex (entrées V1 : Objectifs, Matrice) :
 
 ```html
-<div eCoque>
-  <nav eNav aria-label="Navigation principale">
-    <a eMarque class="e-nav__marque" routerLink="/">Apex</a>
-    <ul eNavListe>
+<div class="shell">
+  <nav class="nav" aria-label="Navigation principale">
+    <a eMarque class="brand" routerLink="/">Apex</a>
+    <ul class="links">
       <li>
-        <a eLienNav icone="objectifs" routerLink="/" routerLinkActive ariaCurrentWhenActive="page"
-           [routerLinkActiveOptions]="{ exact: true }">Objectifs</a>
+        <a eLienNav class="link" icone="objectifs" routerLink="/" [attr.aria-current]="objectivesCurrent()"
+          ><span class="link-label">Objectifs</span></a
+        >
       </li>
       <li>
-        <a eLienNav icone="matrice" routerLink="/matrice" routerLinkActive ariaCurrentWhenActive="page">Matrice</a>
+        <a eLienNav class="link" icone="matrice" routerLink="/matrice" routerLinkActive ariaCurrentWhenActive="page"
+          ><span class="link-label">Matrice</span></a
+        >
       </li>
     </ul>
-    <div eNavBas>
-      <!-- réglages (thème) : invisibles sous 760px, prévoir un autre accès sur mobile -->
-    </div>
+    <div class="nav-bottom"><!-- la personne et ses réglages --></div>
+    <div class="ds-show-mobile ds-push-right"><!-- les réglages, sous 760px --></div>
   </nav>
-  <main eCoquePrincipal id="contenu" tabindex="-1">
-    <div eCoqueContenu>
+  <main class="page" id="contenu" tabindex="-1">
+    <div class="content">
       <!-- AnnoncesStore.signaler : aside[eNote] ici -->
       <router-outlet />
     </div>
@@ -868,7 +864,7 @@ Sorties obtenues en exécutant les fonctions installées.
 ### 5.1 Comment les feuilles arrivent dans la page
 
 - Chaque **composant** embarque sa feuille (`ViewEncapsulation.None`, donc globale). Angular l'injecte à la création de la première instance et, comme `REMOVE_STYLES_ON_COMPONENT_DESTROY` vaut `true` par défaut (Angular 22), **la retire quand la dernière instance est détruite** (comptage par contenu de feuille : une feuille identique portée par plusieurs composants reste tant que l'un d'eux vit).
-- Les **directives** posées sur un élément natif (`eSurface`, `eCorne`, `eCase`, `eListe`, `eSaisie`, `eOnglets`, `eVues`, `eCoque`, `eNav`, `eCoquePrincipal`, `eCoqueContenu`, `eFilAriane`) confient leur feuille à un « porteur » créé une fois par `ChargeurStyles` et jamais détruit : la feuille reste chargée jusqu'à la fin de l'application, **à partir du premier usage** de la directive.
+- Les **directives** posées sur un élément natif (`eSurface`, `eCorne`, `eCase`, `eListe`, `eSaisie`, `eOnglets`, `eVues`, `eFilAriane`) confient leur feuille à un « porteur » créé une fois par `ChargeurStyles` et jamais détruit : la feuille reste chargée jusqu'à la fin de l'application, **à partir du premier usage** de la directive.
 
 ### 5.2 Les 8 classes typographiques (`typographie.css`, toujours chargées)
 
@@ -907,7 +903,7 @@ Toutes sont réellement présentes dans les feuilles embarquées des paquets ins
 | Menu | `e-menu-hote`, `e-menu`, `e-menu__element`, `e-menu__element--doux`, `e-menu__separateur` | `EMenu` | `EMenu`, `ESelection` |
 | Filtres | `e-filtres`, `e-filtre`, `e-filtre__lumiere`, `--ciel`, `--aube`, `--soleil`, `--fjord` | `EFiltres` | `EFiltres` |
 | Onglets | `e-onglets`, `e-onglets__liste`, `e-onglet`, `e-onglets__panneau` | `EOnglets`, `EListeOnglets`, `EOnglet`, `EPanneauOnglet`, `EVues`, `EVue` | porteur onglets (`EOnglets`, `EVues`) |
-| Coque | `e-coque`, `e-coque__nav`, `e-coque__principal`, `e-coque__contenu`, `e-nav`, `e-nav__marque`, `e-nav__liste`, `e-nav__lien`, `e-nav__libelle`, `e-nav__bas` | `ECoque`, `ENav`, `ECoquePrincipal`, `ECoqueContenu`, `ENavListe`, `ENavBas`, `ELienNav` ; `e-nav__marque` à la main | porteur navigation, `ELienNav` |
+| Entrée de navigation | `e-nav__lien`, `e-nav__libelle` | `ELienNav` | `ELienNav` |
 | Marque | `e-marque`, `e-marque__sceau`, `e-marque__nom` | `EMarque` | `EMarque`, porteur navigation |
 | Fil d'Ariane | `e-fil-ariane` | `EFilAriane` | porteur navigation |
 | Feuille | `e-feuille`, `e-feuille__entete`, `e-feuille__titre`, `e-feuille__titre--manifeste`, `e-feuille__fermer`, `e-feuille__corps`, `e-feuille__actions`, `e-feuille-fond`, `e-feuille-panneau` | `EFeuille`, `EFeuilleActions`, `Feuilles` (fond et panneau CDK) | `EFeuille` |
@@ -922,7 +918,6 @@ Règle : **le composant ou la directive d'abord**. Une classe `e-*` écrite à l
 | Classe à la main | Où | Pourquoi c'est sûr |
 | --- | --- | --- |
 | `e-carte__entete`, `e-carte__pied`, `e-carte__meta`, `e-carte__raison` | à l'intérieur d'un `[eCarte]` / `[eCarteObjectif]` | La carte qui les contient porte leur feuille tant qu'elle est affichée. |
-| `e-nav__marque` | sur l'`a[eMarque]` placé dans `nav[eNav]` | Feuille du porteur navigation, chargé par `ENav`. |
 | `e-masque` | n'importe où (libellé pour lecteurs d'écran, comme le `<label>` de la zone de réponse à Akari) | `base.css`, toujours chargé. Il reste masqué même au focus : un lien d'évitement a besoin d'une classe d'Apex qui le révèle (`.skip-link`, `shell.css`). |
 
 Cas **à ne pas faire**, parce qu'un composant existe ou que la feuille peut manquer :
@@ -949,7 +944,7 @@ Noms exacts des variables CSS (`tokens.css`, généré depuis `tokens.json`, « 
 
 | Variable | Jour | Nuit | Usage |
 | --- | --- | --- | --- |
-| `--fond` | `#f5f4f0` | `#0c111b` | Le mur derrière le shoji : fond de page (`body`, `e-coque`). |
+| `--fond` | `#f5f4f0` | `#0c111b` | Le mur derrière le shoji : fond de page (`body`, la coque d'Apex). |
 | `--panneau` | `#ffffff` | `#151b28` | Surfaces, cartes, feuilles, menus : toujours plus lumineux que le fond. |
 | `--creux` | `#ecebe5` | `#1e2534` | Champs, cases vides, survols, rabat de la corne. |
 | `--trame` | `#dedbd2` | `#283044` | Filets décoratifs, contours des surfaces, séparateurs. |
@@ -1009,7 +1004,7 @@ Inventaire des usages actuels sous `apps/apex-client/src/app` : 24 `<p-button>`,
 | `<p-avatar icon>` (`board`, `auth`, `create-objective`, `stats-card`, `focus`) | rien, ou une `e-icone` | Pas d'avatar ni de pastille d'icône. Les cartes de statistiques et le Focus sortent de la V1. |
 | `<p-message severity="error">` (`auth`) | erreur d'un champ → `e-champ [erreur]` ; erreur de page → `AnnoncesStore.signaler` (`aside[eNote]`) | Écrite en encre, avec la solution. |
 | `<p-message severity="info" icon="pi pi-shield">` + Refuser / Autoriser (`chat`) | dans la conversation : la demande d'Akari en `voix` + `trait petit` « Ajouter » et `nu petit` « Pas maintenant » | Cahier § 5. |
-| `<p-toolbar>` + `nav.ds-float-bottom` (`shell`) | `[eCoque]` + `nav[eNav]` + `ul[eNavListe]` + `a[eLienNav]` | Structure au § 2.16. |
+| `<p-toolbar>` + `nav.ds-float-bottom` (`shell`) | la coque d'Apex (`shell.css`) + `a[eLienNav]` + `a[eMarque]` | Structure au § 2.16. |
 | `<p-divider>` (`shell`) | rien : les filets viennent des surfaces ou d'une classe `.ds-*` | |
 | `<p-skeleton>` | (absent d'Apex) — pas d'équivalent | |
 | `pInputText` (`auth`, `create-objective`, `edit-*`, `add-task`, `chat`) | `input[eSaisie]` dans `e-champ libelle` | Libellé toujours visible ; placeholder en `encre-douce`. Zone de réponse d'Akari : `textarea[eSaisie][tailleAuto]` + `button[eBouton=trait][icone]`. |
@@ -1055,7 +1050,7 @@ Inventaire des usages actuels sous `apps/apex-client/src/app` : 24 `<p-button>`,
 24. **`EBouton`** : pas d'état de chargement ; `aria-disabled="true"` sur un lien ne bloque pas la navigation ; pas de style de focus propre (celui de `base.css`).
 25. **`ENote`** : prévue une par écran ; `div[eNote]` porte un `aria-label` sans rôle (préférer `aside` ou `section`).
 26. **Feuilles** : le composant ouvert hérite de l'injecteur racine → `cdk: { injector }` pour atteindre `ObjectiveStore` (fourni par la coque). `autoFocus` va sur le titre : le titre est requis. Écraser `panelClass` par `cdk` fait perdre le panneau. Une feuille est centrée (position par défaut du CDK Dialog) ; aucun style de panneau latéral n'existe.
-27. **Navigation** : sous 760px, `eNavBas` disparaît (réglages, personne) et les libellés des liens ne sont plus visibles ; pour l'entrée `/`, `[routerLinkActiveOptions]="{ exact: true }"` sinon elle est active partout.
+27. **Navigation** : sous 760px, la coque d'Apex cache le bas de la navigation (réglages, personne) et le libellé des entrées ; pour l'entrée `/`, `[routerLinkActiveOptions]="{ exact: true }"` sinon elle est active partout.
 28. **Overlays** (`e-menu`, `e-selection`) : CDK en popover natif ; dans jsdom (Vitest), le CDK repasse en overlay classique (pas de `showPopover`).
 
 ### 8.5 Tests
@@ -1075,7 +1070,7 @@ Relevé en comparant les maquettes `Objectifs`, `Arete`, `Matrice`, `Akari` au c
 | Maquette | Manque | Contournement possible |
 | --- | --- | --- |
 | Toutes | Aucune classe utilitaire de couleur (`encre-douce`) ni de remise à zéro des marges | Utilitaires `.ds-*` d'Apex (`.ds-muted`, conteneurs). |
-| Toutes (coque) | Pas d'avatar ni d'initiale (bas de navigation « L · Léa ») ; `eNavBas` masqué sous 760px | Initiale en `.initial` (`shell.css`, fond creux de la maquette) ; réglages dans un `e-menu` en `.ds-show-mobile`. À proposer à Empreinte : un composant d'initiale. |
+| Toutes (coque) | Pas d'avatar ni d'initiale (bas de navigation « L · Léa ») ; le bas de la navigation est masqué sous 760px | Initiale en `.initial` (`shell.css`, fond creux de la maquette) ; réglages dans un `e-menu` en `.ds-show-mobile`. À proposer à Empreinte : un composant d'initiale. |
 | Toutes | Pas d'indicateur de chargement (bouton, zone), pas d'infobulle, pas de panneau latéral, pas de sélecteur de date | Texte d'état en `role="status"` ; `input[type=date][eSaisie]` ; feuilles centrées. |
 | Objectifs | `ECarteObjectif` ne suit pas la maquette (horizon, pourquoi, pas, prochain pas avec case dans le pied) | Composer avec `article[eCarte]` (§ 2.5). Une `li[eTache]` dans le pied garde son padding de ligne (`--pas-4 --pas-6`). |
 | Objectifs | Pas de repli générique (`<details>` « Accomplis ») ; `ECarnet` n'est pas un accordéon générique | `details.accomplished` natif (`objectives.css`, fait), ou demande d'ajout à Empreinte. |
