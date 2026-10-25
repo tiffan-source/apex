@@ -155,7 +155,7 @@ describe('Objectives', () => {
       const article = element.querySelector('article.e-carte') as HTMLElement;
       expect(article).toBeTruthy();
       // Un seul filet entre deux cartes : la trame sait que ses enfants dessinent déjà le leur.
-      expect(article.parentElement?.classList).toContain('ds-surfaces');
+      expect(article.parentElement?.classList).toContain('cards');
       expect(article.parentElement?.classList).toContain('ds-panels');
       expect(article.classList.contains('e-carte--marquee')).toBe(false);
       const title = article.querySelector('h2.objectif') as HTMLElement;

@@ -1,7 +1,7 @@
 <!-- Lien d'évitement : hors de l'écran tant qu'il n'a pas le focus. Pas de href="#contenu" écrit en dur :
      avec <base href="/">, il renverrait vers l'accueil. Le routeur garde l'adresse de la page. -->
 <a
-  class="ds-skip-link"
+  class="skip-link"
   [routerLink]="[]"
   fragment="contenu"
   queryParamsHandling="preserve"
@@ -9,23 +9,28 @@
   >Aller au contenu</a
 >
 
-<div eCoque>
-  <nav eNav aria-label="Navigation principale">
-    <a eMarque class="e-nav__marque" routerLink="/">Apex</a>
+<div class="shell">
+  <nav class="nav" aria-label="Navigation principale">
+    <a eMarque class="brand" routerLink="/">Apex</a>
 
-    <ul eNavListe>
+    <!-- Le libellé est dans une balise d'Apex : sous 760px, shell.css ne le montre plus (il reste lu). -->
+    <ul class="links">
       <li>
-        <a eLienNav icone="objectifs" routerLink="/" [attr.aria-current]="objectivesCurrent()">Objectifs</a>
+        <a eLienNav class="link" icone="objectifs" routerLink="/" [attr.aria-current]="objectivesCurrent()"
+          ><span class="link-label">Objectifs</span></a
+        >
       </li>
       <li>
-        <a eLienNav icone="matrice" routerLink="/matrice" routerLinkActive ariaCurrentWhenActive="page">Matrice</a>
+        <a eLienNav class="link" icone="matrice" routerLink="/matrice" routerLinkActive ariaCurrentWhenActive="page"
+          ><span class="link-label">Matrice</span></a
+        >
       </li>
     </ul>
 
-    <div eNavBas>
-      <div class="ds-row ds-rule-top ds-pad-inline-3">
+    <div class="nav-bottom">
+      <div class="ds-row ds-rule-top person">
         @if (initial()) {
-          <span class="ds-initial voix" aria-hidden="true">{{ initial() }}</span>
+          <span class="initial voix" aria-hidden="true">{{ initial() }}</span>
         }
         <!-- Une grille à une piste minmax(0, 1fr) ne réclame aucune largeur : sans elle, une adresse longue
              élargirait toute la navigation (232px dans les maquettes) au lieu d'être coupée. -->
@@ -42,8 +47,8 @@
     </div>
   </nav>
 
-  <main eCoquePrincipal id="contenu" tabindex="-1" #contenu>
-    <div eCoqueContenu>
+  <main class="page" id="contenu" tabindex="-1" #contenu>
+    <div class="content">
       @if (annonces.signalement(); as texte) {
         <aside eNote>
           <p>{{ texte }}</p>

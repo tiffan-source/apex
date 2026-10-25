@@ -2,11 +2,10 @@
 
 Les règles complètes du dépôt sont dans [`CLAUDE.md`](../CLAUDE.md). Ce fichier en reprend l'essentiel pour le front-end.
 
-## Front-end : design system obligatoire
+## Front-end : Empreinte pour l'identité, Apex pour sa mise en page
 
-Toutes les applications de productivité partagent un design system unique, `libs/design-tokens`. **Les applications ne contiennent jamais de CSS custom** : l'apparence vient des composants PrimeNG habillés par le preset partagé, et la mise en page vient des classes `.ds-*`.
-
+- L'identité vient du design system **Empreinte**, commun à toutes les applications de la suite : les composants de `@empreinte-studio/angular`, les 8 styles typographiques, les tokens Jour et Nuit de `@empreinte-studio/tokens`.
+- La mise en page et le style propres à Apex vivent dans Apex : la feuille du composant (`<nom>.css` à côté du gabarit, `styleUrl`) pour ce qui n'appartient qu'à un écran ; `apps/apex-client/src/styles/layout.css` (utilitaires `.ds-*`) pour ce qui sert à plusieurs écrans. Couleurs en tokens d'Empreinte.
+- Empreinte ne change que pour ce qui servirait à toute la suite (composant, variante, icône, token, voix), jamais pour la mise en page d'Apex.
 - Avant toute intervention sur une interface, suivre le skill [`frontend-ui`](../.claude/skills/frontend-ui/SKILL.md).
-- Pour toute modification du design system (tokens, preset PrimeNG, classes `.ds-*`, mode sombre), suivre le skill [`design-system-evolution`](../.claude/skills/design-system-evolution/SKILL.md).
-- Interdits dans les applications : feuilles de style de composant, `style="…"`, `[ngStyle]`, `[ngClass]`, `::ng-deep`, `!important`, couleurs ou longueurs en dur, classes autres que `ds-*` et `pi`/`pi-*`, tokens ou classes inventés, thème ou `definePreset`.
-- `npx nx lint design-tokens` vérifie ces règles. Il doit passer avant de rendre la main ; ne jamais l'affaiblir pour faire passer une modification.
+- PrimeNG est retiré : ne pas le réintroduire.

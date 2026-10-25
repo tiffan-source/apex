@@ -23,16 +23,7 @@ import { filter } from 'rxjs';
 import { EBouton } from '@empreinte-studio/angular/bouton';
 import { type PreferenceTheme, Theme } from '@empreinte-studio/angular/core';
 import { type ElementMenu, EMenu } from '@empreinte-studio/angular/menu';
-import {
-  ECoque,
-  ECoqueContenu,
-  ECoquePrincipal,
-  ELienNav,
-  EMarque,
-  ENav,
-  ENavBas,
-  ENavListe,
-} from '@empreinte-studio/angular/navigation';
+import { ELienNav, EMarque } from '@empreinte-studio/angular/navigation';
 import { ENote, ENoteActions } from '@empreinte-studio/angular/note';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
@@ -71,12 +62,6 @@ const PATHS_ONLY: Partial<IsActiveMatchOptions> = { queryParams: 'ignored', matr
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    ECoque,
-    ECoquePrincipal,
-    ECoqueContenu,
-    ENav,
-    ENavListe,
-    ENavBas,
     ELienNav,
     EMarque,
     EMenu,
@@ -85,6 +70,7 @@ const PATHS_ONLY: Partial<IsActiveMatchOptions> = { queryParams: 'ignored', matr
     EBouton,
   ],
   templateUrl: './shell.html',
+  styleUrl: './shell.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ObjectiveStore, AkariWritesStore],
 })

@@ -1,0 +1,169 @@
+/*
+ * La coque d'Apex : la navigation d'un côté, la page de l'autre. Sous 760px,
+ * la navigation passe en bandeau au-dessus de la page et ne garde que ses
+ * icônes. Les entrées elles-mêmes (a[eLienNav], la corne de l'entrée
+ * courante) et la marque (a[eMarque]) viennent d'Empreinte.
+ */
+
+/* Deux colonnes : la navigation (232px dans les maquettes) et la page. Un seul
+   seuil, 760px, fait passer la navigation en bandeau. */
+.shell {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--fond);
+  color: var(--encre);
+}
+
+/* La navigation tient toute la hauteur de l'écran et y reste quand la page
+   défile : son filet trame va jusqu'en bas, et le bas de la navigation (la
+   personne, ses réglages) reste au pied de l'écran. Sur un écran trop bas
+   pour elle, elle défile seule. */
+.nav {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  padding: var(--pas-8) 20px var(--pas-6);
+  box-shadow: inset calc(-1 * var(--trait-fin)) 0 0 var(--trame);
+}
+
+/* La marque, alignée sur le texte des entrées (qui ont un retrait de pas-3). */
+.brand {
+  padding: 0 var(--pas-3);
+}
+
+/* Les entrées, empilées ; chaque lien prend toute la largeur. */
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pas-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.links > li {
+  display: flex;
+}
+
+/* Le bas de la navigation : la personne et ses réglages. */
+.nav-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pas-4);
+}
+
+/* La page, à côté de la navigation. */
+.page {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--pas-12) 56px 72px;
+}
+
+/* Le contenu de la page : centré, 1120px au plus. */
+.content {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* Lien d'évitement « Aller au contenu », premier élément de la coque : hors de
+   l'écran tant qu'il n'a pas le focus, puis posé en haut à gauche sur un
+   panneau. (.e-masque d'Empreinte ne convient pas : il reste masqué même au
+   focus.) */
+.skip-link {
+  position: fixed;
+  inset-block-start: calc(-1 * var(--pas-16));
+  inset-inline-start: var(--pas-2);
+  z-index: 10;
+  padding: var(--pas-2) var(--pas-4);
+  background: var(--panneau);
+  color: var(--encre);
+}
+
+.skip-link:focus {
+  inset-block-start: var(--pas-2);
+}
+
+/* La personne, en bas de la navigation : un retrait de pas-3 à gauche et à
+   droite l'aligne sur le texte des entrées de navigation. */
+.person {
+  padding-inline: var(--pas-3);
+}
+
+/* L'initiale de la personne (« L » à côté de « Léa ») : un carré de pas-8 sur
+   le fond creux, la lettre centrée. La lettre prend un des 8 styles
+   typographiques (class="voix") ; elle est décorative (aria-hidden), le nom
+   est écrit à côté. */
+.initial {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--pas-8);
+  block-size: var(--pas-8);
+  background: var(--creux);
+}
+
+/* 760px : mobile */
+@media (max-width: 760px) {
+  /* Une seule colonne : le bandeau garde sa hauteur, la page prend le reste,
+     même quand elle est courte. */
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .page {
+    padding: var(--pas-6) var(--pas-4) var(--pas-12);
+  }
+
+  /* La navigation devient un bandeau, avec un filet trame dessous, qui part
+     avec la page quand elle défile. */
+  .nav {
+    position: static;
+    height: auto;
+    overflow-y: visible;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--pas-2);
+    padding: var(--pas-3) var(--pas-4);
+    box-shadow: inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
+  }
+
+  .links {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .nav-bottom {
+    display: none;
+  }
+
+  /* Les entrées ne gardent que leur icône : le libellé n'est plus montré,
+     mais reste lu (nom du lien). */
+  .link {
+    gap: 0;
+  }
+
+  .link-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

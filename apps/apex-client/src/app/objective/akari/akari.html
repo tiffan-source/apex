@@ -17,11 +17,11 @@
 
     <div class="ds-panels ds-cols-7-6">
       <section class="ds-panel" aria-label="Conversation avec Akari">
-        <ol class="ds-conversation">
+        <ol class="conversation">
           @for (message of chat.orderLatestMessages(); track message.id) {
             @if (message.sender === 'user') {
-              <li #reply class="ds-reply">
-                <p class="repere ds-muted ds-reply-author">{{ personName() }}</p>
+              <li #reply class="reply">
+                <p class="repere ds-muted reply-author">{{ personName() }}</p>
                 <div class="corps ds-prose" [innerHTML]="message.content | markdown"></div>
               </li>
             } @else {
@@ -63,7 +63,7 @@
 
         <p class="detail ds-muted" role="status" aria-live="polite">{{ status() }}</p>
 
-        <form class="ds-composer ds-rule-top ds-push-down" (submit)="submit($event)">
+        <form class="composer ds-rule-top ds-push-down" (submit)="submit($event)">
           <label class="e-masque" for="akari-reponse">Réponds à Akari</label>
           <textarea
             #saisie
@@ -101,7 +101,7 @@
         @if (stageRows().length) {
           <ol class="ds-divided" aria-label="Les étapes">
             @for (stage of stageRows(); track stage.id) {
-              <li class="ds-entry">
+              <li class="stage">
                 <span class="objectif">{{ stage.index }}</span>
                 <span class="corps ds-break">{{ stage.title }}</span>
                 <span class="detail ds-muted ds-nowrap">{{ stage.taskCount }}</span>

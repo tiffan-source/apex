@@ -103,6 +103,7 @@ const ACCOMPLISHED_SUMMARY_ID = 'accomplis-resume';
   selector: 'app-objectives',
   imports: [RouterLink, EBouton, ECarte, ECase, EEmpreinte, EIcone, ENote, ENoteActions, EPas],
   templateUrl: './objectives.html',
+  styleUrl: './objectives.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Objectives {

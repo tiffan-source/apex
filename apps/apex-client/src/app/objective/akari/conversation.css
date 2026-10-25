@@ -1,0 +1,48 @@
+/*
+ * La conversation avec Akari : le fil des répliques. Partagée par l'écran
+ * Akari (objective/akari) et par le nouvel objectif
+ * (objectives/new-objective), qui listent tous deux cette feuille dans leurs
+ * styles.
+ */
+
+/* Les enfants directs perdent leurs marges par défaut (p) : l'espacement vient
+   de l'écart du conteneur. Spécificité nulle : une marge propre à un
+   composant d'Empreinte l'emporte. */
+:where(.conversation > *, .reply > *) {
+  margin: 0;
+}
+
+/* Le fil : liste nue, répliques séparées de 28px. */
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-7);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Une réplique de la personne : son nom dans une colonne de 96px, la phrase à
+   côté, sur la même ligne de base ; empilés sur mobile. Une réplique d'Akari
+   est une aside[eNote] posée directement dans le li, sans .reply : la grille à
+   deux colonnes la ferait tomber dans la colonne du nom. */
+.reply {
+  display: grid;
+  grid-template-columns: calc(var(--pas-12) * 2) minmax(0, 1fr);
+  gap: var(--pas-1) var(--pas-4);
+  align-items: baseline;
+}
+
+/* Le nom de la personne, décalé pour s'aligner sur celui d'Akari, écrit après
+   son losange (e-note__qui : losange de 7px, puis un écart de --pas-2). */
+.reply-author {
+  padding-inline-start: calc(7px + var(--pas-2));
+}
+
+/* 760px : mobile */
+@media (max-width: 760px) {
+  /* Le nom passe au-dessus de la phrase. */
+  .reply {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -64,6 +64,7 @@ type AuthAttempt = { mode: AuthMode; email: string; password: string };
   selector: 'app-auuthentication-page',
   imports: [FormField, FormRoot, EBouton, EChamp, EMarque, ENote, ESaisie, ESurface],
   templateUrl: './auuthentication-page.html',
+  styleUrl: './auuthentication-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuuthenticationPage {

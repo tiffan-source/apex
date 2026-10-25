@@ -1,0 +1,32 @@
+/*
+ * L'arête d'un objectif et ses étapes.
+ */
+
+/* Panneau à bord perdu (l'étape choisie, les pas sans étape) : les listes de
+   pas (ul[eListe] nue) vont d'un bord à l'autre, leurs pas gardant la marge
+   du panneau ; les autres enfants directs (titre, rangée d'actions…) gardent
+   cette marge. --ds-panel-inset est posée par .ds-panel (styles/layout.css)
+   et se resserre sur mobile. */
+.panel-flush {
+  padding-inline: 0;
+}
+
+.panel-flush > * {
+  margin-inline: var(--ds-panel-inset);
+}
+
+.panel-flush > .e-liste {
+  margin-inline: 0;
+}
+
+.panel-flush .e-tache {
+  padding-inline: var(--ds-panel-inset);
+}
+
+/* L'arête d'Empreinte prend 100 % de la largeur : sur mobile, elle
+   rétrécirait jusqu'à rendre ses noms illisibles (à 375px, une arête de
+   6 étapes tombait à environ 40 %, ses noms à 6px environ). Elle garde ici la
+   largeur de la maquette Arête, et son conteneur .ds-scroll-x défile. */
+.arete > e-arete {
+  min-width: 640px;
+}

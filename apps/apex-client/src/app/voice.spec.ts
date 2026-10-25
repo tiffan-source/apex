@@ -115,8 +115,8 @@ function templateTexts(html: string): string[] {
 
 /** Après ces mots, une barre oblique ouvre une expression régulière, pas une division. */
 const BEFORE_REGEX = /(?:^|[(,=:[!&|?{};+\-*%<>~^]|\breturn|\btypeof|\bcase|\bin|\bof|\bnew|\bdelete|\bvoid|\bthrow)\s*$/;
-/** Les chaînes qui ne sont pas du texte : chemin d'un import, sélecteur, gabarit, message pour la console. */
-const NOT_TEXT_BEFORE = /(?:\bfrom|\bimport\s*\(|\bselector\s*:|\btemplateUrl\s*:|\bstyleUrls?\s*:)\s*$/;
+/** Les chaînes qui ne sont pas du texte : chemin d'un import, sélecteur, gabarit, feuille de style, message pour la console. */
+const NOT_TEXT_BEFORE = /(?:\bfrom|\bimport\s*\(|\bselector\s*:|\btemplateUrl\s*:|\bstyleUrls?\s*:|\bstyleUrls\s*:\s*\[[^\]]*)\s*$/;
 
 /**
  * Les chaînes littérales d'un fichier TypeScript ('…', "…" et `…`, dont les ${…} deviennent des espaces),

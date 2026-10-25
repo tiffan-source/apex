@@ -240,15 +240,15 @@ describe('Akari : l’ouverture de la conversation', () => {
 describe('Akari : les répliques', () => {
   it('Akari parle dans une note signée, la personne signe de son prénom', async () => {
     const { root } = await setup({ history: HISTORY });
-    const replies = Array.from(root.querySelectorAll('ol.ds-conversation > li'));
+    const replies = Array.from(root.querySelectorAll('ol.conversation > li'));
     expect(replies).toHaveLength(2);
 
     const [mine, akari] = replies;
-    expect(mine.classList).toContain('ds-reply');
-    expect(text(mine.querySelector('.ds-reply-author'))).toBe('Léa');
+    expect(mine.classList).toContain('reply');
+    expect(text(mine.querySelector('.reply-author'))).toBe('Léa');
     expect(mine.querySelector('.corps.ds-prose strong')?.textContent).toBe('semi');
 
-    expect(akari.classList).not.toContain('ds-reply');
+    expect(akari.classList).not.toContain('reply');
     const note = akari.querySelector('aside[eNote]');
     expect(note).not.toBeNull();
     expect(text(note?.querySelector('.e-note__qui'))).toBe('Akari');
@@ -257,7 +257,7 @@ describe('Akari : les répliques', () => {
 
   it('signe « Toi » quand la personne n’a pas de prénom', async () => {
     const { root } = await setup({ history: HISTORY, userName: '' });
-    expect(text(root.querySelector('.ds-reply-author'))).toBe('Toi');
+    expect(text(root.querySelector('.reply-author'))).toBe('Toi');
   });
 
   it('assainit le Markdown d’une réplique', async () => {
@@ -270,14 +270,14 @@ describe('Akari : les répliques', () => {
 
   it('fait venir la dernière réplique à l’écran', async () => {
     const { root } = await setup({ history: HISTORY });
-    const last = root.querySelector('ol.ds-conversation > li:last-child') as HTMLElement;
+    const last = root.querySelector('ol.conversation > li:last-child') as HTMLElement;
     // À l'ouverture, d'un coup : pas de défilement animé à travers toute la conversation.
     expect(last.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'auto' });
   });
 
   it('ne déplace pas la page quand la personne relit plus haut', async () => {
     const { fixture, chat, root } = await setup({ history: HISTORY });
-    const previous = root.querySelector('ol.ds-conversation > li:last-child') as HTMLElement;
+    const previous = root.querySelector('ol.conversation > li:last-child') as HTMLElement;
     // La dernière réplique est hors de l'écran : la personne lit plus haut.
     previous.getBoundingClientRect = () => ({ top: 2000, bottom: 2100 }) as DOMRect;
     const scroll = vi.fn();
@@ -290,7 +290,7 @@ describe('Akari : les répliques', () => {
 
   it('suit la conversation quand la personne en voit la fin', async () => {
     const { fixture, chat, root } = await setup({ history: HISTORY });
-    const previous = root.querySelector('ol.ds-conversation > li:last-child') as HTMLElement;
+    const previous = root.querySelector('ol.conversation > li:last-child') as HTMLElement;
     previous.getBoundingClientRect = () => ({ top: 100, bottom: 200 }) as DOMRect;
     const scroll = vi.fn();
     Element.prototype.scrollIntoView = scroll;
@@ -304,7 +304,7 @@ describe('Akari : les répliques', () => {
 describe('Akari : les invitations', () => {
   it('ouvre une conversation vide en proposant des étapes', async () => {
     const { chat, fixture, root } = await setup();
-    const note = root.querySelector('ol.ds-conversation aside[eNote]');
+    const note = root.querySelector('ol.conversation aside[eNote]');
     expect(text(note)).toContain('Je peux te proposer des étapes pour « Semi-marathon ». On commence ?');
 
     buttonNamed(root, 'Propose-moi des étapes')?.click();
@@ -341,7 +341,7 @@ describe('Akari : les invitations', () => {
 
   it('avec ?etape, propose des pas pour cette étape, même après une conversation', async () => {
     const { chat, fixture, root } = await setup({ etape: 'endurance', history: HISTORY });
-    const notes = Array.from(root.querySelectorAll('ol.ds-conversation aside[eNote]'));
+    const notes = Array.from(root.querySelectorAll('ol.conversation aside[eNote]'));
     expect(text(notes.at(-1))).toContain("Je peux te proposer des pas pour l'étape « Endurance ».");
 
     buttonNamed(root, 'Propose-moi des pas')?.click();
@@ -366,7 +366,7 @@ describe('Akari : les demandes d’accord', () => {
 
   it('propose une étape : « Ajouter » ou « Pas maintenant »', async () => {
     const { chat, root } = await setup({ history: HISTORY, configure: asking({ kind: 'stage', title: 'Portfolio', parentId: 'semi' }) });
-    const note = Array.from(root.querySelectorAll('ol.ds-conversation aside[eNote]')).at(-1);
+    const note = Array.from(root.querySelectorAll('ol.conversation aside[eNote]')).at(-1);
     expect(text(note)).toContain("Je te propose d'ajouter l'étape « Portfolio ». On l'ajoute ?");
     expect(text(statusLine(root))).toBe('Akari attend ton accord.');
 
@@ -548,7 +548,7 @@ describe('Akari : l’arête à droite', () => {
     expect(panel.querySelector('.ds-hide-mobile > e-arete')).not.toBeNull();
     expect(panel.querySelector('e-arete')?.hasAttribute('interactive')).toBe(false);
 
-    const rows = Array.from(panel.querySelectorAll('ol.ds-divided > li.ds-entry'));
+    const rows = Array.from(panel.querySelectorAll('ol.ds-divided > li.stage'));
     expect(rows.map((row) => Array.from(row.children).map(text))).toEqual([
       ['1', 'Endurance', '2 pas', 'En cours'],
       ['2', 'Vitesse', '1 pas', 'À venir'],
@@ -575,7 +575,7 @@ describe('Akari : l’arête à droite', () => {
     const { fixture, objectives, root } = await setup();
     objectives.objectives.set([...OBJECTIVES, { id: 'portfolio', title: 'Récupération', why: '', description: '', dueDate: '', parentId: 'semi' }]);
     await refresh(fixture);
-    expect(Array.from(root.querySelectorAll('li.ds-entry')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Vitesse', 'Récupération']);
+    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Vitesse', 'Récupération']);
   });
 
   it('nomme une étape enregistrée sans nom, comme l’arête', async () => {
@@ -583,7 +583,7 @@ describe('Akari : l’arête à droite', () => {
       etape: 'vitesse',
       configure: (_, store) => store.objectives.set(OBJECTIVES.map((o) => (o.id === 'vitesse' ? { ...o, title: '' } : o))),
     });
-    expect(Array.from(root.querySelectorAll('li.ds-entry')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Étape sans nom']);
+    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Étape sans nom']);
     // Sur l'arête aussi, et un titre fait d'espaces compte comme vide.
     expect(Array.from(root.querySelectorAll('e-arete .etape .nom')).map(text)).toEqual(['Endurance', 'Étape sans nom']);
     expect(text(root)).toContain("Je peux te proposer des pas pour l'étape « Étape sans nom ».");
@@ -593,7 +593,7 @@ describe('Akari : l’arête à droite', () => {
     const { root } = await setup({
       configure: (_, store) => store.objectives.set(OBJECTIVES.map((o) => (o.id === 'vitesse' ? { ...o, title: '   ' } : o))),
     });
-    expect(Array.from(root.querySelectorAll('li.ds-entry')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Étape sans nom']);
+    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Étape sans nom']);
     expect(Array.from(root.querySelectorAll('e-arete .etape .nom')).map(text)).toEqual(['Endurance', 'Étape sans nom']);
   });
 

@@ -87,7 +87,7 @@ describe('Shell', () => {
   describe('la navigation', () => {
     it('affiche la marque « Apex » et deux entrées : Objectifs et Matrice, avec leurs icônes', async () => {
       const root = shellOf(await open());
-      const marque = present(root.querySelector<HTMLAnchorElement>('nav a.e-nav__marque'), 'la marque');
+      const marque = present(root.querySelector<HTMLAnchorElement>('nav a.brand'), 'la marque');
       expect(marque.textContent?.trim()).toBe('Apex');
       expect(marque.getAttribute('href')).toBe('/');
 
@@ -95,6 +95,8 @@ describe('Shell', () => {
       expect(links.map((a) => a.textContent?.trim())).toEqual(['Objectifs', 'Matrice']);
       expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/matrice']);
       for (const link of links) expect(link.querySelector('e-icone svg')).not.toBeNull();
+      // Le libellé est dans une balise d'Apex, que shell.css cache sous 760px (le nom du lien reste).
+      expect(links.map((a) => a.querySelector('.link-label')?.textContent)).toEqual(['Objectifs', 'Matrice']);
       expect(root.textContent).not.toContain('Focus');
     });
 
@@ -131,23 +133,23 @@ describe('Shell', () => {
   describe('la personne, en bas de la navigation', () => {
     it('montre l’initiale et le nom', async () => {
       const root = shellOf(await open());
-      const initial = present(root.querySelector('[eNavBas] .ds-initial'), "l'initiale");
+      const initial = present(root.querySelector('.nav-bottom .initial'), "l'initiale");
       expect(initial.textContent?.trim()).toBe('L');
       expect(initial.getAttribute('aria-hidden')).toBe('true');
-      expect(present(root.querySelector('[eNavBas]'), 'le bas de la navigation').textContent).toContain('Léa');
+      expect(present(root.querySelector('.nav-bottom'), 'le bas de la navigation').textContent).toContain('Léa');
     });
 
     it('prend l’adresse quand le nom manque, et met l’initiale en capitale', async () => {
       currentUser.set({ id: 'u-2', name: '  ', email: 'élise@exemple.fr' });
       const root = shellOf(await open());
-      expect(present(root.querySelector('[eNavBas] .ds-initial'), "l'initiale").textContent?.trim()).toBe('É');
-      expect(present(root.querySelector('[eNavBas]'), 'le bas de la navigation').textContent).toContain('élise@exemple.fr');
+      expect(present(root.querySelector('.nav-bottom .initial'), "l'initiale").textContent?.trim()).toBe('É');
+      expect(present(root.querySelector('.nav-bottom'), 'le bas de la navigation').textContent).toContain('élise@exemple.fr');
     });
 
     it('coupe une adresse longue sans élargir la navigation (grille minmax(0, 1fr) autour du texte)', async () => {
       currentUser.set({ id: 'u-3', name: '', email: 'une.adresse.vraiment.longue@exemple-de-domaine.fr' });
       const root = shellOf(await open());
-      const text = present(root.querySelector('[eNavBas] .ds-truncate'), "le nom ou l'adresse");
+      const text = present(root.querySelector('.nav-bottom .ds-truncate'), "le nom ou l'adresse");
       expect(text.textContent?.trim()).toBe('une.adresse.vraiment.longue@exemple-de-domaine.fr');
       // Mesuré dans Chrome : sans la grille, la navigation passait de 232 à 350px pour une adresse de 25 lettres.
       expect(present(text.parentElement, 'son conteneur').matches('.ds-grid.ds-grow')).toBe(true);
@@ -156,7 +158,7 @@ describe('Shell', () => {
     it('ne dessine pas d’initiale vide sans session', async () => {
       currentUser.set(null);
       const root = shellOf(await open());
-      expect(root.querySelector('.ds-initial')).toBeNull();
+      expect(root.querySelector('.initial')).toBeNull();
     });
   });
 
@@ -170,10 +172,10 @@ describe('Shell', () => {
         expect(menu.libelle()).toBe('Réglages');
         expect(menu.icone()).toBe('reglages');
       }
-      expect(root.querySelector('[eNavBas] e-menu')).not.toBeNull();
-      // eNavBas disparaît sous 760px : le second menu est dans la navigation, enveloppé dans .ds-show-mobile.
+      expect(root.querySelector('.nav-bottom e-menu')).not.toBeNull();
+      // Le bas de la navigation disparaît sous 760px : le second menu est dans la navigation, enveloppé dans .ds-show-mobile.
       expect(root.querySelector('nav > .ds-show-mobile > e-menu')).not.toBeNull();
-      expect(root.querySelector('.ds-show-mobile [eNavBas]')).toBeNull();
+      expect(root.querySelector('.ds-show-mobile .nav-bottom')).toBeNull();
     });
 
     it('dit quelle entrée est retenue : Jour au premier lancement', async () => {
@@ -211,7 +213,7 @@ describe('Shell', () => {
     it('déplie le menu au clic et applique l’entrée choisie', async () => {
       const harness = await open();
       const trigger = present(
-        shellOf(harness).querySelector<HTMLButtonElement>('[eNavBas] e-menu button[aria-label="Réglages"]'),
+        shellOf(harness).querySelector<HTMLButtonElement>('.nav-bottom e-menu button[aria-label="Réglages"]'),
         'le bouton « Réglages »',
       );
       trigger.click();
@@ -230,7 +232,7 @@ describe('Shell', () => {
     it('est le premier élément de la coque et vise la page courante, pas l’accueil', async () => {
       const root = shellOf(await open('/matrice'));
       const skip = root.firstElementChild as HTMLAnchorElement;
-      expect(skip.matches('a.ds-skip-link')).toBe(true);
+      expect(skip.matches('a.skip-link')).toBe(true);
       expect(skip.textContent?.trim()).toBe('Aller au contenu');
       expect(skip.getAttribute('href')).toBe('/matrice#contenu');
       expect(skip.getAttribute('href')).not.toBe('/#contenu');
@@ -238,13 +240,13 @@ describe('Shell', () => {
 
     it('garde les paramètres de la page (?etape=…)', async () => {
       const root = shellOf(await open('/objectifs/42/akari?etape=7'));
-      expect(present(root.querySelector('a.ds-skip-link'), "le lien d'évitement").getAttribute('href')).toBe('/objectifs/42/akari?etape=7#contenu');
+      expect(present(root.querySelector('a.skip-link'), "le lien d'évitement").getAttribute('href')).toBe('/objectifs/42/akari?etape=7#contenu');
     });
 
     it('donne le focus au contenu et reste sur la page', async () => {
       const harness = await open('/matrice');
       const root = shellOf(harness);
-      present(root.querySelector<HTMLAnchorElement>('a.ds-skip-link'), "le lien d'évitement").click();
+      present(root.querySelector<HTMLAnchorElement>('a.skip-link'), "le lien d'évitement").click();
       await harness.fixture.whenStable();
       harness.detectChanges();
 
@@ -260,7 +262,7 @@ describe('Shell', () => {
   describe('le contenu', () => {
     it('rend la page dans le contenu de la coque, sans note quand tout va bien', async () => {
       const root = shellOf(await open());
-      const content = present(root.querySelector('main [eCoqueContenu]'), 'le contenu de la coque');
+      const content = present(root.querySelector('main .content'), 'le contenu de la coque');
       expect(content.textContent).toContain('Page des objectifs');
       expect(root.querySelector('aside[eNote]')).toBeNull();
     });
@@ -278,7 +280,7 @@ describe('Shell', () => {
       harness.detectChanges();
 
       const root = shellOf(harness);
-      const content = present(root.querySelector('main [eCoqueContenu]'), 'le contenu de la coque');
+      const content = present(root.querySelector('main .content'), 'le contenu de la coque');
       const note = present(content.querySelector('aside[eNote]'), 'la note');
       expect(note).not.toBeNull();
       expect(content.firstElementChild).toBe(note);

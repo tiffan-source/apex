@@ -107,6 +107,7 @@ export function permissionPrompt(
     MarkdownPipe,
   ],
   templateUrl: './akari.html',
+  styleUrls: ['./akari.css', './conversation.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ChatStore],
 })

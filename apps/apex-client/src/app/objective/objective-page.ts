@@ -67,6 +67,7 @@ type OpenStageSource = {
     ETacheActions,
   ],
   templateUrl: './objective-page.html',
+  styleUrl: './objective-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ObjectivePage {

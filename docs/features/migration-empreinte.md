@@ -4,9 +4,9 @@ Ce document est le cahier de la migration du client Apex de PrimeNG vers le desi
 
 ## 1. Le contrat
 
-- **Seul le client change.** On ne touche ni au domaine ni à l'infrastructure : `libs/objective`, `libs/chat`, `libs/ai`, `libs/gemini`, `libs/supabase`, `libs/firebase`, `libs/chore`, `libs/auth`, `worklfows/`, `apex-library/`, `supabase/` restent intacts. On peut modifier : `apps/apex-client/**`, `libs/design-tokens/**`, `tools/design-system/**`, `.claude/**`, `CLAUDE.md`, `docs/**`, `package.json` et `package-lock.json` (dépendances front uniquement).
+- **Seul le client change.** On ne touche ni au domaine ni à l'infrastructure : `libs/objective`, `libs/chat`, `libs/ai`, `libs/gemini`, `libs/supabase`, `libs/firebase`, `libs/chore`, `libs/auth`, `worklfows/`, `apex-library/`, `supabase/` restent intacts. On peut modifier : `apps/apex-client/**`, `.claude/**`, `CLAUDE.md`, `docs/**`, `package.json` et `package-lock.json` (dépendances front uniquement).
 - **PrimeNG part entièrement** : `primeng`, `@primeuix/themes`, `primeicons`, le preset, les toasts, les `pi pi-*`.
-- **Aucun CSS dans l'application**, comme avant : l'apparence vient des composants Empreinte, la mise en page des classes `.ds-*` de `libs/design-tokens/src/layout.css`, désormais construites sur les tokens d'Empreinte.
+- **L'identité vient d'Empreinte, la mise en page est celle d'Apex.** Les composants Empreinte et ses 8 styles typographiques donnent l'apparence ; la mise en page d'Apex vit dans Apex, dans la feuille de chaque composant (`styleUrl`) et dans les utilitaires partagés `.ds-*` (`apps/apex-client/src/styles/layout.css`). Pendant la migration, Apex n'avait aucun CSS propre et tout passait par la couche `libs/design-tokens` ; elle a été répartie dans les composants le 25 octobre 2026.
 - Si une fonctionnalité des maquettes exige le back-end, elle attend : on ne la simule pas avec des données inventées.
 
 ## 2. Les sources
@@ -16,7 +16,7 @@ Ce document est le cahier de la migration du client Apex de PrimeNG vers le desi
 | Maquettes (canvas « Apex ») | `project/*.dc.html` du canvas https://claude.ai/artifact/E59CU8bjiq7EhNft2hZHCy. Page V1 : `Objectifs`, `Arete`, `Matrice`, `Akari`. Page « Hors V1 » : `Main` (Aujourd'hui), `Carnet`, `Palier`. |
 | Brand book Empreinte | design system « Empreinte » https://claude.ai/artifact/QBkmtgtj9oKk8xdJPb2QNe (`project/README.md`, `project/components/*/README.md`) |
 | Périmètre V1 | doc « Apex — périmètre V1 » https://claude.ai/artifact/3mEAfVqPMbkSquRS6Ge3tg |
-| Librairie | `node_modules/@empreinte-studio/angular` (types dans `types/`), `node_modules/@empreinte-studio/tokens/dist` ; dépôt https://github.com/empreinte-studio/empreinte (sources, `docs/MIGRATION-APEX.md`, vitrine `apps/vitrine`) |
+| Librairie | `node_modules/@empreinte-studio/angular` (types dans `types/`), `node_modules/@empreinte-studio/tokens/dist` ; dépôt https://github.com/empreinte-studio/empreinte (sources, vitrine `apps/vitrine`) |
 | Catalogue des composants | `.claude/skills/frontend-ui/references/catalogue-empreinte.md` |
 
 ## 3. Le périmètre V1
@@ -104,7 +104,7 @@ Empreinte tutoie, en phrases courtes. Jamais : « échec », « erreur », « ra
 - [ ] Aucune erreur en rouge, aucun pourcentage, aucun point d'exclamation, aucun « en retard ».
 - [ ] Cibles de 44px (36px en petit) ; focus visible ; Jour et Nuit vérifiés ; lisible à 375px.
 - [ ] Plus de `p-*`, `pButton`, `pi pi-*`, `::ng-deep`, `[dt]`.
-- [ ] `npx nx lint design-tokens`, `npx nx typecheck apex-client`, `npx nx vite:test apex-client` et `npx nx build apex-client` passent.
+- [ ] `npx nx lint apex-client`, `npx nx typecheck apex-client`, `npx nx vite:test apex-client` et `npx nx build apex-client` passent.
 
 ## 11. Suivi
 
@@ -122,11 +122,11 @@ Ce que la migration laisse ouvert. Rien de ceci n'est compensé ni simulé côt�
 
 - **Voix** : `motsAEviter` rate les mots qui commencent ou finissent par une lettre accentuée (« échec », « raté », « manqué », « supprimé » : son `\b` ne voit pas la frontière) et ne connaît ni « erreur » ni les emoji (Apex complète avec `voiceIssues`) ; `formaterAttente` ne sait pas dire une date future (elle donne « Pour aujourd'hui »).
 - **Akari** : pas de composant « réplique ». Une `aside[eNote]` par réplique crée autant de régions « complementary » de même nom pour les lecteurs d'écran, et la règle « une note par écran » ne tient pas (la coque peut aussi afficher un signalement).
-- **Coque et navigation** : `.e-nav { height: 100% }` (`navigation.css`) empêche la navigation de s'étirer, son filet s'arrête et `eNavBas` vient sous les liens au lieu du pied de l'écran (retirer la hauteur : l'étirement suffit) ; sous 760px, la coque (`flex-wrap`) partage la hauteur libre et le bandeau du haut grandit sur une page courte (`align-content: flex-start`, ou coque en colonne) ; entre 761 et 791px (jusqu'à environ 806px avec une barre de défilement classique ; un iPad mini en portrait, 768px, est dedans), la coque passe déjà à la ligne (`.e-coque__nav { flex: 1 1 232px }` + `.e-coque__principal { flex: 999 1 560px }` : 792px) alors que la navigation ne passe en rangée que sous 760px : elle devient un bandeau de toute la largeur, en colonne, d'environ 330px de haut, au-dessus du contenu, avec `eNavBas` visible (aligner les deux seuils, ou ne pas enrouler au-dessus de 760px ; aucun contournement propre sans CSS côté Apex) ; `ELienNav` ne pose la corne que pour `aria-current="page"` (pas pour `"true"`, la section courante) ; `e-menu` ne marque pas l'entrée choisie (ni `menuitemradio` ni `aria-checked` : Apex écrit « · choisi ») ; pas de composant d'initiale (Apex : `.ds-initial`).
+- **Navigation** : `ELienNav` ne pose la corne que pour `aria-current="page"` (pas pour `"true"`, la section courante) ; `e-menu` ne marque pas l'entrée choisie (ni `menuitemradio` ni `aria-checked` : Apex écrit « · choisi ») ; pas de composant d'initiale (Apex : `.initial`, `shell.css`).
 - **`e-matrice`** : sous 640px, les axes restent au-dessus d'une grille passée sur une colonne et deviennent faux ; le compte d'un quadrant n'est pas personnalisable et ses titres sont figés en `h3` ; au toucher, le glisser bloque le défilement (Apex règle un délai par `CDK_DRAG_CONFIG` ; à porter dans le composant).
 - **`e-arete`** : pas de variante brouillon (la tête est toujours un sceau), pas de légende (Apex compose avec des cases d'`e-pas`, dont la case « En cours » porte une corne, `clip-path` à `--corne-s`, que la borne en cours de l'arête n'a pas : dans la légende, cette corne est décorative et sans `aria-current`, contraire au § 10 ; aucune primitive d'Empreinte ne dessine la borne sans corne), noms tronqués (18 / 22 / 2 × 15 caractères), pas d'identifiant dans `choisir` pour l'arête repliée « Faites », l'étape choisie n'est pas marquée, bornes carrées au lieu d'empreintes.
 - **`e-filtres`** : pas de nom accessible par option (`OptionFiltre` n'a que `valeur`, `libelle`, `lumiere`) ; le libellé, coupé pour tenir sur un téléphone, est le seul nom du bouton. Apex garde des libellés différents (`distinctShortTitles`, « Préparer le… 2027 ») ; un `libelleComplet` (ou `aria-label`) par option rendrait le titre entier aux lecteurs d'écran.
-- **Contenu** : pas de style « prose » pour le Markdown rendu (Apex : `.ds-prose`), pas de repli générique `details` (Apex : `.ds-disclosure`).
+- **Contenu** : pas de style « prose » pour le Markdown rendu (Apex : `.ds-prose`), pas de repli générique `details` (Apex : `details.accomplished`, `objectives.css`).
 
 ### Client, à reprendre
 
@@ -137,6 +137,6 @@ Ce que la migration laisse ouvert. Rien de ceci n'est compensé ni simulé côt�
 - `editObjective` appliqué à une étape met son « pourquoi » à vide dans l'état optimiste (il reste en base ; invisible aujourd'hui). Une feuille ouverte sur un id temporaire remplacé pendant qu'elle est ouverte ignore la modification sans rien dire.
 - `ChatStore` n'a pas d'état « injoignable » : si le workflow ne démarre pas, la zone de réponse reste désactivée et seule la note de la coque l'explique.
 - La note de signalement est en haut du contenu : après défilement, seuls les lecteurs d'écran l'entendent tout de suite.
-- Le brouillon du nouvel objectif pose `[eSurface]` dans `.ds-panels` : son filet se double de celui de la trame (`.ds-surfaces` ne convient qu'à une trame faite de surfaces).
-- La couche `libs/design-tokens` garde 18 classes `.ds-*` qu'aucun écran n'utilise (`node tools/design-system/check.mjs --unused`) : les retirer est un changement cassant, à valider par l'utilisateur.
+- Le brouillon du nouvel objectif pose `[eSurface]` dans `.ds-panels` : son filet se double de celui de la trame (`.cards`, dans `objectives.css`, ne vaut que pour une trame faite de surfaces ; à régler dans une feuille du nouvel objectif).
+- `apps/apex-client/src/styles/layout.css` garde 18 utilitaires `.ds-*` qu'aucun écran n'utilise (écarts, alignements, `.ds-grid-auto`, `.ds-cols-3`, `.ds-span-*`, `.ds-text-*`) : à garder ou à retirer.
 

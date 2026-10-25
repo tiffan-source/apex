@@ -1,0 +1,36 @@
+/*
+ * Akari pour un objectif. Le fil des répliques est dans conversation.css.
+ */
+
+/* Les enfants directs perdent leurs marges par défaut (p) : l'espacement vient
+   de l'écart du conteneur. Spécificité nulle : une marge propre à un
+   composant d'Empreinte l'emporte. */
+:where(.composer > *, .stage > *) {
+  margin: 0;
+}
+
+/* Zone de réponse : la saisie (textarea[eSaisie]) prend la place, le bouton
+   d'envoi reste à sa taille, aligné en bas. */
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--pas-3);
+}
+
+.composer > textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Une étape de la liste : son numéro dans une colonne étroite (28px), le nom,
+   le compte de pas à droite ; l'état passe sous le nom. */
+.stage {
+  display: grid;
+  grid-template-columns: var(--ds-space-7) minmax(0, 1fr) auto;
+  gap: var(--ds-space-0-5) var(--pas-3);
+  align-items: baseline;
+}
+
+.stage > :nth-child(n + 4) {
+  grid-column: 2 / -1;
+}
