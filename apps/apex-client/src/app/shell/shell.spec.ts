@@ -53,7 +53,7 @@ describe('Shell', () => {
               { path: 'matrice', component: MatrixStub },
               { path: 'objectifs/nouveau', component: ObjectiveStub },
               { path: 'objectifs/:id', component: ObjectiveStub },
-              { path: 'objectifs/:id/akari', component: ObjectiveStub },
+              { path: 'objectifs/:id/akari', component: ObjectiveStub, data: { fitsWindow: true } },
             ],
           },
         ]),
@@ -297,6 +297,18 @@ describe('Shell', () => {
       expect(content.textContent).toContain('Page des objectifs');
       // Le bouton a disparu avec la note : le focus passe au contenu, pas au document.
       expect(document.activeElement).toBe(root.querySelector('main#contenu'));
+    });
+
+    it('passe la hauteur de la fenêtre à une page qui y tient (data.fitsWindow), et seulement à elle', async () => {
+      const harness = await open('/objectifs/semi/akari');
+      const shell = present(shellOf(harness).querySelector<HTMLElement>('.shell'), 'la coque');
+      expect(shell.classList).toContain('fits-window');
+      // La page est rendue dans .outlet, qui lui passe la hauteur qui reste sous la note (shell.css).
+      expect(shellOf(harness).querySelector('main .content > .outlet')?.textContent).toContain('Page d’un objectif');
+
+      await harness.navigateByUrl('/objectifs/semi');
+      harness.detectChanges();
+      expect(shell.classList).not.toContain('fits-window');
     });
 
     it('place la note avant la page', async () => {

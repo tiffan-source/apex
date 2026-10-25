@@ -23,7 +23,7 @@
         class="conversation"
         libelle="Conversation avec Akari"
         libelleSaisie="Réponds à Akari"
-        placeholder="Réponds à Akari…"
+        indication="Réponds à Akari…"
         [repliques]="replies()"
         [statut]="status()"
         [pret]="ready()"
@@ -40,7 +40,8 @@
         </ng-template>
       </e-conversation>
 
-      <section class="ds-panel ds-gap-6 stages" aria-labelledby="akari-titre-arete">
+      <!-- Au-dessus de 1100px, l'arête défile dans son panneau : il prend le focus pour défiler au clavier. -->
+      <section class="ds-panel ds-gap-6 stages" aria-labelledby="akari-titre-arete" tabindex="0">
         <div class="ds-title-row">
           <h2 class="section" id="akari-titre-arete">L'arête</h2>
           @if (summary()) {

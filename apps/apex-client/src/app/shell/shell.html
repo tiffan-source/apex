@@ -9,7 +9,7 @@
   >Aller au contenu</a
 >
 
-<div class="shell">
+<div class="shell" [class.fits-window]="fitsWindow()">
   <nav class="nav" aria-label="Navigation principale">
     <a eMarque class="brand" routerLink="/">Apex</a>
 
@@ -59,8 +59,9 @@
       }
 
       <!-- Un bloc simple autour de la sortie : sinon router-outlet, élément vide de la colonne, ajouterait
-           l'écart de la coque au-dessus de chaque page. -->
-      <div>
+           l'écart de la coque au-dessus de chaque page. Pour une page qui tient dans la fenêtre, il lui passe la
+           hauteur qui reste. -->
+      <div class="outlet">
         <router-outlet />
       </div>
     </div>

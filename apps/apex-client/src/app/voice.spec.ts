@@ -28,6 +28,7 @@ const READABLE_ATTRIBUTES = [
   'legende',
   'aide',
   'texteVide',
+  'indication',
   'placeholder',
   'title',
   'alt',
@@ -239,7 +240,7 @@ describe('la voix de tout src/app', () => {
       'Mes objectifs', // texte d'un gabarit
       'Aller au contenu', // texte de la coque
       "Légende de l'arête", // aria-label
-      'Réponds à Akari…', // placeholder
+      'Réponds à Akari…', // indication (le texte indicatif de la zone de réponse)
       'Déplacer «', // chaîne d'un [libelle] lié
       "Je m'y engage", // bouton sceau du nouvel objectif
       'Objectifs · Apex', // titre de route

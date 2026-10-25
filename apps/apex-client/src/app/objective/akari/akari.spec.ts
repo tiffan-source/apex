@@ -377,6 +377,27 @@ describe('Akari : les demandes d’accord', () => {
     expect(chat.respondToPermission).toHaveBeenCalledWith(false);
   });
 
+  it('dit la demande aux lecteurs d’écran, une seule fois', async () => {
+    const { fixture, chat } = await setup({ history: HISTORY });
+    const announce = vi.spyOn(TestBed.inject(AnnoncesStore), 'annoncer');
+    asking({ kind: 'stage', title: 'Portfolio', parentId: 'semi' })(chat);
+    await refresh(fixture);
+    expect(announce).toHaveBeenCalledWith("Je te propose d'ajouter l'étape « Portfolio ». On l'ajoute ?");
+
+    // L'état du workflow est relu chaque seconde : la même demande n'est pas redite.
+    chat.permissionRequest.set({ kind: 'stage', title: 'Portfolio', parentId: 'semi' });
+    await refresh(fixture);
+    expect(announce).toHaveBeenCalledTimes(1);
+
+    // Une autre demande, après la réponse, est dite à son tour.
+    chat.isAwaitingPermission.set(false);
+    await refresh(fixture);
+    asking({ kind: 'stage', title: 'Fractionné', parentId: 'semi' })(chat);
+    await refresh(fixture);
+    expect(announce).toHaveBeenLastCalledWith("Je te propose d'ajouter l'étape « Fractionné ». On l'ajoute ?");
+    expect(announce).toHaveBeenCalledTimes(2);
+  });
+
   it('au clavier, la zone de réponse garde le focus pendant qu’Akari travaille, et le retrouve après « Ajouter »', async () => {
     const { fixture, chat, root } = await setup({ history: HISTORY });
     const area = textarea(root);
@@ -606,6 +627,13 @@ describe('Akari : l’arête à droite', () => {
     expect(panel.querySelector('e-arete')?.parentElement?.classList).toContain('ds-hide-mobile');
   });
 
+  it('défile au clavier dans son panneau : le panneau prend le focus et porte le nom de l’arête', async () => {
+    const { root } = await setup();
+    const panel = root.querySelector('section.stages') as HTMLElement;
+    expect(panel.getAttribute('tabindex')).toBe('0');
+    expect(text(root.querySelector(`#${panel.getAttribute('aria-labelledby')}`))).toBe("L'arête");
+  });
+
   it('garde un seul sceau : la tête de l’arête', async () => {
     const { root } = await setup({ history: HISTORY, configure: (c) => {
       c.isAwaitingPermission.set(true);
@@ -613,6 +641,76 @@ describe('Akari : l’arête à droite', () => {
     } });
     expect(root.querySelectorAll('e-arete')).toHaveLength(1);
     expect(root.querySelectorAll('.e-btn--sceau, e-sceau')).toHaveLength(0);
+  });
+});
+
+describe('Akari : sur une seule colonne (1100px et moins)', () => {
+  let narrow = true;
+  let place = { top: 320, bottom: 1100 };
+  const scrolled: { element: Element; options: unknown }[] = [];
+
+  beforeEach(() => {
+    narrow = true;
+    place = { top: 320, bottom: 1100 };
+    scrolled.length = 0;
+    // jsdom n'a ni mise en page ni défilement : la largeur de l'écran, la place de la conversation (sous l'en-tête,
+    // son pied sous la fenêtre de 768px) et le défilement de la page sont simulés.
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 1100px)' && narrow,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return this.tagName === 'E-CONVERSATION'
+        ? new DOMRect(0, place.top, 600, place.bottom - place.top)
+        : new DOMRect();
+    });
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: function (this: Element, options: unknown) {
+        scrolled.push({ element: this, options });
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+  });
+
+  it('descend jusqu’au pied de la conversation quand son historique est là, une seule fois', async () => {
+    const { fixture, chat, root } = await setup({ history: HISTORY, configure: (c) => c.historyLoaded.set(false) });
+    expect(scrolled).toEqual([]);
+
+    chat.historyLoaded.set(true);
+    await refresh(fixture);
+    expect(scrolled).toEqual([{ element: root.querySelector('e-conversation'), options: { block: 'end', behavior: 'instant' } }]);
+
+    // Les relectures suivantes de l'historique ne déplacent plus la page.
+    chat.historyLoaded.set(false);
+    await refresh(fixture);
+    chat.historyLoaded.set(true);
+    await refresh(fixture);
+    expect(scrolled).toHaveLength(1);
+  });
+
+  it('ne bouge pas quand la conversation et l’arête sont côte à côte', async () => {
+    narrow = false;
+    await setup({ history: HISTORY });
+    expect(scrolled).toEqual([]);
+  });
+
+  it('ne bouge pas quand la personne est déjà à la conversation, ou plus bas', async () => {
+    place = { top: -200, bottom: 560 };
+    await setup({ history: HISTORY });
+    expect(scrolled).toEqual([]);
+
+    TestBed.resetTestingModule();
+    place = { top: 40, bottom: 760 };
+    await setup({ history: HISTORY });
+    expect(scrolled).toEqual([]);
   });
 });
 

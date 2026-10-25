@@ -7,10 +7,12 @@ import {
   afterNextRender,
   computed,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
+  type Data,
   isActive,
   type IsActiveMatchOptions,
   NavigationEnd,
@@ -87,13 +89,22 @@ export class Shell {
   /** Le chemin de la page affichée (sans requête ni fragment) ; null avant la première navigation. */
   private shownPath: string | null = null;
 
+  /**
+   * La page affichée tient dans la fenêtre (data.fitsWindow de sa route : Akari). Au-dessus de 1100px, la coque
+   * lui passe la hauteur de l'écran, moins ses marges et la note d'Akari (shell.css).
+   */
+  protected readonly fitsWindow = signal(false);
+
   constructor() {
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe((event) => this.pageShown(event.urlAfterRedirects));
+      .subscribe((event) => {
+        this.fitsWindow.set(this.shownRouteData()['fitsWindow'] === true);
+        this.pageShown(event.urlAfterRedirects);
+      });
   }
 
   /*
@@ -134,6 +145,13 @@ export class Shell {
    */
   protected goToContent(): void {
     this.content().nativeElement.focus();
+  }
+
+  /** Les données de la route affichée : la plus profonde. */
+  private shownRouteData(): Data {
+    let route = this.router.routerState.snapshot.root;
+    while (route.firstChild) route = route.firstChild;
+    return route.data;
   }
 
   /**

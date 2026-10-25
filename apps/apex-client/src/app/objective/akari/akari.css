@@ -35,14 +35,23 @@
 }
 
 /* Au-dessus de 1100px (la conversation et l'arête côte à côte), l'écran tient
-   dans la fenêtre : l'en-tête garde sa hauteur, les deux panneaux prennent le
-   reste. La conversation s'ouvre sur ses dernières répliques avec sa zone de
-   réponse visible, sans faire défiler la page ; l'arête défile aussi quand ses
-   étapes sont nombreuses. Les marges de la coque viennent de shell.css. */
+   dans la fenêtre : la coque lui passe la hauteur qui reste (la route porte
+   data.fitsWindow, shell.css), l'en-tête garde la sienne et les deux panneaux
+   prennent le reste. La conversation s'ouvre sur ses dernières répliques avec
+   sa zone de réponse visible, sans faire défiler la page ; l'arête défile aussi
+   quand ses étapes sont nombreuses. Chaque niveau garde min-height: 0 : sans
+   lui, la hauteur de toute la conversation remonterait jusqu'à la page. */
 @media (width > 1100px) {
+  :host {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
   .akari {
-    height: calc(100dvh - var(--shell-padding-top, 0px) - var(--shell-padding-bottom, 0px));
-    min-height: 36rem;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .panels {
@@ -58,7 +67,8 @@
 }
 
 /* 1100px : une seule colonne. La conversation prend la hauteur de la fenêtre
-   (entière à l'écran, sa zone de réponse y est aussi), l'arête suit dessous. */
+   (entière à l'écran, sa zone de réponse y est aussi) et la page y descend à
+   l'ouverture (akari.ts) ; l'arête suit dessous. */
 @media (max-width: 1100px) {
   .conversation {
     height: min(calc(100svh - var(--pas-8)), 48rem);

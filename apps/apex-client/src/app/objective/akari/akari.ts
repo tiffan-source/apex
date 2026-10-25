@@ -1,6 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
+  ElementRef,
+  afterRenderEffect,
   computed,
   effect,
   inject,
@@ -8,6 +11,7 @@ import {
   linkedSignal,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
@@ -48,6 +52,9 @@ export type AkariReply = Replique & {
   /** L'invitation qu'accepte son bouton. */
   readonly invitation?: AkariInvitation;
 };
+
+/** Une seule colonne (akari.css) : la conversation suit l'en-tête de la page. */
+const STACKED_LAYOUT = '(max-width: 1100px)';
 
 /** Les répliques que l'écran ajoute après les messages, et les boutons de la demande d'accord. */
 export const INVITATION_REPLY_ID = 'akari-invitation';
@@ -103,9 +110,10 @@ export function permissionPrompt(
  * d'Empreinte), l'arête de l'objectif à droite, qui se remplit quand la personne accepte une étape ou un pas.
  * La tête de l'arête est le seul sceau de l'écran.
  *
- * L'écran tient dans la fenêtre : la conversation défile à l'intérieur, s'ouvre sur ses dernières répliques
- * et garde sa zone de réponse au pied (akari.css). Empreinte suit la fin de la conversation et rend le focus
- * à la zone de réponse quand un bouton d'une réplique disparaît.
+ * Au-dessus de 1100px, l'écran tient dans la fenêtre (data.fitsWindow de sa route, akari.css) : la conversation
+ * défile à l'intérieur, s'ouvre sur ses dernières répliques et garde sa zone de réponse au pied. En dessous, elle
+ * suit l'en-tête, et la page y descend à l'ouverture. Empreinte suit la fin de la conversation et rend le focus à
+ * la zone de réponse quand un bouton d'une réplique disparaît.
  */
 @Component({
   selector: 'app-akari',
@@ -125,6 +133,10 @@ export class Akari {
   private readonly objectives = inject(ObjectiveStore);
   private readonly annonces = inject(AnnoncesStore);
   private readonly session = inject(SessionStore);
+  private readonly document = inject(DOCUMENT);
+
+  /** La conversation d'Empreinte, amenée à l'écran à l'ouverture quand elle suit l'en-tête (une seule colonne). */
+  private readonly conversation = viewChild(EConversation, { read: ElementRef });
 
   /** Un objectif racine connu : une étape n'a pas de conversation à elle. */
   private readonly known = computed(() => this.objectives.objectiveOptions().some((option) => option.valeur === this.id()));
@@ -288,6 +300,34 @@ export class Akari {
         this.chat.loadChatHistory({ objectifId: id });
         this.chat.initWorkflow(id);
       });
+    });
+
+    // La demande d'accord arrive dans le fil, qui ne se lit pas à voix haute : sa phrase est dite une fois (la
+    // ligne d'état dit seulement « Akari attend ton accord. »), pour que ses deux boutons aient un sens.
+    let announced = '';
+    effect(() => {
+      const phrase = this.chat.isAwaitingPermission() ? this.permissionPhrase() : '';
+      if (phrase && phrase !== announced) this.annonces.annoncer(phrase);
+      announced = phrase;
+    });
+
+    // Une seule colonne (1100px et moins) : la conversation suit l'en-tête de la page. Quand son historique est là,
+    // la page descend jusqu'à son pied : ses dernières répliques et sa zone de réponse sont à l'écran. Une fois par
+    // objectif ouvert, et seulement si la conversation est encore plus bas (la personne n'y est pas déjà, ni plus
+    // bas, comme après un retour arrière qui retrouve sa place).
+    let framedFor: string | null = null;
+    afterRenderEffect({
+      earlyRead: () => {
+        const id = this.openedFor();
+        const host = this.conversation()?.nativeElement as HTMLElement | undefined;
+        if (!id || !host || !this.chat.historyLoaded() || framedFor === id) return null;
+        framedFor = id;
+        const view = this.document.defaultView;
+        if (!view || typeof view.matchMedia !== 'function' || !view.matchMedia(STACKED_LAYOUT).matches) return null;
+        const { top, bottom } = host.getBoundingClientRect();
+        return top >= 0 && bottom > view.innerHeight ? host : null;
+      },
+      write: (below) => below()?.scrollIntoView({ block: 'end', behavior: 'instant' }),
     });
   }
 

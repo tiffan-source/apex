@@ -62,14 +62,11 @@
   gap: var(--pas-4);
 }
 
-/* La page, à côté de la navigation. Ses marges haute et basse sont aussi lues
-   par un écran qui tient dans la fenêtre (Akari : 100dvh moins ces marges). */
+/* La page, à côté de la navigation. */
 .page {
-  --shell-padding-top: var(--pas-12);
-  --shell-padding-bottom: 72px;
   min-width: 0;
   box-sizing: border-box;
-  padding: var(--shell-padding-top) 56px var(--shell-padding-bottom);
+  padding: var(--pas-12) 56px 72px;
 }
 
 /* Le contenu de la page : centré, 1120px au plus. */
@@ -119,6 +116,41 @@
   background: var(--creux);
 }
 
+/* Une page qui tient dans la fenêtre (la route le dit : data.fitsWindow, pour
+   Akari). Au-dessus de 1100px, la coque prend la hauteur de l'écran et la
+   passe à la page (.outlet, puis l'hôte du composant), moins ses marges et la
+   note d'Akari quand il y en a une : ce qui déborde défile dans les panneaux
+   de la page, pas dans la fenêtre. Sur une fenêtre très basse, la coque garde
+   32rem et la fenêtre défile. Sous 1100px, la page défile normalement. */
+@media (width > 1100px) {
+  .fits-window {
+    grid-template-rows: minmax(0, 1fr);
+    height: max(100vh, 32rem);
+    height: max(100dvh, 32rem);
+  }
+
+  .fits-window .page {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Un élément flexible centré par ses marges ne s'étire plus : la largeur
+     revient à 100% (1120px au plus). */
+  .fits-window .content {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .fits-window .outlet {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
 /* 760px : mobile */
 @media (max-width: 760px) {
   /* Une seule colonne : le bandeau garde sa hauteur, la page prend le reste,
@@ -129,9 +161,7 @@
   }
 
   .page {
-    --shell-padding-top: var(--pas-6);
-    --shell-padding-bottom: var(--pas-12);
-    padding: var(--shell-padding-top) var(--pas-4) var(--shell-padding-bottom);
+    padding: var(--pas-6) var(--pas-4) var(--pas-12);
   }
 
   /* La navigation devient un bandeau, avec un filet trame dessous, qui part

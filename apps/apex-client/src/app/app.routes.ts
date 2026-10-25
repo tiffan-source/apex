@@ -42,6 +42,8 @@ export const routes: Routes = [
       {
         path: 'objectifs/:id/akari',
         title: 'Akari · Apex',
+        // L'écran tient dans la fenêtre au-dessus de 1100px : la coque lui donne la hauteur qui reste (shell.css).
+        data: { fitsWindow: true },
         loadComponent: () => import('./objective/akari/akari').then((m) => m.Akari),
       },
       {
