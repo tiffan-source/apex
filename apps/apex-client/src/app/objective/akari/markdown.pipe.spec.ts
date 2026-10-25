@@ -42,7 +42,7 @@ describe('renderMarkdown', () => {
   it('ne charge rien tout seul : une image devient un lien, les médias écrits en HTML partent', () => {
     const html = renderMarkdown('Voici ![une carte](https://exemple.fr/carte.png?q=secret).');
     expect(html).not.toMatch(/<img/);
-    expect(html).toContain('<a href="https://exemple.fr/carte.png?q=secret" class="ds-link">une carte</a>');
+    expect(html).toContain('<a href="https://exemple.fr/carte.png?q=secret">une carte</a>');
 
     const media = renderMarkdown('<img src="https://exemple.fr/x.png"><video src="v.mp4"></video><audio src="a.mp3"></audio><picture><source srcset="s.png"></picture>');
     expect(media).not.toMatch(/<img|<video|<audio|<picture|<source|exemple\.fr|v\.mp4|a\.mp3|s\.png/);
@@ -65,8 +65,8 @@ describe('renderMarkdown', () => {
     expect(renderMarkdown('![clic](javascript:alert(1))')).not.toMatch(/javascript:/);
   });
 
-  it('donne aux liens l’encre du texte (.ds-link)', () => {
-    expect(renderMarkdown('[Empreinte](https://exemple.fr)')).toContain('<a href="https://exemple.fr" class="ds-link">Empreinte</a>');
+  it('garde les liens sans classe : leur encre vient de la prose d’Empreinte', () => {
+    expect(renderMarkdown('[Empreinte](https://exemple.fr)')).toContain('<a href="https://exemple.fr">Empreinte</a>');
   });
 
   it('rend vide un texte vide', () => {

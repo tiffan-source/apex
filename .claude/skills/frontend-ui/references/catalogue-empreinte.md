@@ -1,6 +1,6 @@
 # Catalogue : les composants Empreinte pour Apex
 
-Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.1.1** et **`@empreinte-studio/tokens` 0.1.1**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt), sauf la coque de navigation, qu'Apex n'utilise plus (§ 2.16). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
+Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.3.0** et **`@empreinte-studio/tokens` 0.3.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
 
 Le cahier de la migration (`docs/features/migration-empreinte.md`) fixe le périmètre, le vocabulaire et les règles d'écran ; ce catalogue dit **avec quoi** les construire.
 
@@ -25,7 +25,7 @@ import { EMatrice, EMatriceElement } from '@empreinte-studio/angular/matrice'; /
 
 ### 1.1 Dépendances
 
-`@empreinte-studio/angular` 0.1.1 demande en pair `@angular/aria`, `@angular/cdk`, `@angular/common`, `@angular/core`, `@angular/forms` en `^22.2.0` (installés en 22.2.3). Il dépend de `@empreinte-studio/tokens` 0.1.1, qui dépend de `@fontsource/schibsted-grotesk` et `@fontsource/shippori-mincho` (présents dans `node_modules`). Aucune feuille du CDK n'est à charger : le CDK injecte lui-même les styles de l'overlay, du drag-drop et du text-field.
+`@empreinte-studio/angular` 0.3.0 demande en pair `@angular/aria`, `@angular/cdk`, `@angular/common`, `@angular/core`, `@angular/forms` en `^22.2.0` (installés en 22.2.3). Il dépend de `@empreinte-studio/tokens` 0.3.0, qui dépend de `@fontsource/schibsted-grotesk` et `@fontsource/shippori-mincho` (présents dans `node_modules`). Aucune feuille du CDK n'est à charger : le CDK injecte lui-même les styles de l'overlay, du drag-drop et du text-field.
 
 ### 1.2 Les styles globaux
 
@@ -395,6 +395,40 @@ Hôte : `e-note`, `e-note--large`, `aria-label`. Rendu : `p.e-note__qui` (signat
 </aside>
 ```
 
+### 2.10 bis `conversation` : `EConversation`, `EReplique`, `EFil`, `ERepliqueActions`, `ERepliqueContenu`
+
+**`<e-conversation>`** — la conversation avec Akari, d'après la maquette `Akari` : le fil des répliques (la signature dans une colonne de 96px, Akari en `voix` avec son losange, la personne en `corps`, sans bulle), la ligne d'état et la zone de réponse. Présentationnelle : elle annonce `(envoyer)` et `(action)`, l'écran décide.
+
+| Entrée | Type | Défaut | Effet |
+| --- | --- | --- | --- |
+| `repliques` | `readonly R[]` (`R extends Replique`) | `[]` | Les répliques, de la plus ancienne à la plus récente, suivies par `id`. |
+| `statut` | `string` | `''` | Ce que fait Akari (« Akari réfléchit… »), dans un `p[role=status][aria-live=polite]` sous la dernière réplique ; sans place quand il est vide. |
+| `pret` | bool | `true` | L'envoi est possible. Faux : on écrit quand même, mais Entrée et « Envoyer » attendent. |
+| `saisie` | bool | `true` | Afficher la zone de réponse. |
+| `brouillon` | `model<string>` | `''` | Ce qui est écrit, en `[(brouillon)]` si l'écran veut le garder ; vidé après un envoi. |
+| `assistant`, `personne` | `string` | `'Akari'`, `'Toi'` | Les signatures, reprises aussi par les `li[eReplique]` posés dans la conversation. |
+| `libelle`, `libelleSaisie`, `indication` | `string` | « Conversation avec Akari », « Réponds à Akari », « Réponds à Akari… » | Nom du fil (région qui défile, `tabindex=0`), libellé masqué et texte indicatif (`placeholder`) de la zone de réponse ; par défaut, ils reprennent `assistant`. |
+| `libelleEnvoyer`, `libelleRetour` | `string` | « Envoyer », « Dernières répliques » | Le bouton d'envoi (icône seule) et celui qui ramène à la fin. |
+
+Sorties : `envoyer` (`string`, le texte sans ses espaces autour), `action` (`ActionChoisie<R>` = `{ replique, action }`). Méthodes publiques (`exportAs: 'eConversation'`) : `allerALaFin()`, `focaliser()`.
+
+`Replique` = `{ id, auteur: 'assistant' | 'personne', texte, qui?, actions?: ActionReplique[], enAttente? }` ; `ActionReplique` = `{ id, libelle, variante?: 'trait' | 'nu' }` (par défaut la première en trait, les suivantes nues ; deux au plus : au-delà, la console prévient en développement, une fois par réplique). `enAttente` écrit la réplique en encre douce (envoi en cours). Le texte est affiché tel quel (retours à la ligne gardés) sauf avec `ng-template[eRepliqueContenu]` (contexte `$implicit` : la réplique), où l'écran rend son Markdown. Les deux sont posés dans `div.e-replique__prose`, seul à recevoir la prose d'Empreinte, à spécificité nulle (paragraphes espacés de 12px, puces carrées, liens à l'encre soulignés, `em` en `sens` sans italique, titres à la taille du texte, code et tableaux qui défilent) : un composant placé dans une réplique garde son apparence, et la feuille d'un écran peut ajuster la prose sans `!important`.
+
+Comportement : le fil défile seul (hauteur à donner à l'hôte), s'ouvre sur les dernières répliques d'un coup (même quand il reste moins d'un écran à défiler ; masqué, il attend d'être affiché), les suit tant que la personne en lit la fin (une réplique qui arrive glisse ; au-delà d'un écran, d'un coup ; sans mouvement, toujours d'un coup), la laisse relire plus haut sans bouger et lui propose alors « Dernières répliques ». Les réponses d'Akari qui arrivent se déplient depuis leur pli haut (pas celles de l'ouverture). Entrée envoie, Maj+Entrée va à la ligne ; un envoi ramène à la fin. Quand l'élément qui avait le focus disparaît (un bouton de réplique après un clic), le focus revient à la zone de réponse. Une liste vide repart de zéro.
+
+Mise en page : l'hôte est une colonne flexible sans marge ni fond ; l'écran règle sa hauteur et sa marge latérale par `--e-conversation-retrait` (`pas-8` par défaut) — la seule variable d'Empreinte qu'une application règle. Étroit (fil de moins de 480px), le nom passe au-dessus de la phrase (requête de conteneur).
+
+**`ol[eFil]`, `ul[eFil]`** (`EFil`) — un fil sans défilement ni zone de réponse (les questions d'Akari au-dessus des champs du nouvel objectif). Hôte : `e-fil` (liste nue, répliques espacées de 28px, conteneur de requête).
+
+**`li[eReplique]`** (`EReplique`, `exportAs: 'eReplique'`) — entrées `auteur` (`'assistant'` par défaut), `qui` (par défaut le nom de la conversation qui l'accueille, sinon « Akari » ou « Toi »), `enAttente` (bool). Rendu : `p.e-replique__qui`, `div.e-replique__texte[id]` (le contenu projeté ; `idTexte` est public), puis l'élément `[eRepliqueActions]` (`e-replique__actions`, sous la phrase). Hôte : `e-replique`, `e-replique--assistant` | `--personne`, `--en-attente`. Les blocs posés directement dans une réplique (`p`, listes, titres) perdent les marges du navigateur ; un texte riche posé à la main va dans `div.e-replique__prose`. Dans une `e-conversation`, un `li[eReplique]` projeté se place après les répliques et reprend les noms de la conversation ; sous un `@if`, une seule racine par bloc (un bloc à plusieurs racines ne va pas dans l'emplacement des répliques).
+
+```html
+<e-conversation class="conversation" [repliques]="repliques()" [statut]="statut()" [pret]="pret()"
+                [personne]="prenom()" (envoyer)="envoyer($event)" (action)="choisir($event)">
+  <ng-template [eRepliqueContenu]="repliques()" let-r><div [innerHTML]="r.texte | markdown"></div></ng-template>
+</e-conversation>
+```
+
 ### 2.11 `champ` : `EChamp`, `ESaisie`, `ETailleAuto`, `ecrireErreur`
 
 **`<e-champ>`** — libellé toujours visible, contrôle, aide, message.
@@ -417,7 +451,7 @@ Fournit `CONTEXTE_CHAMP` ; trouve le premier `CONTROLE_CHAMP` descendant (`input
 
 Hôte : `e-saisie` (creux carré, 100 % de large, 44px min, 88px pour un `textarea`), `id`, `aria-describedby` (depuis le champ), `aria-invalid="true"` si invalide. Formulaires : élément natif, donc `formControlName`, `[(ngModel)]`, `[formField]`. **Avec Signal Forms seulement** (`[formField]`, jeton `FORM_FIELD`), la première erreur s'écrit seule dans le champ, une fois le contrôle touché, via `ecrireErreur`. Avec les formulaires réactifs d'Apex, passer le message par `[erreur]` du champ.
 
-**`textarea[eSaisie][tailleAuto]`** (`ETailleAuto`) — grandit avec le texte (`CdkTextareaAutosize` en directive hôte). Entrées `lignesMin`, `lignesMax` (nombres). Hôte : `e-saisie--taille-auto` (56px min, pas de poignée).
+**`textarea[eSaisie][tailleAuto]`** (`ETailleAuto`) — grandit avec le texte (`CdkTextareaAutosize` en directive hôte). Entrées `lignesMin`, `lignesMax` (nombres). Hôte : `e-saisie--taille-auto` (content-box, sans hauteur minimale propre : le CDK écrit la hauteur en lignes de 24px, plus les marges, soit 68px pour 2 lignes ; au-delà de `lignesMax`, le texte défile ; pas de poignée). Jusqu'à la 0.2, une hauteur minimale de 56px faussait la mesure du CDK (112px pour 2 lignes, dernière ligne coupée).
 
 **`ecrireErreur(erreur: ValidationError): string`** — le `message` du validateur passe en premier ; sinon, vérifié à l'exécution :
 
@@ -556,7 +590,7 @@ Vues qui sont des routes (liens, sans rôle d'onglet) : **`nav[eVues]`** (`e-ong
 | `e-marque`, `a[eMarque]` | — | `e-marque` | Petit sceau à corne (non compté par le gardien) + nom en `sens` 26/32 semi-gras, 44px. |
 | `nav[eFilAriane]` | `libelle: string` (défaut « Fil d'Ariane ») | `e-fil-ariane`, `aria-label` | Fil d'Ariane : `ol > li`, séparateurs « / » dessinés, liens soulignés `encre-douce`, page courante `[aria-current=page]` en encre. |
 
-**La coque est celle d'Apex**, dans `app/shell/shell.html` et `shell.css` : une grille de deux colonnes, la navigation (232px, à hauteur d'écran, qui reste à l'écran quand la page défile, un filet `trame` à droite) et la page (`padding: 48px 56px 72px`, contenu centré de 1120px au plus, sections espacées de 40px). Sous 760px, une seule colonne : la navigation devient un bandeau au-dessus de la page (`padding: 24px 16px 48px`), ses entrées ne gardent que leur icône (le libellé, dans un `span.link-label` d'Apex, est caché visuellement mais reste lu) et son bas (la personne, les réglages) disparaît au profit d'un `e-menu` en `.ds-show-mobile`. La version 0.1.1 d'Empreinte livre encore une coque (`ECoque`, `ECoquePrincipal`, `ECoqueContenu`, `ENav`, `ENavListe`, `ENavBas`) : Apex ne s'en sert plus, et elle quitte Empreinte à la version suivante.
+**La coque est celle d'Apex**, dans `app/shell/shell.html` et `shell.css` : une grille de deux colonnes, la navigation (232px, à hauteur d'écran, qui reste à l'écran quand la page défile, un filet `trame` à droite) et la page (`padding: 48px 56px 72px`, contenu centré de 1120px au plus, sections espacées de 40px). Sous 760px, une seule colonne : la navigation devient un bandeau au-dessus de la page (`padding: 24px 16px 48px`), ses entrées ne gardent que leur icône (le libellé, dans un `span.link-label` d'Apex, est caché visuellement mais reste lu) et son bas (la personne, les réglages) disparaît au profit d'un `e-menu` en `.ds-show-mobile`. Depuis la 0.2, Empreinte ne livre plus de coque (`ECoque`, `ENav`… ont été retirés) : chaque application écrit la sienne. Une route qui porte `data: { fitsWindow: true }` (Akari) tient dans la fenêtre au-dessus de 1100px : la coque prend la hauteur de l'écran (32rem au moins) et la passe à la page par `.outlet` (classe `fits-window` sur `.shell`), moins ses marges et sa note ; l'hôte du composant de la page la reçoit en colonne flexible (`:host { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0 }`).
 
 Structure de la coque d'Apex (entrées V1 : Objectifs, Matrice) :
 
@@ -898,6 +932,7 @@ Toutes sont réellement présentes dans les feuilles embarquées des paquets ins
 | Case | `e-case` | `ECase`, `ETache` (case interne) | porteur case (`ECase`), porteur liste, `ETache` |
 | Tâche | `e-liste`, `e-tache`, `e-tache--faite`, `e-tache--attend`, `e-tache__texte`, `e-tache__titre`, `e-tache__meta`, `e-tache__actions` | `EListe`, `ETache` | porteur liste (`EListe`), `ETache` |
 | Note | `e-note`, `e-note--large`, `e-note__qui`, `e-note__voix`, `e-note__actions` | `ENote`, `ENoteActions` | `ENote` |
+| Conversation | `e-conversation`, `e-conversation--prete`, `e-conversation__cadre`, `e-conversation__defilement`, `e-conversation__contenu`, `e-conversation__statut`, `e-conversation__retour`, `e-conversation__saisie`, `e-conversation__envoyer`, `e-fil`, `e-replique`, `e-replique--assistant`, `--personne`, `--en-attente`, `e-replique__qui`, `e-replique__texte`, `e-replique__prose`, `e-replique__brut`, `e-replique__actions` | `EConversation`, `EFil`, `EReplique`, `ERepliqueActions` | `EConversation`, `EReplique`, porteur conversation (`EFil`) |
 | Champ | `e-champ`, `e-champ__libelle`, `e-champ__facultatif`, `e-champ__aide`, `e-champ__message`, `e-saisie`, `e-saisie--taille-auto` | `EChamp`, `ESaisie`, `ETailleAuto` | porteur champ (`ESaisie`), `EChamp` |
 | Sélection | `e-selection-hote`, `e-selection`, `e-selection__valeur`, `e-selection__valeur--vide`, `e-selection__chevron`, `e-liste-options`, `e-option` | `ESelection` | `ESelection` |
 | Menu | `e-menu-hote`, `e-menu`, `e-menu__element`, `e-menu__element--doux`, `e-menu__separateur` | `EMenu` | `EMenu`, `ESelection` |
@@ -1048,7 +1083,7 @@ Inventaire des usages actuels sous `apps/apex-client/src/app` : 24 `<p-button>`,
 22. **`input[type=date][eSaisie]`** renvoie une chaîne `aaaa-mm-jj`, plus une `Date` comme `p-datepicker`.
 23. **`ECase`** fait 20px : une `<label for>` (ou un `<label>` qui l'entoure) donne la cible confortable. `type="checkbox"` doit être statique.
 24. **`EBouton`** : pas d'état de chargement ; `aria-disabled="true"` sur un lien ne bloque pas la navigation ; pas de style de focus propre (celui de `base.css`).
-25. **`ENote`** : prévue une par écran ; `div[eNote]` porte un `aria-label` sans rôle (préférer `aside` ou `section`).
+25. **`ENote`** : prévue une par écran ; `div[eNote]` porte un `aria-label` sans rôle (préférer `aside` ou `section`). Dans un fil, une phrase d'Akari est un `li[eReplique]`, jamais une note. **`e-conversation`** : sans hauteur sur l'hôte (ou un conteneur qui en donne une), elle grandit avec ce qui est dit et la page défile à sa place. Le défilement, la fin suivie et le retour du focus sont les siens : ne pas les refaire dans l'écran (`scrollIntoView`, `viewChildren` des répliques…). Dans jsdom (Vitest), pas de `ResizeObserver` ni de mise en page : ces comportements se vérifient dans les tests d'Empreinte et dans le navigateur.
 26. **Feuilles** : le composant ouvert hérite de l'injecteur racine → `cdk: { injector }` pour atteindre `ObjectiveStore` (fourni par la coque). `autoFocus` va sur le titre : le titre est requis. Écraser `panelClass` par `cdk` fait perdre le panneau. Une feuille est centrée (position par défaut du CDK Dialog) ; aucun style de panneau latéral n'existe.
 27. **Navigation** : sous 760px, la coque d'Apex cache le bas de la navigation (réglages, personne) et le libellé des entrées ; pour l'entrée `/`, `[routerLinkActiveOptions]="{ exact: true }"` sinon elle est active partout.
 28. **Overlays** (`e-menu`, `e-selection`) : CDK en popover natif ; dans jsdom (Vitest), le CDK repasse en overlay classique (pas de `showPopover`).
@@ -1078,7 +1113,7 @@ Relevé en comparant les maquettes `Objectifs`, `Arete`, `Matrice`, `Akari` au c
 | Matrice | Compte de quadrant non personnalisable (« Important · urgent · 4 pas aujourd'hui » impossible, seulement « 4 pas ») ; titres `h3` figés | Accepter « N pas ». |
 | Matrice | Sous 640px, les axes « Urgent / Pas urgent » restent au-dessus d'une grille passée sur une colonne (la maquette masque les axes) — lu dans la feuille, **non vérifié à l'écran** | À vérifier à 375px ; sinon demande de correction à Empreinte. |
 | Matrice | Pas de ligne « case + titre + objectif » sans le padding de `li[eTache]` dans un quadrant | `ul[eListe nue] > li[eTache]` (padding en plus), ou `input[eCase]` + `label` dans une grille `.ds-check` (fait). |
-| Akari | Pas de composant « réplique » : `ENote` est une note par écran, signature au-dessus du texte, et `.e-note__qui` (le losange signé « AKARI ») n'est stylé que si une `ENote` est affichée | Soit une `div[eNote]` par réplique d'Akari (contraire à « une note par écran »), soit une demande d'ajout à Empreinte ; les répliques de la personne : `p.repere` + `p.corps` dans `li.reply` (`conversation.css`). |
+| Akari | ~~Pas de composant « réplique »~~ | Réglé en 0.3.0 : `e-conversation`, `ol[eFil]`, `li[eReplique]` (§ 2.10 bis). |
 | Akari (nouvel objectif) | `EArete` n'a pas de variante brouillon : la tête est toujours un sceau, comptée au gardien → avec le bouton `sceau` « Je m'y engage », deux sceaux | Ne pas afficher l'aperçu d'arête dans le brouillon (la maquette le masque déjà sur mobile) et garder la liste numérotée des étapes ; ou demande d'ajout à Empreinte. |
-| Akari | Aucun style pour le HTML Markdown rendu (listes, titres, code) | `.ds-prose` sur le conteneur du Markdown, globale : le HTML inséré par `[innerHTML]` n'est pas encapsulé. |
+| Akari | ~~Aucun style pour le HTML Markdown rendu~~ | Réglé en 0.3.0 : la prose d'une réplique (§ 2.10 bis) ; `.ds-prose` et `.ds-link` ont quitté Apex. |
 | Voix (toutes) | `motsAEviter` rate les mots accentués et ne connaît pas « erreur » ni les emoji (§ 8.6) | Motifs complémentaires dans le test de voix d'Apex. |

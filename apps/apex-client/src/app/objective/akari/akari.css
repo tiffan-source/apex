@@ -1,25 +1,24 @@
 /*
- * Akari pour un objectif. Le fil des répliques est dans conversation.css.
+ * Akari pour un objectif : la conversation à gauche, l'arête à droite.
+ * La conversation est le composant e-conversation d'Empreinte (le fil, les répliques, la ligne d'état, la
+ * zone de réponse, le défilement). Apex règle sa place dans l'écran : sa hauteur et ses marges.
  */
 
 /* Les enfants directs perdent leurs marges par défaut (p) : l'espacement vient
    de l'écart du conteneur. Spécificité nulle : une marge propre à un
    composant d'Empreinte l'emporte. */
-:where(.composer > *, .stage > *) {
+:where(.stage > *) {
   margin: 0;
 }
 
-/* Zone de réponse : la saisie (textarea[eSaisie]) prend la place, le bouton
-   d'envoi reste à sa taille, aligné en bas. */
-.composer {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--pas-3);
-}
-
-.composer > textarea {
-  flex: 1 1 auto;
-  min-width: 0;
+/* La conversation est un panneau de la trame sans marge propre : Empreinte
+   pose celles du fil et de la zone de réponse, alignées sur les panneaux
+   (--ds-panel-padding-inline). Le fil défile dedans, sous la zone de
+   réponse qui reste au pied. */
+.conversation {
+  --e-conversation-retrait: var(--ds-panel-padding-inline);
+  min-height: 0;
+  background: var(--panneau);
 }
 
 /* Une étape de la liste : son numéro dans une colonne étroite (28px), le nom,
@@ -33,4 +32,53 @@
 
 .stage > :nth-child(n + 4) {
   grid-column: 2 / -1;
+}
+
+/* Au-dessus de 1100px (la conversation et l'arête côte à côte), l'écran tient
+   dans la fenêtre : la coque lui passe la hauteur qui reste (la route porte
+   data.fitsWindow, shell.css), l'en-tête garde la sienne et les deux panneaux
+   prennent le reste. La conversation s'ouvre sur ses dernières répliques avec
+   sa zone de réponse visible, sans faire défiler la page ; l'arête défile aussi
+   quand ses étapes sont nombreuses. Chaque niveau garde min-height: 0 : sans
+   lui, la hauteur de toute la conversation remonterait jusqu'à la page. */
+@media (width > 1100px) {
+  :host {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .akari {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .panels {
+    flex: 1 1 0;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .stages {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+/* 1100px : une seule colonne. La conversation prend la hauteur de la fenêtre
+   (entière à l'écran, sa zone de réponse y est aussi) et la page y descend à
+   l'ouverture (akari.ts) ; l'arête suit dessous. */
+@media (max-width: 1100px) {
+  .conversation {
+    height: min(calc(100svh - var(--pas-8)), 48rem);
+    min-height: 24rem;
+  }
+}
+
+/* 760px : mobile, les marges plus serrées des panneaux. */
+@media (max-width: 760px) {
+  .conversation {
+    --e-conversation-retrait: var(--ds-panel-padding-inline-mobile);
+  }
 }

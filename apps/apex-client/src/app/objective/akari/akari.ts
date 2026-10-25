@@ -12,25 +12,24 @@ import {
   signal,
   untracked,
   viewChild,
-  viewChildren,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
+  type ActionChoisie,
   EArete,
   EBouton,
+  EConversation,
   EFilAriane,
   EIcone,
-  ENote,
-  ENoteActions,
-  ESaisie,
-  ETailleAuto,
-  PreferencesMouvement,
+  ERepliqueContenu,
+  type Replique,
   compter,
 } from '@empreinte-studio/angular';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../../chore/stores/annonces.store';
 import { CRUMB_TITLE_MAX, shortTitle } from '../../../chore/mapper/title.mapper';
 import { SessionStore } from '../../../chore/stores/session.store';
+import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
 import { ChatStore } from './chat.store';
 import { PermissionRequestViewModel } from './chat.models';
 import { MarkdownPipe } from './markdown.pipe';
@@ -43,6 +42,25 @@ export type AkariInvitation = {
   action: string;
   message: string;
 };
+
+/**
+ * Une réplique du fil d'Akari : un message de la conversation, l'invitation d'Akari ou sa demande d'accord.
+ * Un message est rendu en Markdown assaini ; les phrases de l'écran restent du texte.
+ */
+export type AkariReply = Replique & {
+  readonly markdown: boolean;
+  /** L'invitation qu'accepte son bouton. */
+  readonly invitation?: AkariInvitation;
+};
+
+/** Une seule colonne (akari.css) : la conversation suit l'en-tête de la page. */
+const STACKED_LAYOUT = '(max-width: 1100px)';
+
+/** Les répliques que l'écran ajoute après les messages, et les boutons de la demande d'accord. */
+export const INVITATION_REPLY_ID = 'akari-invitation';
+export const PERMISSION_REPLY_ID = 'akari-demande';
+export const ACCEPT_ACTION = 'accepter';
+export const DECLINE_ACTION = 'pas-maintenant';
 
 /** Akari ouvre une conversation vide sur l'objectif. */
 export function objectiveInvitation(objectiveTitle: string): AkariInvitation {
@@ -88,26 +106,20 @@ export function permissionPrompt(
 }
 
 /**
- * Akari pour un objectif (/objectifs/:id/akari) : la conversation avec Akari à gauche, l'arête de
- * l'objectif à droite, qui se remplit quand la personne accepte une étape ou un pas. La tête de
- * l'arête est le seul sceau de l'écran.
+ * Akari pour un objectif (/objectifs/:id/akari) : la conversation avec Akari à gauche (e-conversation
+ * d'Empreinte), l'arête de l'objectif à droite, qui se remplit quand la personne accepte une étape ou un pas.
+ * La tête de l'arête est le seul sceau de l'écran.
+ *
+ * Au-dessus de 1100px, l'écran tient dans la fenêtre (data.fitsWindow de sa route, akari.css) : la conversation
+ * défile à l'intérieur, s'ouvre sur ses dernières répliques et garde sa zone de réponse au pied. En dessous, elle
+ * suit l'en-tête, et la page y descend à l'ouverture. Empreinte suit la fin de la conversation et rend le focus à
+ * la zone de réponse quand un bouton d'une réplique disparaît.
  */
 @Component({
   selector: 'app-akari',
-  imports: [
-    RouterLink,
-    EArete,
-    EBouton,
-    EFilAriane,
-    EIcone,
-    ENote,
-    ENoteActions,
-    ESaisie,
-    ETailleAuto,
-    MarkdownPipe,
-  ],
+  imports: [RouterLink, EArete, EBouton, EConversation, EFilAriane, EIcone, ERepliqueContenu, MarkdownPipe],
   templateUrl: './akari.html',
-  styleUrls: ['./akari.css', './conversation.css'],
+  styleUrl: './akari.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ChatStore],
 })
@@ -121,8 +133,10 @@ export class Akari {
   private readonly objectives = inject(ObjectiveStore);
   private readonly annonces = inject(AnnoncesStore);
   private readonly session = inject(SessionStore);
-  private readonly mouvement = inject(PreferencesMouvement);
   private readonly document = inject(DOCUMENT);
+
+  /** La conversation d'Empreinte, amenée à l'écran à l'ouverture quand elle suit l'en-tête (une seule colonne). */
+  private readonly conversation = viewChild(EConversation, { read: ElementRef });
 
   /** Un objectif racine connu : une étape n'a pas de conversation à elle. */
   private readonly known = computed(() => this.objectives.objectiveOptions().some((option) => option.valeur === this.id()));
@@ -187,13 +201,9 @@ export class Akari {
 
   /**
    * Akari écoute : le workflow attend un nouveau message, et l'historique est là. Avant, un message envoyé
-   * serait effacé par l'historique qui arrive.
+   * serait effacé par l'historique qui arrive. La personne peut écrire pendant ce temps : seul l'envoi attend.
    */
   protected readonly ready = computed(() => this.chat.historyLoaded() && this.chat.canSendMessage());
-
-  /** Ce qu'écrit la personne. */
-  protected readonly draft = signal('');
-  protected readonly canSend = computed(() => this.ready() && this.draft().trim().length > 0);
 
   /** La personne a parlé depuis son arrivée (sur cet objectif, pour cette étape) : l'invitation s'efface. */
   private readonly spoke = linkedSignal({
@@ -235,20 +245,47 @@ export class Akari {
     return '';
   });
 
-  private readonly replies = viewChildren('reply', { read: ElementRef });
-  private readonly textarea = viewChild('saisie', { read: ElementRef });
-  private readonly acceptButton = viewChild('accept', { read: ElementRef });
+  /**
+   * Le fil : les messages de la conversation, puis l'invitation d'Akari ou sa demande d'accord, avec leurs
+   * boutons. Le message que la personne vient d'envoyer garde son id temporaire jusqu'à son enregistrement :
+   * il s'écrit en encre douce jusque-là.
+   */
+  protected readonly replies = computed<AkariReply[]>(() => {
+    const replies: AkariReply[] = this.chat.orderLatestMessages().map((message) => ({
+      id: message.id,
+      auteur: message.sender === 'user' ? 'personne' : 'assistant',
+      texte: message.content,
+      markdown: true,
+      enAttente: isTemporaryId(message.id),
+    }));
+    const invitation = this.invitation();
+    if (invitation) {
+      replies.push({
+        id: INVITATION_REPLY_ID,
+        auteur: 'assistant',
+        texte: invitation.phrase,
+        markdown: false,
+        invitation,
+        actions: [{ id: ACCEPT_ACTION, libelle: invitation.action }],
+      });
+    }
+    if (this.chat.isAwaitingPermission()) {
+      replies.push({
+        id: PERMISSION_REPLY_ID,
+        auteur: 'assistant',
+        texte: this.permissionPhrase(),
+        markdown: false,
+        actions: [
+          { id: ACCEPT_ACTION, libelle: this.acceptLabel() },
+          { id: DECLINE_ACTION, libelle: 'Pas maintenant' },
+        ],
+      });
+    }
+    return replies;
+  });
 
   /** L'objectif dont la conversation est ouverte. */
   private readonly openedFor = signal<string | null>(null);
-  /**
-   * La personne vient d'envoyer ou de répondre : la zone de réponse est désactivée, ou le bouton cliqué a
-   * disparu, et le focus est perdu. Il revient à la demande d'Akari, ou à la zone de réponse quand Akari
-   * est de nouveau prêt.
-   */
-  private readonly refocus = signal(false);
-  /** La dernière réplique affichée au rendu précédent (référence DOM, pas un état de l'écran). */
-  private lastReply: HTMLElement | null = null;
 
   constructor() {
     // Ouvre la conversation dès que l'objectif est connu : l'historique, puis le workflow,
@@ -265,78 +302,49 @@ export class Akari {
       });
     });
 
-    // Une nouvelle réplique : on la fait venir à l'écran si la personne voyait déjà la fin. À l'ouverture
-    // (aucune réplique avant), d'un coup, sans faire défiler toute la conversation sous ses yeux.
-    afterRenderEffect(() => {
-      const last = (this.replies().at(-1)?.nativeElement as HTMLElement | undefined) ?? null;
-      untracked(() => {
-        const previous = this.lastReply;
-        if (!last || last === previous) return;
-        this.lastReply = last;
-        if (previous?.isConnected && !this.isVisible(previous)) return;
-        const instant = previous === null || this.mouvement.reduit();
-        last.scrollIntoView?.({ block: 'nearest', behavior: instant ? 'auto' : 'smooth' });
-      });
+    // La demande d'accord arrive dans le fil, qui ne se lit pas à voix haute : sa phrase est dite une fois (la
+    // ligne d'état dit seulement « Akari attend ton accord. »), pour que ses deux boutons aient un sens.
+    let announced = '';
+    effect(() => {
+      const phrase = this.chat.isAwaitingPermission() ? this.permissionPhrase() : '';
+      if (phrase && phrase !== announced) this.annonces.annoncer(phrase);
+      announced = phrase;
     });
 
-    // Akari demande son accord, ou il est de nouveau prêt : si le focus s'était perdu, il va à « Ajouter »
-    // (qui fait lire la demande), ou à la zone de réponse. Au clavier, on ne repart pas du haut de la page.
-    afterRenderEffect(() => {
-      const asking = this.chat.isAwaitingPermission();
-      if (!asking && !this.ready()) return;
-      untracked(() => {
-        if (!this.refocus()) return;
-        this.refocus.set(false);
-        const active = this.document.activeElement;
-        if (active && active !== this.document.body) return;
-        const target = asking ? this.acceptButton() : this.textarea();
-        (target?.nativeElement as HTMLElement | undefined)?.focus();
-      });
+    // Une seule colonne (1100px et moins) : la conversation suit l'en-tête de la page. Quand son historique est là,
+    // la page descend jusqu'à son pied : ses dernières répliques et sa zone de réponse sont à l'écran. Une fois par
+    // objectif ouvert, et seulement si la conversation est encore plus bas (la personne n'y est pas déjà, ni plus
+    // bas, comme après un retour arrière qui retrouve sa place).
+    let framedFor: string | null = null;
+    afterRenderEffect({
+      earlyRead: () => {
+        const id = this.openedFor();
+        const host = this.conversation()?.nativeElement as HTMLElement | undefined;
+        if (!id || !host || !this.chat.historyLoaded() || framedFor === id) return null;
+        framedFor = id;
+        const view = this.document.defaultView;
+        if (!view || typeof view.matchMedia !== 'function' || !view.matchMedia(STACKED_LAYOUT).matches) return null;
+        const { top, bottom } = host.getBoundingClientRect();
+        return top >= 0 && bottom > view.innerHeight ? host : null;
+      },
+      write: (below) => below()?.scrollIntoView({ block: 'end', behavior: 'instant' }),
     });
   }
 
-  protected write(event: Event): void {
-    this.draft.set((event.target as HTMLTextAreaElement).value);
-  }
-
-  /** Entrée envoie ; Maj+Entrée va à la ligne. */
-  protected enter(event: Event): void {
-    const key = event as KeyboardEvent;
-    if (key.shiftKey || key.isComposing) return;
-    key.preventDefault();
-    this.sendDraft();
-  }
-
-  protected submit(event: Event): void {
-    event.preventDefault();
-    this.sendDraft();
-  }
-
-  protected accept(invitation: AkariInvitation): void {
-    this.say(invitation.message);
-  }
-
-  protected answer(permission: boolean): void {
-    this.chat.respondToPermission(permission);
-    this.refocus.set(true);
-  }
-
-  private sendDraft(): void {
-    if (this.say(this.draft())) this.draft.set('');
-  }
-
-  private say(text: string): boolean {
+  /** La personne envoie un message (Empreinte l'a nettoyé et vide la zone de réponse). */
+  protected say(text: string): void {
     const message = text.trim();
-    if (!message || !this.ready()) return false;
+    if (!message || !this.ready()) return;
     this.chat.sendMessageToAi({ message, objectiveId: this.id() });
     this.spoke.set(true);
-    this.refocus.set(true);
-    return true;
   }
 
-  private isVisible(element: HTMLElement): boolean {
-    const rect = element.getBoundingClientRect();
-    const height = this.document.defaultView?.innerHeight ?? 0;
-    return rect.bottom > 0 && rect.top < height;
+  /** Un bouton sous une réplique : accepter l'invitation, ou répondre à la demande d'accord. */
+  protected act({ replique, action }: ActionChoisie<AkariReply>): void {
+    if (replique.invitation) {
+      this.say(replique.invitation.message);
+    } else if (replique.id === PERMISSION_REPLY_ID) {
+      this.chat.respondToPermission(action.id === ACCEPT_ACTION);
+    }
   }
 }

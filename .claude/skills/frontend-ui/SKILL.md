@@ -36,9 +36,9 @@ Pour chaque besoin visuel, descendre l'échelle et s'arrêter au premier niveau 
 
 ## 3. Où écrire le style
 
-- **La feuille du composant** : tout ce qui n'appartient qu'à un écran (sa composition, ses colonnes, ses exceptions) va dans `<nom>.css`, à côté du gabarit, déclaré par `styleUrl: './<nom>.css'` (ou `styleUrls` pour plusieurs feuilles). Encapsulation émulée : des classes courtes, sans préfixe, nommées par leur rôle dans l'écran (`.cards`, `.accomplished`, `.composer`). Une composition partagée par deux écrans peut avoir sa propre feuille, listée par les deux : `objective/akari/conversation.css` sert à Akari et au nouvel objectif.
+- **La feuille du composant** : tout ce qui n'appartient qu'à un écran (sa composition, ses colonnes, ses exceptions) va dans `<nom>.css`, à côté du gabarit, déclaré par `styleUrl: './<nom>.css'` (ou `styleUrls` pour plusieurs feuilles). Encapsulation émulée : des classes courtes, sans préfixe, nommées par leur rôle dans l'écran (`.cards`, `.accomplished`, `.composer`). Une composition partagée par deux écrans peut avoir sa propre feuille, listée par les deux.
 - **Les utilitaires partagés** : `apps/apex-client/src/styles/layout.css`, chargé après Empreinte par `apps/apex-client/project.json`. Préfixe `ds-` : la page (`.ds-page`, `.ds-page-header`, `.ds-title-row`), les empilements et rangées (`.ds-stack`, `.ds-row`, `.ds-actions`), la trame de panneaux (`.ds-panels`, `.ds-panel`, `.ds-cols-*`), les listes (`.ds-divided`, `.ds-check`), les écarts (`.ds-gap-*`) et quelques modificateurs. N'y monte une classe que lorsqu'un deuxième écran en a besoin. Les valeurs de mise en page partagées y sont aussi (`--ds-*`).
-- **Le HTML inséré par `[innerHTML]`** (le Markdown d'Akari) ne reçoit pas l'attribut d'encapsulation : son style reste global (`.ds-prose`, `.ds-link` dans `styles/layout.css`). Pas de `::ng-deep`.
+- **Le HTML inséré par `[innerHTML]`** ne reçoit pas l'attribut d'encapsulation. Le Markdown d'Akari est rendu dans une réplique d'`e-conversation`, dont la prose vient d'Empreinte (paragraphes, listes à puces carrées, liens à l'encre, code). Pas de `::ng-deep`.
 - **Les valeurs** : les couleurs toujours en tokens d'Empreinte (`var(--encre-douce)`, `var(--trame)`, `var(--panneau)`…), sinon la Nuit ne suit pas ; les espacements et filets en tokens quand ils existent (`var(--pas-4)`, `var(--trait-fin)`, `--ds-space-*` pour les pas intermédiaires). Points de rupture d'Apex : 760px (mobile), 900px, 1100px ; pour `BreakpointObserver`, les mêmes valeurs.
 - **Les composants d'Empreinte** : les placer, les dimensionner, les espacer depuis Apex est normal (`.arete > e-arete { min-width: 640px }`, `.panel-flush .e-tache { padding-inline: … }`). Changer leur apparence (couleur, forme, typographie) touche l'identité : si le changement vaut pour toute la suite, c'est une évolution d'Empreinte.
 - **Le thème** : la Nuit passe par `data-theme` sur `<html>`. Aucune règle `prefers-color-scheme` dans Apex : elle se désynchroniserait du choix fait dans les réglages.
@@ -94,7 +94,7 @@ Les écrans V1 sont sous `apps/apex-client/src/app/` : `shell/` (coque et naviga
 | Arête et étape | `app/objective/` | `div.ds-panels.ds-cols-2-1` > `section.ds-panel` (`.ds-title-row`, `div.ds-scroll-x.arete` > `e-arete`) + `section.ds-panel.panel-flush` (en-tête d'étape, `ul[eListe][nue]` > `li[eTache]`, `.ds-actions`) ; `.arete` et `.panel-flush` dans `objective-page.css` |
 | Feuille (modifier un pas, une étape, l'objectif) | `app/objective/` | `Feuilles.ouvrir(Composant, { donnees, cdk: { injector } })` ; dans le composant ouvert, `e-feuille[titre]` > `form.ds-stack` + `div[eFeuilleActions]`. Catalogue § 2.17. |
 | Formulaire | partout | `form.ds-stack` > `e-champ[libelle]` > `input[eSaisie]`, `textarea[eSaisie][tailleAuto]`, `e-selection`, `input[type=date][eSaisie]` ; erreur par `[erreur]` du champ ; `facultatif` plutôt qu'un astérisque. |
-| Conversation et brouillon | `app/objective/akari/`, nouvel objectif | `div.ds-panels.ds-cols-7-6` > `section.ds-panel` (`ol.conversation`, `form.composer.ds-rule-top.ds-push-down`) + `section.ds-panel[eSurface][eCorne="l"]` (brouillon, `ol.ds-divided` > `li.stage`, bouton `sceau`) ; `conversation.css` et `akari.css` |
+| Conversation et brouillon | `app/objective/akari/`, nouvel objectif | Akari : `div.ds-page.akari` > `div.ds-panels.ds-cols-7-6.panels` > `e-conversation.conversation` (`[repliques]`, `[statut]`, `[pret]`, `[personne]`, `(envoyer)`, `(action)`, `ng-template[eRepliqueContenu]` pour le Markdown) + `section.ds-panel.stages` ; hauteur et retrait dans `akari.css`. Nouvel objectif : `section.ds-panel` > `ol[eFil]` > `li[eReplique]` (Akari) et `li[eReplique][auteur="personne"][qui]` (les champs) + `section.ds-panel[eSurface][eCorne="l"]` (brouillon, `ol.ds-divided` > `li.stage`, bouton `sceau`) |
 | Matrice | `app/matrix/` | `header.ds-stack.ds-gap-5` > titre + `e-filtres` ; `e-matrice` gère sa grille ; dans `ng-template[eMatriceElement]`, `div.ds-row.task` > `.ds-check` (case, label, détail) + `e-menu` « Déplacer vers… » |
 | Connexion | `app/auth/` | `main.screen` > `form[eSurface].ds-panel.form` > `e-marque` + `h1.objectif` + `e-champ`s + `button[eBouton="sceau"]` |
 | Rangée d'actions | partout | `div.ds-actions` (`.ds-justify-end` pour l'aligner à droite) > `button[eBouton="trait"][petit]` + `button[eBouton="nu"][petit]` |
@@ -186,21 +186,29 @@ L'arête et l'étape en cours (pas de bouton `sceau` : la tête de l'arête en e
 .arete > e-arete { min-width: 640px; }
 ```
 
-La conversation avec Akari et le brouillon (voir le piège sur la signature d'Akari, § 7) :
+La conversation avec Akari (le composant d'Empreinte, voir le piège sur la conversation, § 7) et le brouillon du nouvel objectif :
 
 ```html
+<!-- Akari : les messages deviennent des Replique { id, auteur, texte, actions?, enAttente? } (akari.ts) -->
+<div class="ds-panels ds-cols-7-6 panels">
+  <e-conversation class="conversation" [repliques]="repliques()" [statut]="statut()" [pret]="pret()"
+                  [personne]="prenom()" indication="Réponds à Akari…" (envoyer)="envoyer($event)" (action)="choisir($event)">
+    <ng-template [eRepliqueContenu]="repliques()" let-r>
+      @if (r.markdown) { <div [innerHTML]="r.texte | markdown"></div> } @else { <p>{{ r.texte }}</p> }
+    </ng-template>
+  </e-conversation>
+  <section class="ds-panel ds-gap-6 stages" aria-labelledby="titre-arete">…</section>
+</div>
+
+<!-- Nouvel objectif : le fil seul, les réponses dans des champs -->
 <div class="ds-panels ds-cols-7-6">
   <section class="ds-panel" aria-label="Conversation avec Akari">
-    <ol class="conversation">
-      <li><aside eNote><div class="ds-prose" [innerHTML]="message.content | markdown"></div></aside></li>
-      <li class="reply"><p class="repere ds-muted reply-author">Léa</p><div class="corps ds-prose" [innerHTML]="…"></div></li>
+    <ol eFil>
+      <li eReplique><p id="question-titre">Qu'est-ce que tu veux construire&nbsp;?</p></li>
+      <li eReplique auteur="personne" [qui]="prenom()">
+        <e-champ libelle="Ton objectif"><input eSaisie [formField]="brouillon.titre" /></e-champ>
+      </li>
     </ol>
-    <p class="detail ds-muted" role="status">{{ statut() }}</p>
-    <form class="composer ds-rule-top ds-push-down" (submit)="envoyer($event)">
-      <label class="e-masque" for="reponse">Réponds à Akari</label>
-      <textarea eSaisie tailleAuto id="reponse" [lignesMin]="2" [lignesMax]="6"></textarea>
-      <button eBouton="trait" icone type="submit" aria-label="Envoyer"><e-icone nom="envoyer" /></button>
-    </form>
   </section>
   <section class="ds-panel ds-gap-5" eSurface eCorne="l" aria-labelledby="titre-brouillon">
     <p class="repere ds-muted">Brouillon · pas encore enregistré</p>
@@ -250,9 +258,9 @@ Connexion et matrice :
 Les pièges vérifiés des composants sont au catalogue § 8. Les plus fréquents :
 
 - **Marges.** Les 8 styles typographiques ne remettent ni marge ni couleur : un `h1` ou un `p` garde les marges du navigateur s'il n'est pas l'enfant direct d'un conteneur `.ds-*` ou d'un conteneur qui les remet à zéro dans la feuille du composant (§ 3).
-- **Encapsulation.** Une règle de la feuille d'un composant n'atteint que les éléments écrits dans son gabarit (et l'hôte des composants qui y sont posés) : ni l'intérieur d'un composant d'Empreinte, ni le HTML inséré par `[innerHTML]` (d'où `.ds-prose` et `.ds-link`, globaux). Un `ng-template` passé à un composant (`eMatriceElement`) appartient au gabarit qui l'écrit : sa feuille s'y applique.
+- **Encapsulation.** Une règle de la feuille d'un composant n'atteint que les éléments écrits dans son gabarit (et l'hôte des composants qui y sont posés) : ni l'intérieur d'un composant d'Empreinte, ni le HTML inséré par `[innerHTML]` (la prose du Markdown d'Akari vient donc d'Empreinte). Un `ng-template` passé à un composant (`eMatriceElement`) appartient au gabarit qui l'écrit : sa feuille s'y applique.
 - **Feuilles de style qui disparaissent.** La feuille d'un composant d'Empreinte part avec sa dernière instance ; seules celles des directives (`eSurface`, `eCase`, `eListe`, `eSaisie`, `eFilAriane`…) restent une fois chargées. Une classe `e-*` écrite à la main n'est stylée que si son composant est présent sur la page.
-- **Signature d'Akari.** Chaque phrase d'Akari est une `aside[eNote]`, qui pose elle-même la signature (« AKARI » et son losange). Dans une conversation, elle se place directement dans le `li`, **sans** `.reply`, qui est une grille à deux colonnes (un enfant seul tomberait dans la colonne du nom, 96px). Son Markdown rendu va dans un `div.ds-prose`.
+- **Conversation.** `e-conversation` défile seule : sans hauteur sur l'hôte (`akari.css`), elle grandit avec ce qui est dit et la page redéfile. Au-dessus de 1100px, la route d'Akari porte `data: { fitsWindow: true }` : la coque passe la hauteur de la fenêtre à la page, et chaque niveau jusqu'à la conversation garde `min-height: 0` (sinon toute la conversation remonte jusqu'à la page). En une colonne, la page descend jusqu'au pied de la conversation à l'ouverture (`akari.ts`). La prose d'une réplique (`.e-replique__prose`) est à spécificité nulle : la feuille de l'écran peut l'ajuster. Elle s'ouvre sur les dernières répliques et rend le focus à la zone de réponse : ne pas le refaire dans l'écran. L'invitation et la demande d'accord sont des répliques avec `actions` (un trait puis un nu, reliés à la phrase par `aria-describedby`), pas des `aside[eNote]` (une note par écran, celle de la coque). La zone de réponse reste ouverte pendant qu'Akari travaille : seul l'envoi attend `pret`. Une signature dans un fil passe par `qui` / `personne`, jamais par une classe `e-note__qui` écrite à la main.
 - **`li[eTache]`.** Cliquer le titre coche le pas (c'est le `<label>`) ; pour ouvrir ou modifier, un bouton dans `eTacheActions` (placé sous le texte). Avec `(faitChange)`, toujours une mise à jour optimiste du store puis un retour en arrière en cas de souci, sinon la case reste cochée. Dans un panneau, la liste s'écrit `ul[eListe] nue` (sans `nue`, elle redevient une surface).
 - **Feuilles.** Le composant ouvert hérite de l'injecteur racine : passer `cdk: { injector: inject(Injector) }` pour atteindre les stores fournis par la coque. `e-feuille` exige un `titre` (le focus y va).
 - **Formulaires.** `e-selection` prend des options `{ valeur, libelle }` ; `input[type=date][eSaisie]` porte une chaîne `aaaa-mm-jj`, pas une `Date` ; avec `formControlName`, le message d'erreur passe par `e-champ [erreur]` (il n'est automatique qu'avec Signal Forms).

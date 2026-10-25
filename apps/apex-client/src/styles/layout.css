@@ -10,9 +10,10 @@
  *
  *  Ce fichier rassemble ce qui sert à plusieurs écrans d'Apex : la page, les
  *  empilements et rangées, la trame de panneaux, quelques modificateurs.
- *  Ce qui n'appartient qu'à un écran (la coque, la conversation avec Akari,
- *  le bloc « Accomplis », la connexion…) vit dans la feuille du composant,
- *  à côté de son gabarit.
+ *  Ce qui n'appartient qu'à un écran (la coque, la place de la conversation
+ *  avec Akari, le bloc « Accomplis », la connexion…) vit dans la feuille du
+ *  composant, à côté de son gabarit. La conversation elle-même (fil,
+ *  répliques, prose du Markdown, zone de réponse) vient d'Empreinte.
  *
  *  Points de rupture d'Apex (les variables CSS ne marchent pas dans @media :
  *  recopier la valeur) :
@@ -72,8 +73,7 @@
     .ds-panel,
     .ds-list-bare,
     .ds-divided,
-    .ds-check,
-    .ds-prose
+    .ds-check
   )
   > * {
   margin: 0;
@@ -300,40 +300,7 @@
 }
 
 /* ============================================================================
- *  6. Texte rendu depuis le Markdown
- *  Le HTML inséré par [innerHTML] ne reçoit pas l'attribut d'encapsulation
- *  d'Angular : ses styles restent ici, globaux, et pas dans la feuille du
- *  composant qui l'affiche.
- * ========================================================================== */
-
-/* Blocs espacés de pas-3, listes en retrait de pas-6, mots trop longs coupés,
-   bloc de code qui défile au lieu de déborder. La typographie reste celle du
-   conteneur (voix, corps) : un titre Markdown garde la taille du navigateur,
-   le rendre plutôt en paragraphe. */
-.ds-prose {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.ds-prose > * + * {
-  margin-block-start: var(--pas-3);
-}
-
-.ds-prose :where(ul, ol) {
-  padding-inline-start: var(--pas-6);
-}
-
-.ds-prose :where(li + li, li > ul, li > ol) {
-  margin-block-start: var(--pas-1);
-}
-
-.ds-prose :where(pre) {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-/* ============================================================================
- *  7. Modificateurs (après les conteneurs : ils l'emportent)
+ *  6. Modificateurs (après les conteneurs : ils l'emportent)
  * ========================================================================== */
 
 /* --- Retour à la ligne et alignements --------------------------------------- */
@@ -485,13 +452,6 @@
   color: var(--encre-douce);
 }
 
-/* Lien dans le texte (réponses d'Akari) : dans l'encre du texte qui
-   l'entoure, souligné par le navigateur. Le bleu par défaut n'existe pas
-   dans Empreinte, dont la base ne règle pas les liens. */
-.ds-link {
-  color: inherit;
-}
-
 /* Coupe les mots trop longs plutôt que de déborder (titres saisis). */
 .ds-break {
   overflow-wrap: anywhere;
@@ -535,7 +495,7 @@
 }
 
 /* ============================================================================
- *  8. Responsive (en dernier : ces règles l'emportent sur les précédentes)
+ *  7. Responsive (en dernier : ces règles l'emportent sur les précédentes)
  * ========================================================================== */
 
 /* 1100px */

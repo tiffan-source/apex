@@ -16,6 +16,8 @@ import type { MessageViewModel, PermissionRequestViewModel } from './chat.models
 /*
  * L'écran Akari d'un objectif, avec des stores simulés : l'en-tête, la conversation (répliques,
  * invitations, demandes d'accord, ligne d'état, zone de réponse), l'arête à droite, et la voix.
+ * La conversation est le composant e-conversation d'Empreinte : son défilement (ouverture sur les dernières
+ * répliques, suivi de la fin, « Dernières répliques ») est vérifié par ses propres tests.
  */
 
 const OBJECTIVES: ObjectiveViewModel[] = [
@@ -118,6 +120,9 @@ const text = (element: Element | null | undefined) => element?.textContent?.repl
 const buttonsOf = (root: HTMLElement) => Array.from(root.querySelectorAll<HTMLButtonElement | HTMLAnchorElement>('button, a'));
 const buttonNamed = (root: HTMLElement, name: string) => buttonsOf(root).find((button) => text(button) === name);
 const statusLine = (root: HTMLElement) => root.querySelector('p[role="status"]');
+const repliesOf = (root: HTMLElement) => Array.from(root.querySelectorAll<HTMLElement>('e-conversation ol.e-fil > li.e-replique'));
+const lastReply = (root: HTMLElement) => repliesOf(root).at(-1) as HTMLElement;
+const signatureOf = (reply: Element | undefined) => text(reply?.querySelector('.e-replique__qui'));
 const textarea = (root: HTMLElement) => root.querySelector('textarea') as HTMLTextAreaElement;
 const sendButton = (root: HTMLElement) => root.querySelector('button[aria-label="Envoyer"]') as HTMLButtonElement;
 
@@ -128,11 +133,6 @@ function screenTexts(root: HTMLElement): string[] {
   );
   return [text(root), ...attributes];
 }
-
-beforeEach(() => {
-  // jsdom ne fait pas défiler la page.
-  Element.prototype.scrollIntoView = vi.fn();
-});
 
 afterEach(() => {
   TestBed.resetTestingModule();
@@ -238,74 +238,63 @@ describe('Akari : l’ouverture de la conversation', () => {
 });
 
 describe('Akari : les répliques', () => {
-  it('Akari parle dans une note signée, la personne signe de son prénom', async () => {
+  it('pose la conversation d’Empreinte dans la trame, à côté de l’arête', async () => {
     const { root } = await setup({ history: HISTORY });
-    const replies = Array.from(root.querySelectorAll('ol.conversation > li'));
+    const conversation = root.querySelector('.ds-panels > e-conversation') as HTMLElement;
+    expect(conversation.classList).toContain('conversation');
+    expect(conversation.querySelector('[role="region"]')?.getAttribute('aria-label')).toBe('Conversation avec Akari');
+    // L'écran tient dans la fenêtre (akari.css) seulement quand la conversation est là.
+    expect(root.querySelector('.ds-page')?.classList).toContain('akari');
+  });
+
+  it('Akari signe de son losange, la personne de son prénom, sans bulle ni avatar', async () => {
+    const { root } = await setup({ history: HISTORY });
+    const replies = repliesOf(root);
     expect(replies).toHaveLength(2);
 
     const [mine, akari] = replies;
-    expect(mine.classList).toContain('reply');
-    expect(text(mine.querySelector('.reply-author'))).toBe('Léa');
-    expect(mine.querySelector('.corps.ds-prose strong')?.textContent).toBe('semi');
+    expect(mine.classList).toContain('e-replique--personne');
+    expect(signatureOf(mine)).toBe('Léa');
+    expect(mine.querySelector('.e-replique__texte strong')?.textContent).toBe('semi');
 
-    expect(akari.classList).not.toContain('reply');
-    const note = akari.querySelector('aside[eNote]');
-    expect(note).not.toBeNull();
-    expect(text(note?.querySelector('.e-note__qui'))).toBe('Akari');
-    expect(note?.querySelector('.ds-prose strong')?.textContent).toBe('l’endurance');
+    expect(akari.classList).toContain('e-replique--assistant');
+    expect(signatureOf(akari)).toBe('Akari');
+    expect(akari.querySelector('.e-replique__texte strong')?.textContent).toBe('l’endurance');
+    expect(root.querySelector('e-conversation aside, e-conversation img')).toBeNull();
   });
 
   it('signe « Toi » quand la personne n’a pas de prénom', async () => {
     const { root } = await setup({ history: HISTORY, userName: '' });
-    expect(text(root.querySelector('.reply-author'))).toBe('Toi');
+    expect(signatureOf(repliesOf(root)[0])).toBe('Toi');
   });
 
   it('assainit le Markdown d’une réplique', async () => {
     const { root } = await setup({
       history: [{ id: 'x', sender: 'assistant', content: 'Voici <img src="x" onerror="alert(1)"> <script>alert(2)</script>[lien](javascript:alert(3))', timestamp: new Date() }],
     });
-    const prose = root.querySelector('aside[eNote] .ds-prose') as HTMLElement;
+    const prose = lastReply(root).querySelector('.e-replique__texte') as HTMLElement;
     expect(prose.innerHTML).not.toMatch(/onerror|<script|javascript:/);
   });
 
-  it('fait venir la dernière réplique à l’écran', async () => {
-    const { root } = await setup({ history: HISTORY });
-    const last = root.querySelector('ol.conversation > li:last-child') as HTMLElement;
-    // À l'ouverture, d'un coup : pas de défilement animé à travers toute la conversation.
-    expect(last.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'auto' });
-  });
-
-  it('ne déplace pas la page quand la personne relit plus haut', async () => {
+  it('écrit en encre douce le message qui part encore', async () => {
     const { fixture, chat, root } = await setup({ history: HISTORY });
-    const previous = root.querySelector('ol.conversation > li:last-child') as HTMLElement;
-    // La dernière réplique est hors de l'écran : la personne lit plus haut.
-    previous.getBoundingClientRect = () => ({ top: 2000, bottom: 2100 }) as DOMRect;
-    const scroll = vi.fn();
-    Element.prototype.scrollIntoView = scroll;
-
-    chat.messages.update((messages) => [...messages, { id: 'm3', sender: 'assistant', content: 'Et ensuite ?', timestamp: new Date(2026, 9, 20, 11) }]);
+    chat.messages.update((messages) => [...messages, { id: 'temp-id-1', sender: 'user', content: 'Et ensuite ?', timestamp: new Date(2026, 9, 20, 11) }]);
     await refresh(fixture);
-    expect(scroll).not.toHaveBeenCalled();
-  });
+    expect(lastReply(root).classList).toContain('e-replique--en-attente');
 
-  it('suit la conversation quand la personne en voit la fin', async () => {
-    const { fixture, chat, root } = await setup({ history: HISTORY });
-    const previous = root.querySelector('ol.conversation > li:last-child') as HTMLElement;
-    previous.getBoundingClientRect = () => ({ top: 100, bottom: 200 }) as DOMRect;
-    const scroll = vi.fn();
-    Element.prototype.scrollIntoView = scroll;
-
-    chat.messages.update((messages) => [...messages, { id: 'm3', sender: 'assistant', content: 'Et ensuite ?', timestamp: new Date(2026, 9, 20, 11) }]);
+    // Le workflow l'enregistre : il reçoit son vrai id.
+    chat.messages.update((messages) => messages.map((m) => (m.id === 'temp-id-1' ? { ...m, id: 'm3' } : m)));
     await refresh(fixture);
-    expect(scroll).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' });
+    expect(lastReply(root).classList).not.toContain('e-replique--en-attente');
   });
 });
 
 describe('Akari : les invitations', () => {
   it('ouvre une conversation vide en proposant des étapes', async () => {
     const { chat, fixture, root } = await setup();
-    const note = root.querySelector('ol.conversation aside[eNote]');
-    expect(text(note)).toContain('Je peux te proposer des étapes pour « Semi-marathon ». On commence ?');
+    const invitation = lastReply(root);
+    expect(invitation.classList).toContain('e-replique--assistant');
+    expect(text(invitation.querySelector('.e-replique__texte'))).toBe('Je peux te proposer des étapes pour « Semi-marathon ». On commence ?');
 
     buttonNamed(root, 'Propose-moi des étapes')?.click();
     await refresh(fixture);
@@ -341,8 +330,7 @@ describe('Akari : les invitations', () => {
 
   it('avec ?etape, propose des pas pour cette étape, même après une conversation', async () => {
     const { chat, fixture, root } = await setup({ etape: 'endurance', history: HISTORY });
-    const notes = Array.from(root.querySelectorAll('ol.conversation aside[eNote]'));
-    expect(text(notes.at(-1))).toContain("Je peux te proposer des pas pour l'étape « Endurance ».");
+    expect(text(lastReply(root).querySelector('.e-replique__texte'))).toBe("Je peux te proposer des pas pour l'étape « Endurance ».");
 
     buttonNamed(root, 'Propose-moi des pas')?.click();
     await refresh(fixture);
@@ -366,8 +354,8 @@ describe('Akari : les demandes d’accord', () => {
 
   it('propose une étape : « Ajouter » ou « Pas maintenant »', async () => {
     const { chat, root } = await setup({ history: HISTORY, configure: asking({ kind: 'stage', title: 'Portfolio', parentId: 'semi' }) });
-    const note = Array.from(root.querySelectorAll('ol.conversation aside[eNote]')).at(-1);
-    expect(text(note)).toContain("Je te propose d'ajouter l'étape « Portfolio ». On l'ajoute ?");
+    const request = lastReply(root);
+    expect(signatureOf(request)).toBe('Akari');
     expect(text(statusLine(root))).toBe('Akari attend ton accord.');
 
     const add = buttonNamed(root, 'Ajouter') as HTMLButtonElement;
@@ -377,10 +365,11 @@ describe('Akari : les demandes d’accord', () => {
     expect(later.classList).toContain('e-btn--nu');
 
     // Les deux boutons font lire la demande quand ils prennent le focus.
-    const phrase = root.querySelector('#akari-demande');
+    const phrase = request.querySelector('.e-replique__texte') as HTMLElement;
     expect(text(phrase)).toBe("Je te propose d'ajouter l'étape « Portfolio ». On l'ajoute ?");
-    expect(add.getAttribute('aria-describedby')).toBe('akari-demande');
-    expect(later.getAttribute('aria-describedby')).toBe('akari-demande');
+    expect(phrase.id).not.toBe('');
+    expect(add.getAttribute('aria-describedby')).toBe(phrase.id);
+    expect(later.getAttribute('aria-describedby')).toBe(phrase.id);
 
     add.click();
     expect(chat.respondToPermission).toHaveBeenCalledWith(true);
@@ -388,40 +377,56 @@ describe('Akari : les demandes d’accord', () => {
     expect(chat.respondToPermission).toHaveBeenCalledWith(false);
   });
 
-  it('au clavier, le focus va à la demande, puis revient à la zone de réponse', async () => {
+  it('dit la demande aux lecteurs d’écran, une seule fois', async () => {
+    const { fixture, chat } = await setup({ history: HISTORY });
+    const announce = vi.spyOn(TestBed.inject(AnnoncesStore), 'annoncer');
+    asking({ kind: 'stage', title: 'Portfolio', parentId: 'semi' })(chat);
+    await refresh(fixture);
+    expect(announce).toHaveBeenCalledWith("Je te propose d'ajouter l'étape « Portfolio ». On l'ajoute ?");
+
+    // L'état du workflow est relu chaque seconde : la même demande n'est pas redite.
+    chat.permissionRequest.set({ kind: 'stage', title: 'Portfolio', parentId: 'semi' });
+    await refresh(fixture);
+    expect(announce).toHaveBeenCalledTimes(1);
+
+    // Une autre demande, après la réponse, est dite à son tour.
+    chat.isAwaitingPermission.set(false);
+    await refresh(fixture);
+    asking({ kind: 'stage', title: 'Fractionné', parentId: 'semi' })(chat);
+    await refresh(fixture);
+    expect(announce).toHaveBeenLastCalledWith("Je te propose d'ajouter l'étape « Fractionné ». On l'ajoute ?");
+    expect(announce).toHaveBeenCalledTimes(2);
+  });
+
+  it('au clavier, la zone de réponse garde le focus pendant qu’Akari travaille, et le retrouve après « Ajouter »', async () => {
     const { fixture, chat, root } = await setup({ history: HISTORY });
     const area = textarea(root);
     area.focus();
     area.value = 'Propose-moi une étape.';
     area.dispatchEvent(new Event('input'));
     area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-    // Akari travaille : la zone de réponse se désactive et perd le focus (le navigateur la quitte ;
-    // jsdom ne le fait pas seul, et ne sait plus quitter un champ désactivé).
-    area.blur();
+    // Akari travaille : la zone de réponse reste ouverte et garde le focus ; seul l'envoi attend.
     chat.canSendMessage.set(false);
     chat.isStreaming.set(true);
     await refresh(fixture);
-    expect(textarea(root).disabled).toBe(true);
-    expect(document.activeElement).toBe(document.body);
+    expect(textarea(root).disabled).toBe(false);
+    expect(document.activeElement).toBe(textarea(root));
 
-    // Akari demande son accord : le focus va à « Ajouter ».
+    // Akari demande son accord : la personne va jusqu'à « Ajouter » et l'accepte ; le bouton disparaît.
     chat.isStreaming.set(false);
     chat.isAwaitingPermission.set(true);
     chat.permissionRequest.set({ kind: 'stage', title: 'Portfolio', parentId: 'semi' });
     await refresh(fixture);
-    expect(document.activeElement).toBe(buttonNamed(root, 'Ajouter'));
-
-    // La personne accepte : le bouton disparaît, puis Akari est de nouveau prêt.
-    (buttonNamed(root, 'Ajouter') as HTMLButtonElement).click();
+    const add = buttonNamed(root, 'Ajouter') as HTMLButtonElement;
+    add.focus();
+    add.click();
     chat.isAwaitingPermission.set(false);
     chat.permissionRequest.set(null);
     chat.isStreaming.set(true);
     await refresh(fixture);
-    expect(document.activeElement).toBe(document.body);
-
-    chat.isStreaming.set(false);
-    chat.canSendMessage.set(true);
-    await refresh(fixture);
+    expect(chat.respondToPermission).toHaveBeenCalledWith(true);
+    expect(buttonNamed(root, 'Ajouter')).toBeUndefined();
+    // Le focus ne repart pas du haut de la page : il revient à la zone de réponse.
     expect(document.activeElement).toBe(textarea(root));
   });
 
@@ -505,14 +510,26 @@ describe('Akari : la ligne d’état et la zone de réponse', () => {
     expect(chat.sendMessageToAi).toHaveBeenCalledWith({ message: 'Et en février ?', objectiveId: 'semi' });
   });
 
-  it('n’envoie rien tant qu’Akari n’est pas prêt', async () => {
+  it('n’envoie rien tant qu’Akari n’est pas prêt, mais laisse écrire', async () => {
     const { fixture, chat, root } = await setup({ history: HISTORY, configure: (c) => c.canSendMessage.set(false) });
-    expect(textarea(root).disabled).toBe(true);
+    const area = textarea(root);
+    expect(area.disabled).toBe(false);
+    area.value = 'Et pour février ?';
+    area.dispatchEvent(new Event('input'));
+    await refresh(fixture);
     expect(sendButton(root).disabled).toBe(true);
 
-    textarea(root).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await refresh(fixture);
     expect(chat.sendMessageToAi).not.toHaveBeenCalled();
+    expect(textarea(root).value).toBe('Et pour février ?');
+
+    // Akari est de nouveau prêt : le message écrit pendant ce temps part.
+    chat.canSendMessage.set(true);
+    await refresh(fixture);
+    textarea(root).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await refresh(fixture);
+    expect(chat.sendMessageToAi).toHaveBeenCalledWith({ message: 'Et pour février ?', objectiveId: 'semi' });
   });
 
   it('attend l’historique avant d’écouter : un message envoyé avant serait effacé', async () => {
@@ -522,13 +539,18 @@ describe('Akari : la ligne d’état et la zone de réponse', () => {
         c.isLoading.set(true);
       },
     });
-    expect(textarea(root).disabled).toBe(true);
+    const area = textarea(root);
+    area.value = 'Bonjour';
+    area.dispatchEvent(new Event('input'));
+    await refresh(fixture);
     expect(sendButton(root).disabled).toBe(true);
+    area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(chat.sendMessageToAi).not.toHaveBeenCalled();
 
     chat.historyLoaded.set(true);
     chat.isLoading.set(false);
     await refresh(fixture);
-    expect(textarea(root).disabled).toBe(false);
+    expect(sendButton(root).disabled).toBe(false);
   });
 
   it('n’envoie pas un message vide', async () => {
@@ -605,6 +627,13 @@ describe('Akari : l’arête à droite', () => {
     expect(panel.querySelector('e-arete')?.parentElement?.classList).toContain('ds-hide-mobile');
   });
 
+  it('défile au clavier dans son panneau : le panneau prend le focus et porte le nom de l’arête', async () => {
+    const { root } = await setup();
+    const panel = root.querySelector('section.stages') as HTMLElement;
+    expect(panel.getAttribute('tabindex')).toBe('0');
+    expect(text(root.querySelector(`#${panel.getAttribute('aria-labelledby')}`))).toBe("L'arête");
+  });
+
   it('garde un seul sceau : la tête de l’arête', async () => {
     const { root } = await setup({ history: HISTORY, configure: (c) => {
       c.isAwaitingPermission.set(true);
@@ -612,6 +641,76 @@ describe('Akari : l’arête à droite', () => {
     } });
     expect(root.querySelectorAll('e-arete')).toHaveLength(1);
     expect(root.querySelectorAll('.e-btn--sceau, e-sceau')).toHaveLength(0);
+  });
+});
+
+describe('Akari : sur une seule colonne (1100px et moins)', () => {
+  let narrow = true;
+  let place = { top: 320, bottom: 1100 };
+  const scrolled: { element: Element; options: unknown }[] = [];
+
+  beforeEach(() => {
+    narrow = true;
+    place = { top: 320, bottom: 1100 };
+    scrolled.length = 0;
+    // jsdom n'a ni mise en page ni défilement : la largeur de l'écran, la place de la conversation (sous l'en-tête,
+    // son pied sous la fenêtre de 768px) et le défilement de la page sont simulés.
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 1100px)' && narrow,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return this.tagName === 'E-CONVERSATION'
+        ? new DOMRect(0, place.top, 600, place.bottom - place.top)
+        : new DOMRect();
+    });
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: function (this: Element, options: unknown) {
+        scrolled.push({ element: this, options });
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+  });
+
+  it('descend jusqu’au pied de la conversation quand son historique est là, une seule fois', async () => {
+    const { fixture, chat, root } = await setup({ history: HISTORY, configure: (c) => c.historyLoaded.set(false) });
+    expect(scrolled).toEqual([]);
+
+    chat.historyLoaded.set(true);
+    await refresh(fixture);
+    expect(scrolled).toEqual([{ element: root.querySelector('e-conversation'), options: { block: 'end', behavior: 'instant' } }]);
+
+    // Les relectures suivantes de l'historique ne déplacent plus la page.
+    chat.historyLoaded.set(false);
+    await refresh(fixture);
+    chat.historyLoaded.set(true);
+    await refresh(fixture);
+    expect(scrolled).toHaveLength(1);
+  });
+
+  it('ne bouge pas quand la conversation et l’arête sont côte à côte', async () => {
+    narrow = false;
+    await setup({ history: HISTORY });
+    expect(scrolled).toEqual([]);
+  });
+
+  it('ne bouge pas quand la personne est déjà à la conversation, ou plus bas', async () => {
+    place = { top: -200, bottom: 560 };
+    await setup({ history: HISTORY });
+    expect(scrolled).toEqual([]);
+
+    TestBed.resetTestingModule();
+    place = { top: 40, bottom: 760 };
+    await setup({ history: HISTORY });
+    expect(scrolled).toEqual([]);
   });
 });
 

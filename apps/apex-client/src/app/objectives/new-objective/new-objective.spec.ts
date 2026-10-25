@@ -162,19 +162,21 @@ describe('NewObjective', () => {
       );
     });
 
-    it("pose les questions d'Akari, chacune dans sa note signée", () => {
-      const notes = Array.from(element.querySelectorAll('aside.e-note'));
-      expect(notes.map((note) => clean(note.querySelector('.e-note__voix')?.textContent))).toEqual([
+    it("pose les questions d'Akari dans le fil, chacune signée de son losange", () => {
+      const notes = Array.from(element.querySelectorAll('ol.e-fil > li.e-replique--assistant'));
+      expect(notes.map((note) => clean(note.querySelector('.e-replique__texte')?.textContent))).toEqual([
         "Qu'est-ce que tu veux construire ?",
         'Pourquoi est-ce que ça compte pour toi ?',
         'Pour quand ?',
         'Tu veux en dire plus ?',
       ]);
-      for (const note of notes) expect(clean(note.querySelector('.e-note__qui')?.textContent)).toBe('Akari');
+      for (const note of notes) expect(clean(note.querySelector('.e-replique__qui')?.textContent)).toBe('Akari');
     });
 
     it('donne la parole à la personne, par son prénom, dans des champs Empreinte', () => {
-      const authors = Array.from(element.querySelectorAll('.reply-author')).map((p) => clean(p.textContent));
+      const authors = Array.from(element.querySelectorAll('.e-replique--personne > .e-replique__qui')).map((p) =>
+        clean(p.textContent),
+      );
       expect(authors).toEqual(['Léa', 'Léa', 'Léa', 'Léa']);
       expect(element.querySelectorAll('e-champ')).toHaveLength(4);
       expect(titleInput().classList).toContain('e-saisie');
@@ -193,7 +195,7 @@ describe('NewObjective', () => {
       controls.forEach((control, index) => {
         const [questionId, labelId] = (control.getAttribute('aria-labelledby') ?? '').split(' ');
         expect(questionId).toBe(questions[index]);
-        expect(element.querySelector(`#${questionId}`)?.closest('aside.e-note')).not.toBeNull();
+        expect(element.querySelector(`#${questionId}`)?.closest('li.e-replique--assistant')).not.toBeNull();
         const label = element.querySelector(`#${labelId}`);
         expect(label?.tagName).toBe('LABEL');
         expect(label?.getAttribute('for')).toBe(control.id);
@@ -255,9 +257,9 @@ describe('NewObjective', () => {
     });
 
     it("ajoute une dernière réplique d'Akari une fois le titre écrit", () => {
-      expect(element.querySelectorAll('aside.e-note')).toHaveLength(4);
+      expect(element.querySelectorAll('li.e-replique--assistant')).toHaveLength(4);
       write(titleInput(), 'Lire 12 livres');
-      const notes = element.querySelectorAll('aside.e-note');
+      const notes = element.querySelectorAll('li.e-replique--assistant');
       expect(notes).toHaveLength(5);
       expect(clean(notes[4].textContent)).toContain("Relis ton brouillon. Change ce que tu veux avant de t'engager.");
     });
@@ -474,7 +476,9 @@ describe('NewObjective', () => {
     await setup();
     currentUser.set({ id: 'u1', name: '', email: 'lea@example.com' });
     fixture.detectChanges();
-    const authors = Array.from(element.querySelectorAll('.reply-author')).map((p) => clean(p.textContent));
+    const authors = Array.from(element.querySelectorAll('.e-replique--personne > .e-replique__qui')).map((p) =>
+      clean(p.textContent),
+    );
     expect(authors).toEqual(['Toi', 'Toi', 'Toi', 'Toi']);
   });
 

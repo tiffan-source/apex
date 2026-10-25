@@ -116,6 +116,41 @@
   background: var(--creux);
 }
 
+/* Une page qui tient dans la fenêtre (la route le dit : data.fitsWindow, pour
+   Akari). Au-dessus de 1100px, la coque prend la hauteur de l'écran et la
+   passe à la page (.outlet, puis l'hôte du composant), moins ses marges et la
+   note d'Akari quand il y en a une : ce qui déborde défile dans les panneaux
+   de la page, pas dans la fenêtre. Sur une fenêtre très basse, la coque garde
+   32rem et la fenêtre défile. Sous 1100px, la page défile normalement. */
+@media (width > 1100px) {
+  .fits-window {
+    grid-template-rows: minmax(0, 1fr);
+    height: max(100vh, 32rem);
+    height: max(100dvh, 32rem);
+  }
+
+  .fits-window .page {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Un élément flexible centré par ses marges ne s'étire plus : la largeur
+     revient à 100% (1120px au plus). */
+  .fits-window .content {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .fits-window .outlet {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
 /* 760px : mobile */
 @media (max-width: 760px) {
   /* Une seule colonne : le bandeau garde sa hauteur, la page prend le reste,

@@ -30,13 +30,15 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 ### Empreinte, en amont (dépôt `empreinte-studio/empreinte`)
 - [] `motsAEviter` rate les mots accentués (`\b`) et ne connaît ni « erreur » ni les emoji
 - [] `formaterAttente` pour une date future
-- [] Un composant « réplique » pour Akari (une `aside[eNote]` par réplique crée des régions en double)
+- [x] Un composant « réplique » pour Akari : `e-conversation`, `ol[eFil]`, `li[eReplique]` (0.3.0)
 - [] `ELienNav` ne pose la corne que pour `aria-current="page"`
 - [] `e-menu` sans état choisi
 - [] `e-matrice` : axes faux sous 640px, compte non personnalisable, titres figés, glisser qui bloque le défilement tactile
 - [] `e-arete` : pas de brouillon, pas de légende (Apex compose avec des cases d'`e-pas`, dont la case « En cours » porte une corne absente de la borne), noms tronqués, pas d'id dans `choisir`, étape choisie non marquée
 - [] `e-filtres` : pas de nom accessible par option (le libellé coupé est le seul nom du bouton)
-- [] Un style « prose » pour le Markdown, un repli générique (`details`), une initiale de la personne
+- [x] Un style « prose » pour le Markdown, dans les répliques (0.3.0)
+- [] `e-conversation` : dire aux lecteurs d'écran les répliques d'Akari qui arrivent (le fil n'est pas une région annoncée : seuls la ligne d'état et, dans Apex, la demande d'accord sont dites)
+- [] Un repli générique (`details`), une initiale de la personne
 
 ### Client
 - [] Contrôle visuel de chaque écran dans le navigateur (Jour, Nuit, 375px, clavier, `GardienSceau`), avec une session sur le Supabase local
