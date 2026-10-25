@@ -62,11 +62,14 @@
   gap: var(--pas-4);
 }
 
-/* La page, à côté de la navigation. */
+/* La page, à côté de la navigation. Ses marges haute et basse sont aussi lues
+   par un écran qui tient dans la fenêtre (Akari : 100dvh moins ces marges). */
 .page {
+  --shell-padding-top: var(--pas-12);
+  --shell-padding-bottom: 72px;
   min-width: 0;
   box-sizing: border-box;
-  padding: var(--pas-12) 56px 72px;
+  padding: var(--shell-padding-top) 56px var(--shell-padding-bottom);
 }
 
 /* Le contenu de la page : centré, 1120px au plus. */
@@ -126,7 +129,9 @@
   }
 
   .page {
-    padding: var(--pas-6) var(--pas-4) var(--pas-12);
+    --shell-padding-top: var(--pas-6);
+    --shell-padding-bottom: var(--pas-12);
+    padding: var(--shell-padding-top) var(--pas-4) var(--shell-padding-bottom);
   }
 
   /* La navigation devient un bandeau, avec un filet trame dessous, qui part

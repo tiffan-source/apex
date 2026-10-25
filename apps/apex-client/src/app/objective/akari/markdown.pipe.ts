@@ -5,13 +5,13 @@ import { Marked } from 'marked';
 
 /*
  * Le Markdown des répliques, rendu en HTML puis assaini par DOMPurify avant d'entrer dans la page.
- * - Un titre Markdown devient un paragraphe en gras : la page a déjà son titre (h1), et la note d'Akari
- *   garde sa typographie (.ds-prose ne touche pas aux tailles).
+ * - Un titre Markdown devient un paragraphe en gras : la page a déjà son titre (h1), et la réplique garde sa
+ *   typographie (la prose d'Empreinte ne touche pas aux tailles).
  * - Pas d'italique (brand book, Typographie) : *mot* et _mot_ restent du texte droit, et les em, i et titres
  *   écrits en HTML sont retirés, leur texte gardé.
  * - Un retour à la ligne simple est gardé (Maj+Entrée dans la zone de réponse).
- * - Ni style, ni classe, ni identifiant venus du texte : l'apparence vient d'Empreinte. Les liens prennent
- *   l'encre du texte qui les entoure (.ds-link).
+ * - Ni style, ni classe, ni identifiant venus du texte : l'apparence vient d'Empreinte (la prose d'une
+ *   réplique : paragraphes, listes, liens à l'encre du texte, code).
  * - Rien ne se charge tout seul depuis une réplique : une image Markdown devient un lien vers elle, que la
  *   personne choisit d'ouvrir, et les images, vidéos et sons écrits en HTML sont retirés, comme les attributs
  *   qui chargent une image de fond (background d'un tableau) ou d'aperçu. Sinon, une adresse écrite par l'IA
@@ -38,9 +38,6 @@ const markdown = new Marked({
 });
 
 const purifier = DOMPurify(window);
-purifier.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'A') node.classList.add('ds-link');
-});
 
 const PURIFY_OPTIONS = {
   USE_PROFILES: { html: true },

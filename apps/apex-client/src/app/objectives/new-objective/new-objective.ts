@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormField, FormRoot, form } from '@angular/forms/signals';
-import { EBouton, EChamp, ECorne, EIcone, ENote, ESaisie, ESurface, ETailleAuto } from '@empreinte-studio/angular';
+import { EBouton, EChamp, ECorne, EFil, EIcone, EReplique, ESaisie, ESurface, ETailleAuto } from '@empreinte-studio/angular';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { SessionStore } from '../../../chore/stores/session.store';
 import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
@@ -33,17 +33,16 @@ export const NEW_OBJECTIVE_TEXTS = {
 /**
  * Nouvel objectif (/objectifs/nouveau), la phase « brouillon » d'Akari (cahier de migration, § 5).
  *
- * À gauche, Akari pose ses questions et la personne répond dans des champs ; à droite, le brouillon se
- * met à jour en direct. Rien n'est enregistré avant « Je m'y engage » (le seul sceau de l'écran), qui
- * crée l'objectif puis ouvre Akari sur lui (/objectifs/<id définitif>/akari). Si l'enregistrement
- * n'aboutit pas, AnnoncesStore le dit dans la coque et le brouillon garde ce qui a été écrit.
+ * À gauche, Akari pose ses questions et la personne répond dans des champs (le fil d'Empreinte,
+ * ol[eFil]) ; à droite, le brouillon se met à jour en direct. Rien n'est enregistré avant « Je m'y
+ * engage » (le seul sceau de l'écran), qui crée l'objectif puis ouvre Akari sur lui
+ * (/objectifs/<id définitif>/akari). Si l'enregistrement n'aboutit pas, AnnoncesStore le dit dans la
+ * coque et le brouillon garde ce qui a été écrit.
  */
 @Component({
   selector: 'app-new-objective',
-  imports: [RouterLink, FormField, FormRoot, EBouton, EChamp, ECorne, EIcone, ENote, ESaisie, ESurface, ETailleAuto],
+  imports: [RouterLink, FormField, FormRoot, EBouton, EChamp, ECorne, EFil, EIcone, EReplique, ESaisie, ESurface, ETailleAuto],
   templateUrl: './new-objective.html',
-  // Le fil des répliques est celui de l'écran Akari.
-  styleUrl: '../../objective/akari/conversation.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewObjective {

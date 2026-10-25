@@ -1,4 +1,4 @@
-<div class="ds-page">
+<div class="ds-page" [class.akari]="!!detail()">
   @if (detail(); as d) {
     <header class="ds-stack ds-gap-5">
       <nav eFilAriane>
@@ -15,76 +15,32 @@
       </div>
     </header>
 
-    <div class="ds-panels ds-cols-7-6">
-      <section class="ds-panel" aria-label="Conversation avec Akari">
-        <ol class="conversation">
-          @for (message of chat.orderLatestMessages(); track message.id) {
-            @if (message.sender === 'user') {
-              <li #reply class="reply">
-                <p class="repere ds-muted reply-author">{{ personName() }}</p>
-                <div class="corps ds-prose" [innerHTML]="message.content | markdown"></div>
-              </li>
-            } @else {
-              <li #reply>
-                <aside eNote>
-                  <div class="ds-prose" [innerHTML]="message.content | markdown"></div>
-                </aside>
-              </li>
-            }
+    <div class="ds-panels ds-cols-7-6 panels">
+      <!-- La conversation d'Empreinte : le fil (qui défile seul et suit ses dernières répliques), ce que fait
+           Akari, la zone de réponse. Les messages sont rendus en Markdown assaini ; l'invitation et la demande
+           d'accord sont des répliques avec leurs boutons. -->
+      <e-conversation
+        class="conversation"
+        libelle="Conversation avec Akari"
+        libelleSaisie="Réponds à Akari"
+        placeholder="Réponds à Akari…"
+        [repliques]="replies()"
+        [statut]="status()"
+        [pret]="ready()"
+        [personne]="personName()"
+        (envoyer)="say($event)"
+        (action)="act($event)"
+      >
+        <ng-template [eRepliqueContenu]="replies()" let-reply>
+          @if (reply.markdown) {
+            <div [innerHTML]="reply.texte | markdown"></div>
+          } @else {
+            <p>{{ reply.texte }}</p>
           }
+        </ng-template>
+      </e-conversation>
 
-          @if (invitation(); as invite) {
-            <li #reply>
-              <aside eNote>
-                <p class="ds-break">{{ invite.phrase }}</p>
-                <div eNoteActions>
-                  <button eBouton="trait" petit type="button" (click)="accept(invite)">{{ invite.action }}</button>
-                </div>
-              </aside>
-            </li>
-          }
-
-          @if (chat.isAwaitingPermission()) {
-            <li #reply>
-              <aside eNote libelle="Demande d'Akari">
-                <p id="akari-demande" class="ds-break">{{ permissionPhrase() }}</p>
-                <div eNoteActions>
-                  <button #accept eBouton="trait" petit type="button" aria-describedby="akari-demande" (click)="answer(true)">
-                    {{ acceptLabel() }}
-                  </button>
-                  <button eBouton="nu" petit type="button" aria-describedby="akari-demande" (click)="answer(false)">
-                    Pas maintenant
-                  </button>
-                </div>
-              </aside>
-            </li>
-          }
-        </ol>
-
-        <p class="detail ds-muted" role="status" aria-live="polite">{{ status() }}</p>
-
-        <form class="composer ds-rule-top ds-push-down" (submit)="submit($event)">
-          <label class="e-masque" for="akari-reponse">Réponds à Akari</label>
-          <textarea
-            #saisie
-            eSaisie
-            tailleAuto
-            id="akari-reponse"
-            [lignesMin]="2"
-            [lignesMax]="6"
-            placeholder="Réponds à Akari…"
-            [value]="draft()"
-            [disabled]="!ready()"
-            (input)="write($event)"
-            (keydown.enter)="enter($event)"
-          ></textarea>
-          <button eBouton="trait" icone type="submit" aria-label="Envoyer" [disabled]="!canSend()">
-            <e-icone nom="envoyer" />
-          </button>
-        </form>
-      </section>
-
-      <section class="ds-panel ds-gap-6" aria-labelledby="akari-titre-arete">
+      <section class="ds-panel ds-gap-6 stages" aria-labelledby="akari-titre-arete">
         <div class="ds-title-row">
           <h2 class="section" id="akari-titre-arete">L'arête</h2>
           @if (summary()) {
