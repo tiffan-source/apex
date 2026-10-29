@@ -2,7 +2,8 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { signalStore, withState } from '@ngrx/signals';
-import { CreateObjectiveUsecase, EditMyTaskUsecase } from '@org/objective';
+import { ObjectivesApi } from '../../api/objectives.api';
+import { ApiError } from '../../api/api-error';
 import { SessionStore } from '../session.store';
 import { AnnoncesStore } from '../annonces.store';
 import { withRequestStatus } from '../utils/loading-feature';
@@ -26,28 +27,25 @@ const TestStore = signalStore(
   withMoveTaskToQuadrant(),
 );
 
-/** Laisse les promesses des cas d'usage se résoudre. */
+/** Laisse les promesses de l'API se résoudre. */
 const settle = async () => {
   for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve));
 };
 
 describe('ObjectiveStore — déplacer un pas, créer un objectif', () => {
-  let editTask: { execute: ReturnType<typeof vi.fn> };
-  let createObjective: { execute: ReturnType<typeof vi.fn> };
+  let api: { editTask: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
   let announce: ReturnType<typeof vi.fn>;
   let store: InstanceType<typeof TestStore>;
   let annonces: InstanceType<typeof AnnoncesStore>;
 
   beforeEach(() => {
-    editTask = { execute: vi.fn() };
-    createObjective = { execute: vi.fn() };
+    api = { editTask: vi.fn(), create: vi.fn() };
     announce = vi.fn().mockResolvedValue(undefined);
     TestBed.configureTestingModule({
       providers: [
         TestStore,
-        { provide: EditMyTaskUsecase, useValue: editTask },
-        { provide: CreateObjectiveUsecase, useValue: createObjective },
-        { provide: SessionStore, useValue: { currentUserId: signal('lea') } },
+        { provide: ObjectivesApi, useValue: api },
+        { provide: SessionStore, useValue: { isAuthenticated: signal(true) } },
         { provide: LiveAnnouncer, useValue: { announce } },
       ],
     });
@@ -55,25 +53,23 @@ describe('ObjectiveStore — déplacer un pas, créer un objectif', () => {
     annonces = TestBed.inject(AnnoncesStore);
   });
 
-  it('déplace le pas tout de suite, persiste par le cas d’usage d’édition, puis l’annonce', async () => {
-    editTask.execute.mockResolvedValue({ success: true, data: {} });
+  it('déplace le pas tout de suite, persiste par la modification du pas (PATCH /v1/tasks/{id}), puis l’annonce', async () => {
+    api.editTask.mockResolvedValue({ id: 't1', title: 'Courir 8 km', objectiveId: 'semi', importance: 4, urgency: 3 });
 
     store.moveTaskToQuadrant('t1', 'maintenant');
 
     expect(store.tasks()[0]).toMatchObject({ importance: 4, urgency: 3 });
     await settle();
     // L'écriture part depuis la file d'écritures, au tour suivant
-    expect(editTask.execute).toHaveBeenCalledWith({
-      ownerId: 'lea',
-      task: { id: 't1', title: 'Courir 8 km', objectiveId: 'semi', importance: 4, urgency: 3 },
-    });
+    expect(api.editTask).toHaveBeenCalledWith('t1', { title: 'Courir 8 km', objectiveId: 'semi', importance: 4, urgency: 3 });
     expect(store.tasks()[0]).toMatchObject({ importance: 4, urgency: 3 });
     expect(announce).toHaveBeenCalledWith('Ce pas passe dans « Maintenant ».', 'polite');
     expect(annonces.signalement()).toBeNull();
   });
 
   it('revient en arrière et le signale si l’enregistrement n’aboutit pas', async () => {
-    editTask.execute.mockResolvedValue({ success: false, error: { code: 'FAIL_TO_SAVE_TASK', message: 'Failed' } });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    api.editTask.mockRejectedValue(new ApiError('FAIL_TO_SAVE_TASK', 500, 'Failed'));
 
     store.moveTaskToQuadrant('t1', 'confier');
     expect(store.tasks()[0]).toMatchObject({ importance: 2, urgency: 3 });
@@ -83,9 +79,9 @@ describe('ObjectiveStore — déplacer un pas, créer un objectif', () => {
     expect(annonces.signalement()).toBe(FAILURE_REPORTS.moveTask);
   });
 
-  it('revient en arrière si le cas d’usage lève une exception', async () => {
+  it('revient en arrière si l’API ne répond pas', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    editTask.execute.mockRejectedValue(new Error('réseau'));
+    api.editTask.mockRejectedValue(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
 
     store.moveTaskToQuadrant('t2', 'maintenant');
     await settle();
@@ -98,12 +94,12 @@ describe('ObjectiveStore — déplacer un pas, créer un objectif', () => {
     store.moveTaskToQuadrant('t1', 'planifier');
     store.moveTaskToQuadrant('inconnu', 'maintenant');
     await settle();
-    expect(editTask.execute).not.toHaveBeenCalled();
+    expect(api.editTask).not.toHaveBeenCalled();
     expect(store.tasks()).toEqual(initialState.tasks);
   });
 
   it('donne l’id définitif du nouvel objectif une fois enregistré', async () => {
-    createObjective.execute.mockResolvedValue({ success: true, data: { id: 'stage-web', title: 'Décrocher un stage' } });
+    api.create.mockResolvedValue({ id: 'stage-web', title: 'Décrocher un stage' });
 
     store.createObjective({ title: 'Décrocher un stage' });
     expect(store.lastCreatedObjectiveId()).toBeNull();
@@ -116,7 +112,8 @@ describe('ObjectiveStore — déplacer un pas, créer un objectif', () => {
   });
 
   it('retire l’objectif optimiste et le signale si la création n’aboutit pas', async () => {
-    createObjective.execute.mockResolvedValue({ success: false, error: { code: 'FAIL_TO_SAVE_OBJECTIVE', message: 'Failed' } });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    api.create.mockRejectedValue(new ApiError('FAIL_TO_SAVE_OBJECTIVE', 500, 'Failed'));
 
     store.createObjective({ title: 'Décrocher un stage' });
     await settle();

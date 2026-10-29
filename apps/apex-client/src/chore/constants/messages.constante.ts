@@ -38,14 +38,31 @@ export const FAILURE_REPORTS = {
   loadObjectives: "Je n'ai pas pu charger tes objectifs. Vérifie ta connexion, puis recharge la page.",
   objectiveNotFound: 'Je ne retrouve plus cet objectif. Recharge la page, puis réessaie.',
   taskNotFound: 'Je ne retrouve plus ce pas. Recharge la page, puis réessaie.',
+  // L'API borne les textes (200 caractères pour un nom, 5 000 pour une description ou un pourquoi).
+  textTooLong: 'Ce texte est trop long pour être enregistré. Raccourcis-le, puis réessaie.',
+  tooManyRequests: 'Beaucoup de gestes à la suite. Attends une minute, puis réessaie.',
 } as const;
 
-/** Les actions qui peuvent ne pas aboutir. */
-export type FailedAction = Exclude<keyof typeof FAILURE_REPORTS, 'objectiveNotFound' | 'taskNotFound'>;
+/** Les phrases choisies par le code d'erreur de l'API, quelle que soit l'action. */
+type CodeReport = 'objectiveNotFound' | 'taskNotFound' | 'textTooLong' | 'tooManyRequests';
 
 /**
- * La phrase à signaler quand une action n'aboutit pas. Le message du domaine (technique, en anglais)
- * n'est jamais montré : seul son code choisit la phrase.
+ * Les phrases qu'une création d'objectif peut signaler (failureReport) : l'écran « Nouvel objectif » y
+ * reconnaît que sa création n'a pas abouti.
+ */
+export const CREATE_OBJECTIVE_FAILURES: ReadonlySet<string> = new Set([
+  FAILURE_REPORTS.createObjective,
+  FAILURE_REPORTS.textTooLong,
+  FAILURE_REPORTS.tooManyRequests,
+]);
+
+/** Les actions qui peuvent ne pas aboutir. */
+export type FailedAction = Exclude<keyof typeof FAILURE_REPORTS, CodeReport>;
+
+/**
+ * La phrase à signaler quand une action n'aboutit pas, d'après le code d'erreur de l'API (ApiError.code).
+ * Le message de l'API (technique, en anglais) n'est jamais montré : seul son code choisit la phrase.
+ * Sans code connu (réseau, panne du serveur…), la phrase de l'action.
  */
 export function failureReport(action: FailedAction, errorCode?: string): string {
   switch (errorCode) {
@@ -53,6 +70,10 @@ export function failureReport(action: FailedAction, errorCode?: string): string 
       return FAILURE_REPORTS.objectiveNotFound;
     case 'TASK_NOT_FOUND':
       return FAILURE_REPORTS.taskNotFound;
+    case 'VALIDATION_ERROR':
+      return FAILURE_REPORTS.textTooLong;
+    case 'TOO_MANY_REQUESTS':
+      return FAILURE_REPORTS.tooManyRequests;
     default:
       return FAILURE_REPORTS[action];
   }

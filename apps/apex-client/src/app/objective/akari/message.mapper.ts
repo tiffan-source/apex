@@ -1,16 +1,21 @@
-import { GetConversationsQueryOutput } from "@org/chat"
+import { AI_SENDER, type ConversationResponse, type ToolCall } from "../../../chore/api/api.models";
 import { MessageViewModel, PermissionRequestViewModel } from "./chat.models";
-import { ToolCall } from "@org/ai-assistant";
 
 /** Les outils d'écriture du workflow : ceux qui ajoutent une étape ou un pas. */
 export const CREATE_STAGE_TOOL = "createSubObjective";
 export const CREATE_TASK_TOOL = "createTask";
 
 export class MessageMapper {
-  static fromConversationQueryToMessages(conversation: GetConversationsQueryOutput, owner: string): MessageViewModel[] {
+  /** L'auteur d'un message de l'API : Akari (« AI »), sinon la personne (son id). */
+  static senderOf(sender: string): MessageViewModel["sender"] {
+    return sender === AI_SENDER ? "assistant" : "user";
+  }
+
+  /** La conversation rendue par l'API (GET /v1/objectives/{id}/conversation), prête pour l'écran. */
+  static fromConversationToMessages(conversation: ConversationResponse): MessageViewModel[] {
     return conversation.messages.map<MessageViewModel>(message => ({
       id: message.id,
-      sender: message.sender === owner ? "user" : "assistant",
+      sender: MessageMapper.senderOf(message.sender),
       content: message.content,
       timestamp: new Date(message.createdAt)
     }));

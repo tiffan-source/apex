@@ -3,12 +3,13 @@ import { patchState, signalStoreFeature, type, withMethods } from "@ngrx/signals
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { tapResponse } from "@ngrx/operators";
 import { filter, from, map, mergeMap, pipe, tap } from "rxjs";
-import { EditMyTaskUsecase } from "@org/objective";
 import type { Quadrant } from "@empreinte-studio/angular/matrice";
+import { ObjectivesApi } from "../../api/objectives.api";
+import { errorCodeOf } from "../../api/api-error";
 import { ObjectiveState } from "../objective.store";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";
-import { withOwnerId } from "../utils/filter-auth-operation";
+import { whenSignedIn } from "../utils/filter-auth-operation";
 import { isTemporaryId } from "../utils/map-optimistique-id";
 import { WriteQueue } from "../utils/write-queue";
 import { TaskViewModel } from "../../models/objective.viewmodel";
@@ -19,16 +20,16 @@ type Levels = { importance: number; urgency: number };
 
 /**
  * Déplacer un pas vers un quadrant de la matrice : seules l'importance et l'urgence qui doivent changer
- * changent (levelsForQuadrant). Mise à jour optimiste, persistance par le cas d'usage d'édition de tâche
- * (dans la file d'écritures), retour en arrière si l'enregistrement n'aboutit pas. Ne touche pas à
- * requestStatus (action de fond).
+ * changent (levelsForQuadrant). Mise à jour optimiste, persistance par la modification du pas
+ * (PATCH /v1/tasks/{id}, dans la file d'écritures), retour en arrière si l'enregistrement n'aboutit pas.
+ * Ne touche pas à requestStatus (action de fond).
  */
 export function withMoveTaskToQuadrant() {
   return signalStoreFeature(
     { state: type<ObjectiveState>() },
     withMethods((
       store,
-      editMyTaskUsecase = inject(EditMyTaskUsecase),
+      objectivesApi = inject(ObjectivesApi),
       sessionStore = inject(SessionStore),
       annonces = inject(AnnoncesStore),
       writes = inject(WriteQueue)
@@ -47,18 +48,18 @@ export function withMoveTaskToQuadrant() {
 
       const move = rxMethod<{ taskId: string; quadrant: Quadrant }>(
         pipe(
-          withOwnerId(sessionStore.currentUserId),
-          map(({ taskId, quadrant, ownerId }) => {
+          whenSignedIn(sessionStore.isAuthenticated),
+          map(({ taskId, quadrant }) => {
             const oldTask = store.tasks().find((task) => task.id === taskId);
-            return { quadrant, ownerId, oldTask, levels: oldTask ? levelsForQuadrant(oldTask, quadrant) : null };
+            return { quadrant, oldTask, levels: oldTask ? levelsForQuadrant(oldTask, quadrant) : null };
           }),
           // Un pas inconnu, ou déjà dans ce quadrant : rien à faire
-          filter((data): data is { quadrant: Quadrant; ownerId: string; oldTask: TaskViewModel; levels: Levels } =>
+          filter((data): data is { quadrant: Quadrant; oldTask: TaskViewModel; levels: Levels } =>
             data.oldTask !== undefined && data.levels !== null &&
             (data.levels.importance !== data.oldTask.importance || data.levels.urgency !== data.oldTask.urgency)
           ),
           tap(({ oldTask, levels }) => setLevels(oldTask.id, levels)),
-          mergeMap(({ oldTask, levels, ownerId, quadrant }) => {
+          mergeMap(({ oldTask, levels, quadrant }) => {
             const previous: Levels = { importance: oldTask.importance, urgency: oldTask.urgency };
             return from(writes.run(async () => {
               const id = writes.resolve(oldTask.id);
@@ -66,25 +67,22 @@ export function withMoveTaskToQuadrant() {
               const current = store.tasks().find((task) => task.id === id) ?? oldTask;
               const objectiveId = writes.resolve(current.objectiveId);
               if (isTemporaryId(id) || isTemporaryId(objectiveId)) return null; // son ajout n'a pas abouti (déjà signalé)
-              return editMyTaskUsecase.execute({
-                ownerId,
-                task: { id, title: current.title, objectiveId, importance: levels.importance, urgency: levels.urgency }
+              return objectivesApi.editTask(id, {
+                title: current.title,
+                objectiveId,
+                importance: levels.importance,
+                urgency: levels.urgency,
               });
             })).pipe(
               tapResponse({
-                next: (result) => {
-                  if (result === null) return;
-                  if (result.success) {
-                    annonces.annoncer(taskMovedAnnouncement(quadrant));
-                  } else {
-                    restore(oldTask.id, levels, previous);
-                    annonces.signaler(failureReport('moveTask', result.error.code));
-                  }
+                next: (saved) => {
+                  if (saved === null) return;
+                  annonces.annoncer(taskMovedAnnouncement(quadrant));
                 },
                 error: (error) => {
                   console.error(error);
                   restore(oldTask.id, levels, previous);
-                  annonces.signaler(failureReport('moveTask'));
+                  annonces.signaler(failureReport('moveTask', errorCodeOf(error)));
                 }
               })
             );

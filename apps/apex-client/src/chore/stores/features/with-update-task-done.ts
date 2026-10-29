@@ -3,7 +3,8 @@ import { ObjectiveState } from "../objective.store";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { pipe, tap, from, mergeMap } from "rxjs";
 import { inject } from "@angular/core";
-import { UpdateDoneStatusOfTaskUsecase } from "@org/objective";
+import { ObjectivesApi } from "../../api/objectives.api";
+import { errorCodeOf } from "../../api/api-error";
 import { tapResponse } from "@ngrx/operators";
 import { AnnoncesStore } from "../annonces.store";
 import { isTemporaryId } from "../utils/map-optimistique-id";
@@ -15,7 +16,7 @@ export function withUpdateTaskDone() {
     { state: type<ObjectiveState>() },
     withMethods((
       store,
-      updateDoneStatusOfTaskUsecase = inject(UpdateDoneStatusOfTaskUsecase),
+      objectivesApi = inject(ObjectivesApi),
       annonces = inject(AnnoncesStore),
       writes = inject(WriteQueue)
     )=>{
@@ -31,7 +32,7 @@ export function withUpdateTaskDone() {
         if (store.tasks().find((task) => task.id === id)?.done === done) setDone(id, !done);
       };
 
-      /** Coche ou décoche un pas, d'abord dans l'état puis en base ; retour en arrière si l'enregistrement n'aboutit pas. */
+      /** Coche ou décoche un pas, d'abord dans l'état puis par l'API ; retour en arrière si l'enregistrement n'aboutit pas. */
       const updateTaskDone = rxMethod<{ taskId: string; done: boolean }>(
           pipe(
             // Mise à jour optimiste
@@ -40,21 +41,16 @@ export function withUpdateTaskDone() {
               from(writes.run(async () => {
                 const id = writes.resolve(taskId);
                 if (isTemporaryId(id)) return null; // son ajout n'a pas abouti (déjà signalé)
-                return updateDoneStatusOfTaskUsecase.execute({ taskId: id, done });
+                return objectivesApi.setTaskDone(id, done);
               })).pipe(
                 tapResponse({
-                  next: (result)=> {
-                    if (result === null) return;
-                    if (!result.success) {
-                      annonces.signaler(failureReport('toggleTask', result.error.code));
-                      restore(taskId, done);
-                    } else {
-                      annonces.annoncer(done ? SUCCESS_ANNOUNCEMENTS.taskDone : SUCCESS_ANNOUNCEMENTS.taskUndone);
-                    }
+                  next: (saved)=> {
+                    if (saved === null) return;
+                    annonces.annoncer(done ? SUCCESS_ANNOUNCEMENTS.taskDone : SUCCESS_ANNOUNCEMENTS.taskUndone);
                   },
                   error: (error) => {
                     console.error('Mise à jour du pas non enregistrée :', error);
-                    annonces.signaler(failureReport('toggleTask'));
+                    annonces.signaler(failureReport('toggleTask', errorCodeOf(error)));
                     restore(taskId, done);
                   }
                 })

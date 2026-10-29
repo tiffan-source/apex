@@ -2,10 +2,11 @@ import { patchState, signalStoreFeature, type, withMethods } from "@ngrx/signals
 import { ObjectiveState } from "../objective.store";
 import { RequestStatusState } from "../utils/loading-feature";
 import { inject } from "@angular/core";
-import { EditObjectiveUsecase } from "@org/objective";
+import { ObjectivesApi } from "../../api/objectives.api";
+import { errorCodeOf } from "../../api/api-error";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { filter, from, map, mergeMap, pipe, tap } from "rxjs";
-import { withOwnerId } from "../utils/filter-auth-operation";
+import { whenSignedIn } from "../utils/filter-auth-operation";
 import { isTemporaryId } from "../utils/map-optimistique-id";
 import { WriteQueue } from "../utils/write-queue";
 import { SessionStore } from "../session.store";
@@ -21,7 +22,7 @@ export function withEditObjective() {
   return signalStoreFeature(
     {state: type<ObjectiveState & RequestStatusState>()},
     withMethods((store,
-      editObjective = inject(EditObjectiveUsecase),
+      objectivesApi = inject(ObjectivesApi),
       sessionStore = inject(SessionStore),
       annonces = inject(AnnoncesStore),
       writes = inject(WriteQueue)
@@ -40,10 +41,13 @@ export function withEditObjective() {
       };
 
       return {
-        /** Modifie un objectif ou une étape, d'abord dans l'état puis en base ; retour en arrière si l'enregistrement n'aboutit pas. */
+        /**
+         * Modifie un objectif ou une étape, d'abord dans l'état puis par l'API ; retour en arrière si
+         * l'enregistrement n'aboutit pas. Un champ absent (undefined) reste inchangé côté API.
+         */
         editObjective: rxMethod<{id: string, title: string; description?: string; why?: string; dueDate?: Date }>(
           pipe(
-            withOwnerId(sessionStore.currentUserId),
+            whenSignedIn(sessionStore.isAuthenticated),
             map((data)=>({...data, oldObj: store.objectives().find(obj=>obj.id === data.id)})),
             // Rien à modifier si l'objectif n'est pas (ou plus) chargé
             filter((data): data is typeof data & { oldObj: ObjectiveViewModel } => data.oldObj !== undefined),
@@ -62,32 +66,24 @@ export function withEditObjective() {
               patchState(store, {requestStatus: 'pending'});
               patchState(store, {objectives: store.objectives().map((obj)=> obj.id === id ? optimistic : obj)});
             }),
-            mergeMap(({title, id, ownerId, description, dueDate, why, oldObj, optimistic})=>
+            mergeMap(({title, id, description, dueDate, why, oldObj, optimistic})=>
               from(writes.run(async () => {
                 const objectiveId = writes.resolve(id);
                 if (isTemporaryId(objectiveId)) return null; // sa création n'a pas abouti (déjà signalé)
-                return editObjective.execute({
-                  objective: { id: objectiveId, title, description, dueDate, why },
-                  ownerId
-                });
+                return objectivesApi.edit(objectiveId, { title, description, why, dueDate: dueDate?.toISOString() });
               })).pipe(
                 tapResponse({
-                  next: (data) =>{
-                    if (data === null) {
+                  next: (saved) =>{
+                    if (saved === null) {
                       patchState(store, {requestStatus: 'idle'});
-                    } else if (data.success) {
-                      annonces.annoncer(SUCCESS_ANNOUNCEMENTS.objectiveSaved);
-                      patchState(store, {requestStatus: 'fulfilled'});
-                    } else {
-                      const report = failureReport('editObjective', data.error.code);
-                      annonces.signaler(report);
-                      restore(oldObj, optimistic);
-                      patchState(store, {requestStatus: {error: report}});
+                      return;
                     }
+                    annonces.annoncer(SUCCESS_ANNOUNCEMENTS.objectiveSaved);
+                    patchState(store, {requestStatus: 'fulfilled'});
                   },
                   error: (error)=>{
                     console.error(error);
-                    const report = failureReport('editObjective');
+                    const report = failureReport('editObjective', errorCodeOf(error));
                     annonces.signaler(report);
                     patchState(store, {requestStatus: {error: report}});
                     restore(oldObj, optimistic);

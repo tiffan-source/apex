@@ -1,12 +1,13 @@
 import { inject } from '@angular/core';
 import { signalStore, withMethods } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { first, map, mergeMap, pipe, tap, timer } from 'rxjs';
-import { SendMessageToAIWorkflow, type WorkflowStateValue } from '@org/ai-assistant';
+import { EMPTY, catchError, defer, exhaustMap, first, from, mergeMap, of, pipe, retry, switchMap, tap, throwError, timer } from 'rxjs';
+import { AssistantApi } from '../api/assistant.api';
+import { isTransientError } from '../api/api-error';
+import type { WorkflowState, WorkflowStateValue } from '../api/api.models';
 import { ObjectiveStore } from './objective.store';
-import { SessionStore } from './session.store';
 
-/** L'intervalle d'interrogation du workflow, comme ChatStore (le workflow ne pousse rien). */
+/** L'intervalle d'interrogation du workflow, comme ChatStore (l'API ne pousse rien). */
 export const AKARI_WRITE_POLL_INTERVAL = 1000;
 
 /** Le workflow exécute un outil : l'écriture acceptée est en cours. */
@@ -21,34 +22,51 @@ export function isExecutingTool(value: WorkflowStateValue | undefined): boolean 
  * (cahier de migration, § 5). Fourni par la coque, à côté d'ObjectiveStore : il survit au départ de l'écran
  * Akari, alors que ChatStore (fourni par l'écran) s'arrête avec lui.
  *
- * À l'accord sur un outil d'écriture, ChatStore lui confie l'id du workflow. Le workflow passe aussitôt à
- * l'exécution de l'outil ({ ExecutingAllTool: 'ExecutingTool' }) ; dès qu'il en sort (nouvelle demande d'accord,
- * envoi du résultat à l'IA, repos…), l'écriture est faite : les objectifs sont rechargés, une fois. Deux ajouts
- * acceptés dans un même tour donnent deux rechargements, chacun après son écriture.
+ * À l'accord sur un outil d'écriture, ChatStore lui confie la réponse de l'API à cet accord. Le workflow passe
+ * aussitôt à l'exécution de l'outil ({ ExecutingAllTool: 'ExecutingTool' }), sur le serveur ; dès qu'il en sort
+ * (nouvelle demande d'accord, envoi du résultat à l'IA, repos…), l'écriture est faite : les objectifs sont
+ * rechargés, une fois. Deux ajouts acceptés dans un même tour donnent deux rechargements, chacun après son écriture.
  */
 export const AkariWritesStore = signalStore(
   withMethods(
     (
       store,
-      workflow = inject(SendMessageToAIWorkflow),
+      assistant = inject(AssistantApi),
       objectives = inject(ObjectiveStore),
-      session = inject(SessionStore),
-    ) => ({
-      /** Recharge les objectifs dès que l'outil accepté sur ce workflow a fini de s'exécuter. */
-      reloadAfterWrite: rxMethod<string>(
-        pipe(
-          mergeMap((workflowId) =>
-            timer(0, AKARI_WRITE_POLL_INTERVAL).pipe(
-              map(() => workflow.getState(workflowId)),
-              first((snapshot) => !isExecutingTool(snapshot?.value as WorkflowStateValue | undefined)),
-              tap(() => {
-                const ownerId = session.currentUserId();
-                if (ownerId) objectives.loadObjectives({ ownerId });
-              }),
+    ) => {
+      const readState = (objectiveId: string) =>
+        defer(() => assistant.state(objectiveId)).pipe(
+          retry({
+            count: 3,
+            delay: (error) => (isTransientError(error) ? timer(AKARI_WRITE_POLL_INTERVAL) : throwError(() => error)),
+          }),
+        );
+
+      return {
+        /** Recharge les objectifs dès que l'outil accepté (`answered` : la réponse de l'API à l'accord) a fini de s'exécuter. */
+        reloadAfterWrite: rxMethod<{ objectiveId: string; answered: Promise<WorkflowState> }>(
+          pipe(
+            mergeMap(({ objectiveId, answered }) =>
+              from(answered).pipe(
+                switchMap((state) =>
+                  isExecutingTool(state.value)
+                    ? timer(AKARI_WRITE_POLL_INTERVAL, AKARI_WRITE_POLL_INTERVAL).pipe(
+                        exhaustMap(() => readState(objectiveId)),
+                        first((polled) => !isExecutingTool(polled.value)),
+                      )
+                    : of(state),
+                ),
+                tap(() => objectives.loadObjectives()),
+                // L'accord n'a pas abouti (ChatStore le signale), ou l'état n'a pas pu être relu.
+                catchError((error) => {
+                  console.error(error);
+                  return EMPTY;
+                }),
+              ),
             ),
           ),
         ),
-      ),
-    }),
+      };
+    },
   ),
 );

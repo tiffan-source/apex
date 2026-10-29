@@ -20,12 +20,14 @@
 ## Suivi de la migration Empreinte
 Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 
-### Back-end, à décider plus tard
-- [] `findObjectiveWithASpecificTaskId` sans `setDone` / `setDescription` / `setDueDate` : modifier ou déplacer un pas remet en base le pas modifié et ses pas voisins à « non faits » (un pas fait déplacé ou renommé dans la matrice aussi : l'écran le montre fait, la base non), sans description ni échéance (laissé tel quel, sans compensation côté client)
-- [] Le chargement (`SupabaseGetAllObjectiveAndTaskQuery`, `get_objective_subtree`) n'a pas d'`ORDER BY` : chaque upsert d'une étape et chaque pas coché déplacent la ligne en fin de lecture, et au rechargement « Étape N », l'étape en cours, le prochain pas et l'ordre des pas changent (`.order('created_at')` + départage stable, ou un champ d'ordre dans `ObjectiveOutput` / `TaskOutput`)
-- [] Cas d'usage manquants : laisser filer ou supprimer (objectif, étape, pas), déconnexion, retirer une échéance (`EditObjectiveInput`)
-- [] `SessionStore` ne garde pas le code d'erreur : la traduction des messages Supabase (`translateAuthError`) repose sur leurs textes anglais
-- [] worklfows : `createBrowserInspector` de `@statelyai/inspect` appelé pour chaque workflow ; un tour reste bloqué si une étape invoquée échoue sans `onError`
+### Back-end (Apex Brain)
+- [x] Le client appelle l'API d'Apex Brain : plus de librairie métier ni d'accès direct à Supabase, Firebase ou Gemini
+- [x] `findObjectiveWithASpecificTaskId`, ordre du chargement, codes d'erreur de l'authentification, tour d'Akari bloqué : corrigés dans le serveur
+- [] Déconnexion : `POST /v1/auth/logout` existe, il manque le geste dans l'interface
+- [] Retirer une échéance : l'API accepte `dueDate: null`, les feuilles « Modifier » l'interdisent encore
+- [] Cas d'usage manquants : laisser filer ou supprimer (objectif, étape, pas)
+- [] Règles encore dans le client, à exposer par l'API : quadrant d'un pas et déplacement vers un quadrant (`matrix.mapper.ts`), progression des étapes et objectif accompli (`objective-view.mapper.ts`)
+- [] Akari : remplacer l'interrogation chaque seconde par un flux (SSE) côté API
 
 ### Empreinte, en amont (dépôt `empreinte-studio/empreinte`)
 - [] `motsAEviter` rate les mots accentués (`\b`) et ne connaît ni « erreur » ni les emoji
@@ -41,7 +43,7 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [] Un repli générique (`details`), une initiale de la personne
 
 ### Client
-- [] Contrôle visuel de chaque écran dans le navigateur (Jour, Nuit, 375px, clavier, `GardienSceau`), avec une session sur le Supabase local
+- [] Contrôle visuel de chaque écran dans le navigateur (Jour, Nuit, 375px, clavier, `GardienSceau`), avec une session sur Apex Brain (local ou hébergé)
 - [] Un état de réussite ou d'échec propre à chaque action d'`ObjectiveStore` (`requestStatus` est partagé)
 - [] Un état « injoignable » dans `ChatStore`
 - [] Décider du sort des 18 utilitaires `.ds-*` inutilisés (`apps/apex-client/src/styles/layout.css`)

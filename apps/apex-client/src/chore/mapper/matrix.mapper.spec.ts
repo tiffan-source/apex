@@ -1,14 +1,6 @@
-import { EisenhowerCategory } from '@org/apex-library';
 import { QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
 import type { ObjectiveViewModel, TaskViewModel } from '../models/objective.viewmodel';
-import {
-  categoryToQuadrant,
-  filterMatrixByObjective,
-  levelsForQuadrant,
-  quadrantOf,
-  quadrantToCategory,
-  toMatrix,
-} from './matrix.mapper';
+import { filterMatrixByObjective, levelsForQuadrant, quadrantOf, toMatrix } from './matrix.mapper';
 
 const objective = (id: string, title: string, parentId: string | null = null): ObjectiveViewModel => ({
   id,
@@ -29,28 +21,7 @@ const task = (id: string, objectiveId: string, importance: number, urgency: numb
 });
 
 describe('matrix.mapper', () => {
-  describe('quadrants ↔ catégories', () => {
-    it.each([
-      [EisenhowerCategory.DO, 'maintenant'],
-      [EisenhowerCategory.SCHEDULE, 'planifier'],
-      [EisenhowerCategory.DELEGATE, 'confier'],
-      [EisenhowerCategory.DELETE, 'laisser-filer'],
-    ] as const)('%s ↔ %s', (category, quadrant) => {
-      expect(categoryToQuadrant(category)).toBe(quadrant);
-      expect(quadrantToCategory(quadrant)).toBe(category);
-    });
-
-    it('fait l’aller-retour pour chaque quadrant d’Empreinte', () => {
-      for (const quadrant of QUADRANTS) expect(categoryToQuadrant(quadrantToCategory(quadrant))).toBe(quadrant);
-    });
-
-    it('fait l’aller-retour pour chaque catégorie d’Apex', () => {
-      for (const category of Object.values(EisenhowerCategory))
-        expect(quadrantToCategory(categoryToQuadrant(category))).toBe(category);
-    });
-  });
-
-  describe('quadrantOf (règle ApexLibsMetier, seuil 3)', () => {
+  describe('quadrantOf (seuil 3)', () => {
     it.each([
       [3, 3, 'maintenant'],
       [5, 4, 'maintenant'],

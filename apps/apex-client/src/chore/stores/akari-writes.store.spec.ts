@@ -1,8 +1,9 @@
 import { EnvironmentInjector, createEnvironmentInjector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { GetConversationsQuery } from '@org/chat';
-import { SendMessageToAIWorkflow, WORKFLOW_READY_FOR_NEW_MESSAGE } from '@org/ai-assistant';
 import { ChatStore } from '../../app/objective/akari/chat.store';
+import { AssistantApi } from '../api/assistant.api';
+import { ApiError } from '../api/api-error';
+import type { ToolCall, WorkflowState } from '../api/api.models';
 import { AKARI_WRITE_POLL_INTERVAL, AkariWritesStore, isExecutingTool } from './akari-writes.store';
 import { AnnoncesStore } from './annonces.store';
 import { ObjectiveStore } from './objective.store';
@@ -10,26 +11,36 @@ import { SessionStore } from './session.store';
 
 /*
  * Ce qu'Akari ajoute arrive sur l'arête au fil des ajouts (cahier, § 5) : rechargement dès que l'outil
- * accepté est exécuté, même si l'écran Akari (et son ChatStore) est parti entre-temps.
+ * accepté est exécuté sur le serveur, même si l'écran Akari (et son ChatStore) est parti entre-temps.
  */
 
-type Snapshot = { value: unknown; context: Record<string, unknown> } | undefined;
-
-const READY = WORKFLOW_READY_FOR_NEW_MESSAGE;
+const READY = 'Ready For New Message';
 const EXECUTING = { ExecutingAllTool: 'ExecutingTool' };
 const ASKING = { ExecutingAllTool: 'WaitingForUserPermission' };
-const STAGE_CALL = { id: 'call-1', name: 'createSubObjective', arguments: { parentObjectiveId: 'semi', title: 'Portfolio' } };
-const TASK_CALL = { id: 'call-2', name: 'createTask', arguments: { objectiveId: 'portfolio', title: 'Trois projets' } };
+const STAGE_CALL: ToolCall = { id: 'call-1', name: 'createSubObjective', arguments: { parentObjectiveId: 'semi', title: 'Portfolio' } };
+const TASK_CALL: ToolCall = { id: 'call-2', name: 'createTask', arguments: { objectiveId: 'portfolio', title: 'Trois projets' } };
+
+const state = (value: WorkflowState['value'], overrides: Partial<WorkflowState> = {}): WorkflowState => ({
+  objectiveId: 'semi',
+  value,
+  status: value === READY ? 'ready' : 'processing',
+  pendingToolCall: null,
+  lastRegisteredMessage: null,
+  lastError: null,
+  ...overrides,
+});
+const asking = (call: ToolCall) => state(ASKING, { status: 'awaiting-permission', pendingToolCall: call });
 
 function setup() {
-  let snapshot: Snapshot = { value: READY, context: {} };
-  const workflow = {
-    startWorkFlow: vi.fn(async (id: string) => id),
-    getState: vi.fn(() => snapshot),
-    sendMessage: vi.fn(),
-    // Comme la machine : accepter fait passer aussitôt à l'exécution de l'outil.
-    respondToPermission: vi.fn((_: string, permission: boolean) => {
-      if (permission) snapshot = { value: EXECUTING, context: {} };
+  let current = state(READY);
+  const assistant = {
+    conversation: vi.fn().mockResolvedValue({ id: 'c1', messages: [] }),
+    state: vi.fn(async () => current),
+    sendMessage: vi.fn(async () => current),
+    // Comme l'API : accepter fait passer aussitôt à l'exécution de l'outil, et la réponse (202) le dit.
+    respondToPermission: vi.fn(async (_objectiveId: string, granted: boolean) => {
+      if (granted) current = state(EXECUTING);
+      return current;
     }),
   };
   const objectives = { loadObjectives: vi.fn() };
@@ -37,19 +48,18 @@ function setup() {
   TestBed.configureTestingModule({
     providers: [
       AkariWritesStore,
-      { provide: SendMessageToAIWorkflow, useValue: workflow },
+      { provide: AssistantApi, useValue: assistant },
       { provide: ObjectiveStore, useValue: objectives },
-      { provide: SessionStore, useValue: { currentUserId: signal('u1') } },
-      { provide: GetConversationsQuery, useValue: { execute: vi.fn().mockResolvedValue({ id: 'c1', messages: [] }) } },
+      { provide: SessionStore, useValue: { isAuthenticated: signal(true) } },
       { provide: AnnoncesStore, useValue: { annoncer: vi.fn(), signaler: vi.fn() } },
     ],
   });
 
   return {
     store: TestBed.inject(AkariWritesStore),
-    workflow,
+    assistant,
     objectives,
-    setSnapshot: (next: Snapshot) => (snapshot = next),
+    setState: (next: WorkflowState) => (current = next),
   };
 }
 
@@ -61,7 +71,10 @@ function openAkariScreen() {
 
 const tick = (ms = 0) => vi.advanceTimersByTimeAsync(ms);
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+});
 
 afterEach(() => {
   vi.useRealTimers();
@@ -81,74 +94,94 @@ describe('isExecutingTool', () => {
 
 describe('AkariWritesStore', () => {
   it('recharge les objectifs une fois l’outil exécuté, pas avant, et une seule fois', async () => {
-    const { store, objectives, setSnapshot } = setup();
-    setSnapshot({ value: EXECUTING, context: {} });
-    store.reloadAfterWrite('semi');
+    const { store, objectives, setState } = setup();
+    setState(state(EXECUTING));
+    store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.resolve(state(EXECUTING)) });
     await tick(3 * AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).not.toHaveBeenCalled();
 
-    setSnapshot({ value: 'SendingCallResultToAI', context: {} });
+    setState(state('SendingCallResultToAI'));
     await tick(AKARI_WRITE_POLL_INTERVAL);
-    expect(objectives.loadObjectives).toHaveBeenCalledWith({ ownerId: 'u1' });
+    expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
 
     await tick(5 * AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
   });
 
+  it('recharge tout de suite quand l’outil avait déjà tourné à la réponse de l’API', async () => {
+    const { store, assistant, objectives } = setup();
+    store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.resolve(state('SendingCallResultToAI')) });
+    await tick();
+    expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
+    expect(assistant.state).not.toHaveBeenCalled();
+  });
+
+  it('ne recharge rien quand l’accord n’a pas abouti', async () => {
+    const { store, objectives } = setup();
+    store.reloadAfterWrite({
+      objectiveId: 'semi',
+      answered: Promise.reject(new ApiError('NO_PENDING_PERMISSION', 409, 'No pending permission')),
+    });
+    await tick(3 * AKARI_WRITE_POLL_INTERVAL);
+    expect(objectives.loadObjectives).not.toHaveBeenCalled();
+  });
+
   it('deux ajouts dans un même tour : l’arête se remplit après le premier, sans attendre la fin du tour', async () => {
-    const { workflow, objectives, setSnapshot } = setup();
+    const { assistant, objectives, setState } = setup();
     // Akari demande une étape, puis un pas, dans le même tour.
-    setSnapshot({ value: ASKING, context: { currentToolCall: STAGE_CALL } });
+    setState(asking(STAGE_CALL));
     const { chat } = openAkariScreen();
     chat.initWorkflow('semi');
     await tick();
     expect(chat.isAwaitingPermission()).toBe(true);
     chat.respondToPermission(true);
-    expect(workflow.respondToPermission).toHaveBeenCalledWith('semi', true);
+    expect(assistant.respondToPermission).toHaveBeenCalledWith('semi', true, 'call-1');
     await tick();
     expect(objectives.loadObjectives).not.toHaveBeenCalled();
 
     // L'étape est écrite ; Akari demande déjà le pas suivant : le tour n'est pas fini, l'arête se remplit.
-    setSnapshot({ value: ASKING, context: { currentToolCall: TASK_CALL } });
+    setState(asking(TASK_CALL));
     await tick(AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
+    expect(chat.isAwaitingPermission()).toBe(true);
 
     chat.respondToPermission(true);
+    expect(assistant.respondToPermission).toHaveBeenLastCalledWith('semi', true, 'call-2');
     await tick();
-    setSnapshot({ value: 'SendingCallResultToAI', context: {} });
+    setState(state('SendingCallResultToAI'));
     await tick(AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(2);
 
-    setSnapshot({ value: READY, context: {} });
+    setState(state(READY));
     await tick(3 * AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(2);
   });
 
   it('écran quitté avant la fin de l’écriture : les objectifs sont rechargés quand même', async () => {
-    const { objectives, setSnapshot } = setup();
-    setSnapshot({ value: ASKING, context: { currentToolCall: STAGE_CALL } });
+    const { objectives, setState } = setup();
+    setState(asking(STAGE_CALL));
     const { chat, leave } = openAkariScreen();
     chat.initWorkflow('semi');
     await tick();
 
     chat.respondToPermission(true);
-    await tick();
-    leave(); // « Voir l'arête », ou la matrice : ChatStore part avec l'écran
+    leave(); // « Voir l'arête », ou la matrice : ChatStore part avec l'écran, avant même la réponse de l'API
 
-    setSnapshot({ value: 'SendingCallResultToAI', context: {} });
+    await tick();
+    setState(state('SendingCallResultToAI'));
     await tick(AKARI_WRITE_POLL_INTERVAL);
-    expect(objectives.loadObjectives).toHaveBeenCalledWith({ ownerId: 'u1' });
+    expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
   });
 
   it('ne recharge rien quand la personne refuse', async () => {
-    const { objectives, setSnapshot } = setup();
-    setSnapshot({ value: ASKING, context: { currentToolCall: STAGE_CALL } });
+    const { objectives, setState } = setup();
+    setState(asking(STAGE_CALL));
     const { chat } = openAkariScreen();
     chat.initWorkflow('semi');
     await tick();
 
     chat.respondToPermission(false);
-    setSnapshot({ value: READY, context: {} });
+    setState(state(READY));
     await tick(3 * AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).not.toHaveBeenCalled();
   });

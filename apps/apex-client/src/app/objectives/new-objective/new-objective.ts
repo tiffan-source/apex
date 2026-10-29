@@ -5,7 +5,7 @@ import { EBouton, EChamp, ECorne, EFil, EIcone, EReplique, ESaisie, ESurface, ET
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { SessionStore } from '../../../chore/stores/session.store';
 import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
-import { FAILURE_REPORTS } from '../../../chore/constants/messages.constante';
+import { CREATE_OBJECTIVE_FAILURES } from '../../../chore/constants/messages.constante';
 import { fromDateInputValue } from '../../../chore/mapper/date-input.mapper';
 import { formatHorizon } from '../../../chore/mapper/objective-view.mapper';
 import { firstName } from '../../../chore/mapper/person.mapper';
@@ -118,7 +118,7 @@ export class NewObjective {
       // optimiste : le signalement passe d'abord, car lastCreatedObjectiveId peut encore porter l'id d'une
       // création précédente qui a abouti pendant que celle-ci attendait.
       const createdId = this.store.lastCreatedObjectiveId();
-      if (this.store.error() === FAILURE_REPORTS.createObjective) {
+      if (CREATE_OBJECTIVE_FAILURES.has(this.store.error() ?? '')) {
         // La coque affiche déjà le signalement (AnnoncesStore) ; le brouillon reste tel quel.
         this.engagement.set(null);
       } else if (createdId && !isTemporaryId(createdId)) {

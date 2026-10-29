@@ -1,0 +1,35 @@
+import { HttpErrorResponse, type HttpInterceptorFn, type HttpRequest } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { catchError, from, switchMap, throwError } from 'rxjs';
+import { API_URL, isApiRequest } from './api.config';
+import { ApiSession } from './api-session';
+
+/** Les routes de l'API qui ouvrent ou renouvellent une session : elles ne demandent pas de jeton. */
+const PUBLIC_ROUTES: ReadonlySet<string> = new Set(['/v1/auth/register', '/v1/auth/login', '/v1/auth/refresh']);
+
+const withBearer = (request: HttpRequest<unknown>, token: string | null) =>
+  token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
+
+/**
+ * Chaque requête vers l'API part avec le jeton d'accès de la personne (`Authorization: Bearer`), renouvelé
+ * d'abord s'il expire bientôt. Une requête refusée (401) part une seconde fois après un renouvellement ;
+ * si le renouvellement est refusé, ApiSession ferme la session et l'erreur remonte.
+ * Le jeton ne part jamais vers un autre hôte que l'API.
+ */
+export const authInterceptor: HttpInterceptorFn = (request, next) => {
+  const apiUrl = inject(API_URL);
+  if (!isApiRequest(request.url, apiUrl)) return next(request);
+
+  const path = request.url.slice(apiUrl.length).split(/[?#]/, 1)[0];
+  if (PUBLIC_ROUTES.has(path)) return next(request);
+
+  const session = inject(ApiSession);
+  const send = () => from(session.accessToken()).pipe(switchMap((token) => next(withBearer(request, token))));
+
+  return send().pipe(
+    catchError((error: unknown) => {
+      if (!(error instanceof HttpErrorResponse) || error.status !== 401) return throwError(() => error);
+      return from(session.refresh()).pipe(switchMap((renewed) => (renewed ? send() : throwError(() => error))));
+    }),
+  );
+};
