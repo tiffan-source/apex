@@ -8,7 +8,7 @@ import { ESelection } from '@empreinte-studio/angular/selection';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { IMPORTANCE_OPTIONS, NEW_TASK_LEVELS, URGENCY_OPTIONS } from '../../../chore/constants/task.constante';
 import { namedStageOptions } from '../stage-labels';
-import { requireText, visibleError } from './sheet-validation';
+import { limitText, requireText, visibleError } from './sheet-validation';
 
 /** Ce que la feuille « Ajouter un pas » reçoit : l'objectif (pour ses étapes) et l'étape choisie. */
 export type AddTaskSheetData = {
@@ -56,6 +56,7 @@ export class AddTaskSheet {
     this.model,
     (path) => {
       requireText(path.title, TASK_TITLE_REQUIRED);
+      limitText(path.title, 'title');
       required(path.stageId, { message: TASK_STAGE_REQUIRED });
     },
     { submission: { action: async () => this.add() } },

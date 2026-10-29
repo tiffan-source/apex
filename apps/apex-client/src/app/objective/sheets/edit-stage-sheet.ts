@@ -6,7 +6,7 @@ import { EChamp, ESaisie, ETailleAuto } from '@empreinte-studio/angular/champ';
 import { EFeuille, EFeuilleActions } from '@empreinte-studio/angular/feuille';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { fromDateInputValue, toDateInputValue } from '../../../chore/mapper/date-input.mapper';
-import { requireText } from './sheet-validation';
+import { limitText, requireText } from './sheet-validation';
 
 /** Ce que la feuille « Modifier l'étape » reçoit : l'étape telle qu'elle est affichée. */
 export type EditStageSheetData = {
@@ -54,6 +54,8 @@ export class EditStageSheet {
     this.model,
     (path) => {
       requireText(path.title, STAGE_TITLE_TO_SAVE_REQUIRED);
+      limitText(path.title, 'title');
+      limitText(path.description, 'longText');
       if (this.initialDueDate) requireText(path.dueDate, STAGE_DUE_DATE_KEPT);
     },
     { submission: { action: async () => this.save() } },

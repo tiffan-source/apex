@@ -48,5 +48,9 @@ export const AnnoncesStore = signalStore(
     compris(): void {
       patchState(store, { signalement: null });
     },
+    /** Le souci signalé est levé (le serveur répond de nouveau…) : sa note disparaît, si c'est encore elle. */
+    retirer(texte: string): void {
+      if (store.signalement() === texte.trim()) patchState(store, { signalement: null });
+    },
   })),
 );

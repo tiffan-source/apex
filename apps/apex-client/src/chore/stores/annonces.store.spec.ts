@@ -53,6 +53,14 @@ describe('AnnoncesStore', () => {
     expect(store.signalement()).toBe(phrase);
   });
 
+  it('retirer() efface la note de ce souci-là seulement', () => {
+    store.signaler('Je réessaie.');
+    store.retirer('Autre chose.');
+    expect(store.signalement()).toBe('Je réessaie.');
+    store.retirer('Je réessaie.');
+    expect(store.signalement()).toBeNull();
+  });
+
   it('compris() efface le signalement', () => {
     store.signaler('Je ne retrouve plus ce pas. Recharge la page, puis réessaie.');
     store.compris();

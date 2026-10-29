@@ -42,6 +42,22 @@ export type RegisteredResponse = {
 
 // #endregion
 
+// #region longueurs
+
+/**
+ * Les longueurs que l'API accepte, espaces autour retirés (apex-brain, apps/api/src/http/schemas.ts) ;
+ * au-delà, elle répond VALIDATION_ERROR. Les formulaires s'arrêtent avant. (Un message à Akari s'arrête à
+ * 4 000 caractères : la zone de réponse d'e-conversation ne le borne pas, l'API le refuse.)
+ */
+export const TEXT_MAX_LENGTH = {
+  /** Le nom d'un objectif, d'une étape ou d'un pas. */
+  title: 200,
+  /** Une description, un pourquoi. */
+  longText: 5000,
+} as const;
+
+// #endregion
+
 // #region objectifs, étapes et pas
 
 /** Un objectif (racine) ou une étape (`parentObjective` : l'objectif ou l'étape qui la porte). */

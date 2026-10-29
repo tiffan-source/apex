@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom, type Observable } from 'rxjs';
+import { type MonoTypeOperatorFunction, type Observable, firstValueFrom, retry, throwError, timer } from 'rxjs';
 
 /** Le serveur n'a pas répondu : pas de réseau, adresse injoignable, ou réponse bloquée par le navigateur. */
 export const NETWORK_ERROR = 'NETWORK_ERROR';
@@ -74,6 +74,44 @@ export function errorCodeOf(error: unknown): string | undefined {
  */
 export function isTransientError(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 0 || error.status === 429 || error.status >= 500);
+}
+
+/**
+ * L'issue d'une requête refusée sans réponse claire : pas de réponse (réseau), ou panne du serveur. Le
+ * serveur a pu faire ce qui était demandé avant que la réponse se perde ; une requête refusée (4xx, y
+ * compris une limite de débit) n'a rien fait.
+ */
+export function isUnknownOutcome(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 0 || error.status >= 500);
+}
+
+/** Le délai avant le n-ième nouvel essai : 1 s, 2 s, 4 s, 8 s, puis 10 s. */
+export function retryDelay(retryCount: number, firstDelayMs = 1000, maxDelayMs = 10_000): number {
+  return Math.min(firstDelayMs * 2 ** Math.max(0, retryCount - 1), maxDelayMs);
+}
+
+export type TransientRetryOptions = {
+  /** Le nombre de nouveaux essais au plus ; sans lui, ils continuent tant que la souscription vit. */
+  maxRetries?: number;
+  /** Appelé avant chaque nouvel essai, avec son rang (1, 2…) : pour dire, au bout de quelques-uns, que le serveur ne répond pas. */
+  onRetry?: (retryCount: number) => void;
+};
+
+/**
+ * Relance une requête (à construire avec `defer`, pour qu'elle reparte vraiment) tant que sa panne est
+ * passagère, en espaçant les essais (retryDelay) : une coupure de réseau ou le serveur qui se réveille
+ * (l'instance gratuite de Render dort au repos) ne fait rien abandonner. Une requête refusée (400, 401,
+ * 404, 409) remonte tout de suite.
+ */
+export function retryWhileTransient<T>({ maxRetries = Infinity, onRetry }: TransientRetryOptions = {}): MonoTypeOperatorFunction<T> {
+  return retry({
+    count: maxRetries,
+    delay: (error, retryCount) => {
+      if (!isTransientError(error)) return throwError(() => error);
+      onRetry?.(retryCount);
+      return timer(retryDelay(retryCount));
+    },
+  });
 }
 
 /**

@@ -1,4 +1,5 @@
-import { minDateError, required, requiredError, schema, validate } from '@angular/forms/signals';
+import { maxLength, minDateError, required, requiredError, schema, validate } from '@angular/forms/signals';
+import { TEXT_MAX_LENGTH } from '../../../chore/api/api.models';
 import { fromDateInputValue, toDateInputValue } from '../../../chore/mapper/date-input.mapper';
 
 /*
@@ -46,13 +47,17 @@ export function isBeforeToday(value: string, now: Date = new Date()): boolean {
 
 /**
  * Les règles du brouillon : le titre est obligatoire (des espaces seuls ne comptent pas), l'horizon
- * est facultatif mais jamais avant aujourd'hui ; le pourquoi et la description sont libres.
+ * est facultatif mais jamais avant aujourd'hui ; le pourquoi et la description sont libres. Les textes
+ * ne dépassent pas ce que l'API accepte (TEXT_MAX_LENGTH : [formField] pose aussi maxlength sur le champ).
  */
 export const newObjectiveSchema = schema<NewObjectiveDraft>((path) => {
   required(path.title, { message: DRAFT_MESSAGES.titleRequired });
   validate(path.title, ({ value }) =>
     value().length > 0 && value().trim() === '' ? requiredError({ message: DRAFT_MESSAGES.titleRequired }) : undefined,
   );
+  maxLength(path.title, TEXT_MAX_LENGTH.title);
+  maxLength(path.why, TEXT_MAX_LENGTH.longText);
+  maxLength(path.description, TEXT_MAX_LENGTH.longText);
   validate(path.dueDate, ({ value }) =>
     isBeforeToday(value()) ? minDateError(startOfToday(), { message: DRAFT_MESSAGES.dueDateInPast }) : undefined,
   );

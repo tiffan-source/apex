@@ -49,13 +49,21 @@ describe('failureReport', () => {
 
   it('dit ce que l’API refuse : un texte trop long, trop de gestes à la suite', () => {
     expect(failureReport('addTask', 'VALIDATION_ERROR')).toBe(FAILURE_REPORTS.textTooLong);
+    expect(failureReport('editObjective', 'PAYLOAD_TOO_LARGE')).toBe(FAILURE_REPORTS.textTooLong);
     expect(failureReport('editObjective', 'TOO_MANY_REQUESTS')).toBe(FAILURE_REPORTS.tooManyRequests);
     // Sans réponse de l'API, la phrase de l'action (qui dit de vérifier la connexion).
     expect(failureReport('toggleTask', 'NETWORK_ERROR')).toBe(FAILURE_REPORTS.toggleTask);
   });
 
+  it('dit que la session a pris fin quand l’API refuse le jeton, sans parler de connexion', () => {
+    expect(failureReport('addStage', 'UNAUTHENTICATED')).toBe(FAILURE_REPORTS.sessionEnded);
+    expect(failureReport('loadObjectives', 'INVALID_SESSION')).toBe(FAILURE_REPORTS.sessionEnded);
+    expect(FAILURE_REPORTS.sessionEnded).not.toMatch(/connexion/);
+  });
+
   it('CREATE_OBJECTIVE_FAILURES rassemble les phrases d’une création qui n’aboutit pas', () => {
-    for (const code of [undefined, 'FAIL_TO_SAVE_OBJECTIVE', 'VALIDATION_ERROR', 'TOO_MANY_REQUESTS', 'NETWORK_ERROR'])
+    const codes = [undefined, 'FAIL_TO_SAVE_OBJECTIVE', 'VALIDATION_ERROR', 'PAYLOAD_TOO_LARGE', 'TOO_MANY_REQUESTS', 'NETWORK_ERROR', 'UNAUTHENTICATED'];
+    for (const code of codes)
       expect(CREATE_OBJECTIVE_FAILURES.has(failureReport('createObjective', code)), String(code)).toBe(true);
     expect(CREATE_OBJECTIVE_FAILURES.has(FAILURE_REPORTS.toggleTask)).toBe(false);
   });

@@ -1,7 +1,7 @@
 DATA FLOW
 =========
 
-During its lifecycle, data exists in three different representations: the domain layer, the persistence layer, and the client layer.
+During its lifecycle, data exists in four different representations: the domain and persistence layers, which live in the server (Apex Brain), the HTTP contract the server and its clients exchange, and the client layer.
 
 Domain Layer
 ------------

@@ -27,6 +27,7 @@ const STATUS_OF: Record<string, number> = {
   TASK_NOT_FOUND: 404,
   VALIDATION_ERROR: 400,
   TOO_MANY_REQUESTS: 429,
+  UNAUTHENTICATED: 401,
   NETWORK_ERROR: 0,
 };
 
@@ -173,6 +174,25 @@ describe('ObjectiveStore', () => {
       expect(s.store.tasks().map((item) => item.id)).toEqual(['t1', 't2']);
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.textTooLong);
     });
+
+    it('une modification garde à l’écran ce qu’elle laisse inchangé (un champ absent), comme l’API', async () => {
+      TestBed.resetTestingModule();
+      const loaded = structuredClone(LOADED);
+      loaded.objectives[1] = { ...loaded.objectives[1], description: 'Tenir une heure', why: 'Finir le semi', dueDate: '2027-04-01T00:00:00.000Z' };
+      const t = await setup(loaded);
+      t.api.edit.mockReturnValue(new Promise(() => undefined)); // la réponse n'arrive pas : on regarde l'écran optimiste
+
+      // La feuille d'une étape ne touche pas au pourquoi ; sans date, l'échéance reste.
+      t.store.editObjective({ id: 'endurance', title: 'Fond', description: '' });
+      await settle();
+
+      expect(t.store.objectives().find((item) => item.id === 'endurance')).toMatchObject({
+        title: 'Fond',
+        description: '',
+        why: 'Finir le semi',
+        dueDate: '2027-04-01T00:00:00.000Z',
+      });
+    });
   });
 
   describe('gestes rapprochés : aucune réponse ne se perd', () => {
@@ -275,6 +295,23 @@ describe('ObjectiveStore', () => {
       await settle();
 
       expect(task('t2')?.done).toBe(true);
+    });
+
+    it('un geste en attente ne part pas si une autre personne s’est connectée entre-temps (un autre onglet)', async () => {
+      const first = deferred<unknown>();
+      s.api.setTaskDone.mockReturnValueOnce(first.promise);
+      s.api.addTask.mockResolvedValue({ id: 'p9', title: 'Un', importance: 3, urgency: 3 });
+
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 3 } });
+      await settle();
+      s.session.currentUserId.set('noe');
+      first.resolve({});
+      await settle();
+
+      // Le pas de Léa n'est pas écrit dans le compte de Noé.
+      expect(s.api.addTask).not.toHaveBeenCalled();
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.sessionEnded);
     });
   });
 
@@ -567,6 +604,7 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
     | 'TASK_NOT_FOUND'
     | 'VALIDATION_ERROR'
     | 'TOO_MANY_REQUESTS'
+    | 'UNAUTHENTICATED'
     | 'NETWORK_ERROR'
     | 'throw';
   const OUTCOMES: Outcome[] = [
@@ -576,6 +614,7 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
     'TASK_NOT_FOUND',
     'VALIDATION_ERROR',
     'TOO_MANY_REQUESTS',
+    'UNAUTHENTICATED',
     'NETWORK_ERROR',
     'throw',
   ];

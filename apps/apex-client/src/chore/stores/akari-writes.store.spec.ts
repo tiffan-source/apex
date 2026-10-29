@@ -4,7 +4,7 @@ import { ChatStore } from '../../app/objective/akari/chat.store';
 import { AssistantApi } from '../api/assistant.api';
 import { ApiError } from '../api/api-error';
 import type { ToolCall, WorkflowState } from '../api/api.models';
-import { AKARI_WRITE_POLL_INTERVAL, AkariWritesStore, isExecutingTool } from './akari-writes.store';
+import { AKARI_WRITE_MAX_POLLS, AKARI_WRITE_POLL_INTERVAL, AkariWritesStore, isExecutingTool } from './akari-writes.store';
 import { AnnoncesStore } from './annonces.store';
 import { ObjectiveStore } from './objective.store';
 import { SessionStore } from './session.store';
@@ -51,7 +51,7 @@ function setup() {
       { provide: AssistantApi, useValue: assistant },
       { provide: ObjectiveStore, useValue: objectives },
       { provide: SessionStore, useValue: { isAuthenticated: signal(true) } },
-      { provide: AnnoncesStore, useValue: { annoncer: vi.fn(), signaler: vi.fn() } },
+      { provide: AnnoncesStore, useValue: { annoncer: vi.fn(), signaler: vi.fn(), retirer: vi.fn() } },
     ],
   });
 
@@ -114,6 +114,54 @@ describe('AkariWritesStore', () => {
     await tick();
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
     expect(assistant.state).not.toHaveBeenCalled();
+  });
+
+  it('une panne passagère pendant l’écriture : l’état est relu jusqu’à ce que le serveur réponde, puis l’arête se remplit', async () => {
+    const { store, assistant, objectives, setState } = setup();
+    setState(state('SendingCallResultToAI'));
+    assistant.state
+      .mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'))
+      .mockRejectedValueOnce(new ApiError('UNKNOWN_ERROR', 503, 'Service unavailable'))
+      .mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+    store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.resolve(state(EXECUTING)) });
+
+    // Première lecture à 1 s, puis nouveaux essais 1 s, 2 s et 4 s plus tard.
+    await tick(1000 + 1000 + 2000);
+    expect(objectives.loadObjectives).not.toHaveBeenCalled();
+    await tick(4000);
+    expect(assistant.state).toHaveBeenCalledTimes(4);
+    expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
+  });
+
+  it('un état refusé : les objectifs sont rechargés quand même, l’écriture a sans doute eu lieu', async () => {
+    const { store, assistant, objectives } = setup();
+    assistant.state.mockRejectedValue(new ApiError('OBJECTIVE_NOT_FOUND', 404, 'Objective not found'));
+    store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.resolve(state(EXECUTING)) });
+    await tick(AKARI_WRITE_POLL_INTERVAL);
+    expect(assistant.state).toHaveBeenCalledTimes(1);
+    expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
+  });
+
+  it('un outil qui tarde : au bout d’une minute, les objectifs sont rechargés quand même, une fois', async () => {
+    const { store, assistant, objectives, setState } = setup();
+    setState(state(EXECUTING));
+    store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.resolve(state(EXECUTING)) });
+    await tick((AKARI_WRITE_MAX_POLLS - 1) * AKARI_WRITE_POLL_INTERVAL);
+    expect(objectives.loadObjectives).not.toHaveBeenCalled();
+    await tick(AKARI_WRITE_POLL_INTERVAL);
+    expect(assistant.state).toHaveBeenCalledTimes(AKARI_WRITE_MAX_POLLS);
+    expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
+    await tick(5 * AKARI_WRITE_POLL_INTERVAL);
+    expect(assistant.state).toHaveBeenCalledTimes(AKARI_WRITE_MAX_POLLS);
+  });
+
+  it('un accord resté sans réponse claire a pu arriver : l’état est relu, puis l’arête est rechargée', async () => {
+    const { store, assistant, objectives, setState } = setup();
+    setState(state('SendingCallResultToAI'));
+    store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.reject(new ApiError('NETWORK_ERROR', 0, 'Http failure response')) });
+    await tick(AKARI_WRITE_POLL_INTERVAL);
+    expect(assistant.state).toHaveBeenCalledTimes(1);
+    expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
   });
 
   it('ne recharge rien quand l’accord n’a pas abouti', async () => {

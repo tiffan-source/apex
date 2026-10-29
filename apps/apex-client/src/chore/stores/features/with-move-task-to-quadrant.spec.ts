@@ -45,7 +45,7 @@ describe('ObjectiveStore — déplacer un pas, créer un objectif', () => {
       providers: [
         TestStore,
         { provide: ObjectivesApi, useValue: api },
-        { provide: SessionStore, useValue: { isAuthenticated: signal(true) } },
+        { provide: SessionStore, useValue: { isAuthenticated: signal(true), currentUserId: signal('lea') } },
         { provide: LiveAnnouncer, useValue: { announce } },
       ],
     });

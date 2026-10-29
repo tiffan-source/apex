@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { API_URL } from './api.config';
+import { NETWORK_ERROR, UNKNOWN_ERROR } from './api-error';
 import { ApiSession, REFRESH_MARGIN_MS, SESSION_STORAGE_KEY, type StoredSession } from './api-session';
 import { authInterceptor } from './auth.interceptor';
 
@@ -21,6 +22,12 @@ const session = (accessToken: string, refreshToken: string, expiresAt = inMinute
   user,
   session: { accessToken, refreshToken, expiresAt },
 });
+
+/** Une autre personne, connectée dans un autre onglet. */
+const otherPerson: StoredSession = {
+  user: { id: 'u2', name: 'Noé', email: 'noe@exemple.com' },
+  session: { accessToken: 'b1', refreshToken: 'q1', expiresAt: inMinutes(60) },
+};
 
 const stored = (): StoredSession | null => {
   const raw = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -187,7 +194,7 @@ describe('authInterceptor', () => {
     expect(stored()).toBeNull();
   });
 
-  it('une panne pendant le renouvellement garde la session : on ne déconnecte personne pour une panne', async () => {
+  it('une panne pendant le renouvellement garde la session, et c’est la panne qui remonte', async () => {
     const { http, httpMock, apiSession } = setup(session('a1', 'r1'));
     const response = firstValueFrom(http.get(`${API}/v1/objectives`));
     await settle();
@@ -198,8 +205,85 @@ describe('authInterceptor', () => {
     await settle();
     httpMock.expectOne(`${API}/v1/auth/refresh`).error(new ProgressEvent('error'));
 
-    await expect(response).rejects.toMatchObject({ status: 401 });
+    // On ne déconnecte personne pour une panne : l'écran dira de vérifier la connexion.
+    await expect(response).rejects.toMatchObject({ code: NETWORK_ERROR, status: 0 });
     expect(apiSession.current()?.session.refreshToken).toBe('r1');
+    expect(stored()?.session.refreshToken).toBe('r1');
+  });
+
+  it('un 401 qui ne vient pas de l’API (proxy, portail captif) pendant le renouvellement garde la session', async () => {
+    const { http, httpMock, apiSession } = setup(session('a1', 'r1'));
+    const response = firstValueFrom(http.get(`${API}/v1/objectives`));
+    await settle();
+
+    httpMock
+      .expectOne(`${API}/v1/objectives`)
+      .flush({ error: { code: 'UNAUTHENTICATED', message: 'Invalid token' } }, { status: 401, statusText: 'Unauthorized' });
+    await settle();
+    httpMock.expectOne(`${API}/v1/auth/refresh`).flush('<html>Sign in to the network</html>', { status: 401, statusText: 'Unauthorized' });
+
+    await expect(response).rejects.toMatchObject({ code: UNKNOWN_ERROR, status: 401 });
+    expect(apiSession.current()?.session.refreshToken).toBe('r1');
+  });
+
+  it('un renouvellement refusé n’efface pas la session qu’un autre onglet vient d’ouvrir, et la requête ne repart pas avec elle', async () => {
+    const { http, httpMock, apiSession } = setup(session('a1', 'r1'));
+    const response = firstValueFrom(http.get(`${API}/v1/objectives`));
+    await settle();
+
+    httpMock
+      .expectOne(`${API}/v1/objectives`)
+      .flush({ error: { code: 'UNAUTHENTICATED', message: 'Invalid token' } }, { status: 401, statusText: 'Unauthorized' });
+    await settle();
+    // Pendant le renouvellement, une autre personne se connecte dans un autre onglet.
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(otherPerson));
+    httpMock
+      .expectOne(`${API}/v1/auth/refresh`)
+      .flush({ error: { code: 'INVALID_SESSION', message: 'Session expired' } }, { status: 401, statusText: 'Unauthorized' });
+
+    await expect(response).rejects.toMatchObject({ status: 401 });
+    httpMock.expectNone(`${API}/v1/objectives`);
+    expect(stored()?.user.id).toBe('u2');
+    expect(apiSession.current()?.user.id).toBe('u2');
+  });
+
+  it('une requête refusée ne repart pas avec la session d’une autre personne, connectée entre-temps', async () => {
+    const { http, httpMock, apiSession } = setup(session('a1', 'r1'));
+    const response = firstValueFrom(http.post(`${API}/v1/objectives`, { title: 'Guitare' }));
+    await settle();
+    const sent = httpMock.expectOne(`${API}/v1/objectives`);
+    expect(sent.request.headers.get('Authorization')).toBe('Bearer a1');
+
+    // Noé se connecte dans un autre onglet pendant que la requête de Léa est en route.
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(otherPerson));
+    window.dispatchEvent(new StorageEvent('storage', { key: SESSION_STORAGE_KEY }));
+    sent.flush({ error: { code: 'UNAUTHENTICATED', message: 'Invalid token' } }, { status: 401, statusText: 'Unauthorized' });
+    await settle();
+
+    await expect(response).rejects.toMatchObject({ status: 401 });
+    httpMock.expectNone(`${API}/v1/auth/refresh`);
+    httpMock.expectNone(`${API}/v1/objectives`);
+    expect(apiSession.current()?.user.id).toBe('u2');
+    expect(stored()?.session.refreshToken).toBe('q1');
+  });
+
+  it('un renouvellement pendant lequel une autre personne se connecte ne lui prend pas son jeton', async () => {
+    const { http, httpMock } = setup(session('a1', 'r1', new Date(Date.now() + REFRESH_MARGIN_MS / 2).toISOString()));
+    const response = firstValueFrom(http.post(`${API}/v1/objectives`, { title: 'Guitare' }));
+    await settle();
+
+    const refresh = httpMock.expectOne(`${API}/v1/auth/refresh`);
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(otherPerson));
+    window.dispatchEvent(new StorageEvent('storage', { key: SESSION_STORAGE_KEY }));
+    refresh.flush(session('a2', 'r2'));
+    await settle();
+
+    // La requête de Léa part sans jeton : l'API la refuse, et rien ne repart.
+    const sent = httpMock.expectOne(`${API}/v1/objectives`);
+    expect(sent.request.headers.has('Authorization')).toBe(false);
+    sent.flush({ error: { code: 'UNAUTHENTICATED', message: 'Missing token' } }, { status: 401, statusText: 'Unauthorized' });
+    await expect(response).rejects.toMatchObject({ status: 401 });
+    httpMock.expectNone(`${API}/v1/auth/refresh`);
   });
 
   it('reprend la session qu’un autre onglet a renouvelée, sans réutiliser un jeton de renouvellement consommé', async () => {

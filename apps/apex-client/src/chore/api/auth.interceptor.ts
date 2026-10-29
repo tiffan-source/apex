@@ -12,9 +12,11 @@ const withBearer = (request: HttpRequest<unknown>, token: string | null) =>
 
 /**
  * Chaque requête vers l'API part avec le jeton d'accès de la personne (`Authorization: Bearer`), renouvelé
- * d'abord s'il expire bientôt. Une requête refusée (401) part une seconde fois après un renouvellement ;
- * si le renouvellement est refusé, ApiSession ferme la session et l'erreur remonte.
- * Le jeton ne part jamais vers un autre hôte que l'API.
+ * d'abord s'il expire bientôt. Une requête refusée (401) part une seconde fois après un renouvellement.
+ * Si l'API refuse le renouvellement, ApiSession ferme la session et le 401 remonte (« ta session a pris
+ * fin ») ; si une panne l'empêche, la session reste ouverte et c'est la panne qui remonte (« vérifie ta
+ * connexion »). Le jeton ne part jamais vers un autre hôte que l'API, ni pour une autre personne que
+ * celle pour qui la requête est partie (une autre a pu se connecter entre-temps dans un autre onglet).
  */
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const apiUrl = inject(API_URL);
@@ -24,12 +26,15 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   if (PUBLIC_ROUTES.has(path)) return next(request);
 
   const session = inject(ApiSession);
-  const send = () => from(session.accessToken()).pipe(switchMap((token) => next(withBearer(request, token))));
+  const owner = session.ownerId();
+  const send = () => from(session.accessToken(owner)).pipe(switchMap((token) => next(withBearer(request, token))));
 
   return send().pipe(
     catchError((error: unknown) => {
       if (!(error instanceof HttpErrorResponse) || error.status !== 401) return throwError(() => error);
-      return from(session.refresh()).pipe(switchMap((renewed) => (renewed ? send() : throwError(() => error))));
+      return from(session.refresh(owner)).pipe(
+        switchMap((outcome) => (outcome.renewed ? send() : throwError(() => outcome.failure ?? error))),
+      );
     }),
   );
 };

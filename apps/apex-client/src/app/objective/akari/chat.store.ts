@@ -1,9 +1,9 @@
-import { patchState, signalStore, withComputed, withMethods, withState } from "@ngrx/signals";
+import { patchState, signalStore, withComputed, withHooks, withMethods, withState } from "@ngrx/signals";
 import { MessageViewModel } from "./chat.models";
 import { SessionStore } from "../../../chore/stores/session.store";
 import { computed, inject } from "@angular/core";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
-import { EMPTY, catchError, concatMap, defer, exhaustMap, from, pipe, retry, switchMap, takeWhile, tap, throwError, timer } from "rxjs";
+import { EMPTY, catchError, concatMap, defer, exhaustMap, from, pipe, switchMap, takeWhile, tap, timer } from "rxjs";
 import { tapResponse } from "@ngrx/operators";
 import { CREATE_STAGE_TOOL, CREATE_TASK_TOOL, MessageMapper } from "./message.mapper";
 import { whenSignedIn } from "../../../chore/stores/utils/filter-auth-operation";
@@ -11,7 +11,8 @@ import { isTemporaryId, withOptimistiqueId } from "../../../chore/stores/utils/m
 import { AnnoncesStore } from "../../../chore/stores/annonces.store";
 import { AkariWritesStore } from "../../../chore/stores/akari-writes.store";
 import { AssistantApi } from "../../../chore/api/assistant.api";
-import { errorCodeOf, isTransientError } from "../../../chore/api/api-error";
+import { ApiError, errorCodeOf, isUnknownOutcome, retryWhileTransient } from "../../../chore/api/api-error";
+import { FAILURE_REPORTS } from "../../../chore/constants/messages.constante";
 import type {
   RegisteredMessage,
   ToolCall,
@@ -52,8 +53,13 @@ const WRITE_TOOLS = new Set<string>([CREATE_STAGE_TOOL, CREATE_TASK_TOOL]);
 /** L'intervalle d'interrogation de l'état du workflow pendant un tour (l'API ne pousse rien). */
 export const AKARI_POLL_INTERVAL = 1000;
 
-/** Les nouveaux essais d'une interrogation qui n'aboutit pas pour une raison passagère, avant de le signaler. */
-export const AKARI_POLL_RETRIES = 4;
+/**
+ * Les lectures en panne passagère avant de le dire. L'état du workflow (et la conversation relue à la fin
+ * d'un tour) est relu sans limite, de plus en plus espacé : la note vient avec le quatrième nouvel essai
+ * (vers 7 s) et reste jusqu'à ce que le serveur réponde. La conversation ouverte avec l'écran n'est relue
+ * que quatre fois (1 s, 2 s, 4 s, 8 s) avant de le dire.
+ */
+export const AKARI_RETRIES_BEFORE_REPORT = 4;
 
 /** Ce que fait Akari pendant un tour, dit dans la ligne d'état (voix d'Empreinte, sans jargon). */
 export const AKARI_STATUS = {
@@ -74,6 +80,10 @@ export const AKARI_REPLIED = "Akari a répondu.";
 export const AKARI_REPORTS = {
   loadConversation: "Je n'ai pas pu retrouver notre conversation. Vérifie ta connexion, puis recharge la page.",
   startConversation: "Je n'arrive pas à te répondre pour l'instant. Vérifie ta connexion, puis recharge la page.",
+  /** Le serveur ne répond plus pendant un tour : l'écran continue de l'interroger, la note part dès qu'il répond. */
+  unreachable: "Je n'arrive pas à te répondre pour l'instant. Vérifie ta connexion, je réessaie en attendant.",
+  /** Un envoi resté sans réponse, que la conversation relue ne contient pas : le serveur ne l'a pas reçu. */
+  notSent: "Ton message ne m'est pas parvenu. Réessaie de me l'envoyer.",
   /** Le tour s'est arrêté sur le serveur (IA indisponible…) : le message de la personne est enregistré. */
   turnInterrupted: "Je n'ai pas pu terminer ma réponse. Réessaie dans un instant.",
   /** Un tour est déjà en cours (dans un autre onglet…). */
@@ -82,28 +92,47 @@ export const AKARI_REPORTS = {
   tooManyMessages: "Beaucoup de messages à la suite. Attends une minute, puis réessaie.",
 } as const;
 
+/**
+ * La phrase à signaler quand la conversation ou le workflow ne répond pas comme prévu, d'après le code
+ * d'erreur de l'API ; `fallback` sans code connu (réseau, panne du serveur…).
+ */
+export function akariFailureReport(fallback: string, errorCode?: string): string {
+  switch (errorCode) {
+    case "TOO_MANY_REQUESTS":
+      return AKARI_REPORTS.tooManyMessages;
+    case "UNAUTHENTICATED":
+    case "INVALID_SESSION":
+      return FAILURE_REPORTS.sessionEnded;
+    default:
+      return fallback;
+  }
+}
+
 /** La phrase à signaler quand un message ne part pas, d'après le code d'erreur de l'API. */
 export function sendFailureReport(errorCode?: string): string {
   switch (errorCode) {
     case "WORKFLOW_BUSY":
       return AKARI_REPORTS.busy;
     case "VALIDATION_ERROR":
+    case "PAYLOAD_TOO_LARGE":
       return AKARI_REPORTS.messageTooLong;
-    case "TOO_MANY_REQUESTS":
-      return AKARI_REPORTS.tooManyMessages;
     default:
-      return AKARI_REPORTS.startConversation;
+      return akariFailureReport(AKARI_REPORTS.startConversation, errorCode);
   }
 }
 
-/** L'état du workflow, avec quelques nouveaux essais en cas de panne passagère (réseau, serveur qui se réveille). */
-const readState = (assistant: AssistantApi, objectiveId: string) =>
-  defer(() => assistant.state(objectiveId)).pipe(
-    retry({
-      count: AKARI_POLL_RETRIES,
-      delay: (error) => (isTransientError(error) ? timer(AKARI_POLL_INTERVAL) : throwError(() => error)),
-    })
-  );
+/**
+ * La phrase à signaler quand la réponse à une demande d'accord n'aboutit pas ; null quand l'interrogation
+ * qui suit suffit : la demande avait déjà sa réponse (NO_PENDING_PERMISSION, un autre onglet), ou le
+ * serveur n'a pas répondu (sa note vient avec l'interrogation, et la demande revient à l'écran si la
+ * réponse n'est pas arrivée).
+ */
+export function answerFailureReport(error: unknown): string | null {
+  const code = errorCodeOf(error);
+  if (code === "NO_PENDING_PERMISSION" || (error instanceof ApiError && error.status === 0)) return null;
+  if (isUnknownOutcome(error)) return AKARI_REPORTS.turnInterrupted;
+  return akariFailureReport(AKARI_REPORTS.startConversation, code);
+}
 
 /**
  * La conversation avec Akari sur un objectif. Le workflow d'Akari tourne sur le serveur (Apex Brain) :
@@ -137,6 +166,28 @@ export const ChatStore = signalStore(
     akariWrites = inject(AkariWritesStore),
     annonces = inject(AnnoncesStore)
   )=> {
+    // La panne de tour déjà connue (lastError.at) : l'état la rend jusqu'au message suivant, seule une
+    // panne nouvelle est signalée.
+    let knownErrorAt: string | null = null;
+
+    // La conversation, avec quelques nouveaux essais en cas de panne passagère (réseau, serveur qui se réveille).
+    const readConversation = (objectiveId: string) =>
+      defer(() => assistant.conversation(objectiveId)).pipe(retryWhileTransient({ maxRetries: AKARI_RETRIES_BEFORE_REPORT }));
+
+    // Une lecture relancée tant que la panne est passagère : au bout de quelques essais, la personne apprend
+    // que le serveur ne répond pas ; la note s'en va dès qu'il répond de nouveau.
+    const untilAnswered = <T>(read: () => Promise<T>) =>
+      defer(read).pipe(
+        retryWhileTransient<T>({
+          onRetry: (retryCount) => {
+            if (retryCount === AKARI_RETRIES_BEFORE_REPORT) annonces.signaler(AKARI_REPORTS.unreachable);
+          },
+        }),
+        tap(() => annonces.retirer(AKARI_REPORTS.unreachable))
+      );
+
+    const readState = (objectiveId: string) => untilAnswered(() => assistant.state(objectiveId));
+
     // Affiche un message que le workflow vient d'enregistrer (de la personne ou d'Akari) sans
     // recharger toute la conversation. Le message de la personne était déjà affiché à l'envoi
     // (optimiste) : on remplace son id temporaire par le vrai ; celui d'Akari est ajouté à la suite.
@@ -157,9 +208,12 @@ export const ChatStore = signalStore(
       };
 
       if (view.sender === "user") {
-        const optimisticIndex = messages.findIndex(
-          (message) => message.sender === "user" && isTemporaryId(message.id) && message.content === view.content
-        );
+        // Le dernier envoyé d'abord : un message plus ancien au même texte peut attendre encore sa relecture.
+        let optimisticIndex = -1;
+        for (let index = messages.length - 1; index >= 0 && optimisticIndex === -1; index--) {
+          const message = messages[index];
+          if (message.sender === "user" && isTemporaryId(message.id) && message.content === view.content) optimisticIndex = index;
+        }
 
         if (optimisticIndex !== -1) {
           const reconciled = [...messages];
@@ -173,21 +227,40 @@ export const ChatStore = signalStore(
       return view;
     };
 
-    // Relit la conversation à la fin d'un tour dont l'interrogation n'a pas vu le message de la personne
-    // enregistré (il garde son id temporaire). Les messages envoyés depuis le début de la relecture restent.
+    // Relit la conversation à la fin d'un tour quand un message de la personne garde son id temporaire :
+    // l'interrogation ne l'a pas vu enregistré, ou son envoi est resté sans réponse. Chaque message en
+    // attente retrouve sa copie enregistrée (même texte, pas encore affichée) et prend sa place. Un message
+    // qui attendait déjà avant la relecture et n'a pas de copie n'est pas arrivé : il quitte la conversation,
+    // et la personne en est prévenue. La relecture continue tant que la panne est passagère.
     const refreshHistory = rxMethod<string>(
       pipe(
         switchMap((objectiveId) => {
-          const stale = new Set(store.messages().filter((message) => isTemporaryId(message.id)).map((message) => message.id));
-          return from(assistant.conversation(objectiveId)).pipe(
+          const pending = new Set(store.messages().filter((message) => isTemporaryId(message.id)).map((message) => message.id));
+          return untilAnswered(() => assistant.conversation(objectiveId)).pipe(
             tapResponse({
-              next: (conversation) => patchState(store, {
-                messages: [
-                  ...MessageMapper.fromConversationToMessages(conversation),
-                  ...store.messages().filter((message) => isTemporaryId(message.id) && !stale.has(message.id)),
-                ],
-              }),
-              error: (error) => console.error(error),
+              next: (conversation) => {
+                const messages = store.messages();
+                const refreshed = MessageMapper.fromConversationToMessages(conversation);
+                const shown = new Set(messages.filter((message) => !isTemporaryId(message.id)).map((message) => message.id));
+                const copies = refreshed
+                  .filter((message) => message.sender === "user" && !shown.has(message.id))
+                  .map((message) => message.content);
+                // Dans l'ordre de l'envoi : les messages qui attendaient avant la relecture d'abord.
+                const unmatched = messages.filter((message) => {
+                  if (!isTemporaryId(message.id)) return false;
+                  const copy = copies.indexOf(message.content);
+                  if (copy !== -1) copies.splice(copy, 1);
+                  return copy === -1;
+                });
+
+                patchState(store, { messages: [...refreshed, ...unmatched.filter((message) => !pending.has(message.id))] });
+                if (unmatched.some((message) => pending.has(message.id))) annonces.signaler(AKARI_REPORTS.notSent);
+              },
+              error: (error) => {
+                console.error(error);
+                // Les messages en attente le restent : une page rechargée dira s'ils sont arrivés.
+                if (pending.size > 0) annonces.signaler(akariFailureReport(AKARI_REPORTS.loadConversation, errorCodeOf(error)));
+              },
             })
           );
         })
@@ -201,6 +274,10 @@ export const ChatStore = signalStore(
       const previous = store.workflowStatus();
       const wasRunning = previous === "processing" || previous === "awaiting-permission";
       const awaitingPermission = state.status === "awaiting-permission";
+      // Une panne nouvelle, et non celle d'un tour plus ancien que l'état rend encore.
+      const errorAt = state.lastError?.at ?? null;
+      const newError = errorAt !== null && errorAt !== knownErrorAt;
+      knownErrorAt = errorAt;
 
       patchState(store, {
         objectiveId: state.objectiveId,
@@ -221,23 +298,25 @@ export const ChatStore = signalStore(
 
       if (wasRunning && state.status === "ready") {
         // Le tour s'est arrêté sur une panne (IA indisponible…) : la personne peut réessayer.
-        if (state.lastError) annonces.signaler(AKARI_REPORTS.turnInterrupted);
+        if (newError) annonces.signaler(AKARI_REPORTS.turnInterrupted);
         if (store.messages().some((message) => isTemporaryId(message.id))) refreshHistory(state.objectiveId);
       }
     };
 
     // Interroge l'état du workflow chaque seconde (une requête à la fois), jusqu'au repos : prêt pour un
-    // message, ou en attente d'un accord.
+    // message, ou en attente d'un accord. Une panne passagère ne l'arrête pas (readState).
     const watchWorkflowState = rxMethod<string>(
       pipe(
         switchMap((objectiveId) =>
           timer(0, AKARI_POLL_INTERVAL).pipe(
-            exhaustMap(() => readState(assistant, objectiveId)),
+            exhaustMap(() => readState(objectiveId)),
             takeWhile((state) => state.status === "processing", true),
             tap((state) => applyState(state)),
             catchError((error) => {
+              // L'API refuse de rendre l'état (objectif introuvable, session terminée…) : rien ne marchera
+              // sur cette page avant de la recharger.
               console.error(error);
-              annonces.signaler(AKARI_REPORTS.startConversation);
+              annonces.signaler(akariFailureReport(AKARI_REPORTS.startConversation, errorCodeOf(error)));
               patchState(store, { isStreaming: false });
               return EMPTY;
             })
@@ -257,8 +336,9 @@ export const ChatStore = signalStore(
             }),
             catchError((error) => {
               console.error(error);
-              // NO_PENDING_PERMISSION : la demande avait déjà sa réponse (un autre onglet). L'état est relu.
-              if (errorCodeOf(error) !== "NO_PENDING_PERMISSION") annonces.signaler(AKARI_REPORTS.startConversation);
+              // L'état est relu : une demande qui n'a pas reçu la réponse revient à l'écran.
+              const report = answerFailureReport(error);
+              if (report) annonces.signaler(report);
               watchWorkflowState(objectiveId);
               return EMPTY;
             })
@@ -281,12 +361,12 @@ export const ChatStore = signalStore(
         whenSignedIn(sessionStore.isAuthenticated),
         tap(()=> patchState(store, { isLoading: true, historyLoaded: false })),
         switchMap(({objectifId}) =>
-          from(assistant.conversation(objectifId)).pipe(
+          readConversation(objectifId).pipe(
             tapResponse({
               next: (conversation) => patchState(store, { messages: MessageMapper.fromConversationToMessages(conversation), isLoading: false, historyLoaded: true }),
               error: (error)=>{
                 console.error(error);
-                annonces.signaler(AKARI_REPORTS.loadConversation);
+                annonces.signaler(akariFailureReport(AKARI_REPORTS.loadConversation, errorCodeOf(error)));
                 patchState(store, { isLoading: false, historyLoaded: true });
               }
             })
@@ -322,12 +402,22 @@ export const ChatStore = signalStore(
             }),
             catchError((error) => {
               console.error(error);
+              if (isUnknownOutcome(error)) {
+                // Le serveur a pu recevoir le message avant que la réponse se perde : il reste affiché (en
+                // attente) et l'état du workflow est relu. À la fin du tour, la conversation relue dit s'il a
+                // été enregistré ; sinon, il la quitte et la personne en est prévenue (refreshHistory).
+                watchWorkflowState(objectiveId);
+                return EMPTY;
+              }
+              // Refusé : le message n'a pas été pris en compte.
               annonces.signaler(sendFailureReport(errorCodeOf(error)));
               patchState(store, {
                 isStreaming: false,
+                // L'état réel du workflow (un tour déjà en cours ailleurs…) est relu, sans compter le repos
+                // qui arrive comme la fin d'un tour de cette page.
+                workflowStatus: null,
                 messages: store.messages().filter((message) => message.id !== tempId),
               });
-              // L'état réel du workflow (un tour déjà en cours ailleurs…) est relu.
               watchWorkflowState(objectiveId);
               return EMPTY;
             })
@@ -352,6 +442,13 @@ export const ChatStore = signalStore(
       }
       followAnswer({ objectiveId, answered });
     }
+    };
+  }),
+  withHooks(() => {
+    const annonces = inject(AnnoncesStore);
+    return {
+      // Hors de l'écran Akari, plus rien n'interroge le serveur : la note qui disait « je réessaie » s'en va.
+      onDestroy: () => annonces.retirer(AKARI_REPORTS.unreachable),
     };
   })
 )

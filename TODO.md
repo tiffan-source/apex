@@ -23,6 +23,7 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 ### Back-end (Apex Brain)
 - [x] Le client appelle l'API d'Apex Brain : plus de librairie métier ni d'accès direct à Supabase, Firebase ou Gemini
 - [x] `findObjectiveWithASpecificTaskId`, ordre du chargement, codes d'erreur de l'authentification, tour d'Akari bloqué : corrigés dans le serveur
+- [x] Les longueurs de l'API (200 caractères pour un nom, 5 000 pour une description ou un pourquoi) arrêtent la saisie dans les formulaires
 - [] Déconnexion : `POST /v1/auth/logout` existe, il manque le geste dans l'interface
 - [] Retirer une échéance : l'API accepte `dueDate: null`, les feuilles « Modifier » l'interdisent encore
 - [] Cas d'usage manquants : laisser filer ou supprimer (objectif, étape, pas)
@@ -45,5 +46,6 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 ### Client
 - [] Contrôle visuel de chaque écran dans le navigateur (Jour, Nuit, 375px, clavier, `GardienSceau`), avec une session sur Apex Brain (local ou hébergé)
 - [] Un état de réussite ou d'échec propre à chaque action d'`ObjectiveStore` (`requestStatus` est partagé)
-- [] Un état « injoignable » dans `ChatStore`
+- [x] Un état « injoignable » dans `ChatStore` : l'interrogation continue pendant une panne, la note de la coque le dit puis s'en va
+- [] Akari : remettre dans la zone de réponse un message refusé ou qui n'est pas parvenu (`[(brouillon)]` d'`e-conversation`)
 - [] Décider du sort des 18 utilitaires `.ds-*` inutilisés (`apps/apex-client/src/styles/layout.css`)

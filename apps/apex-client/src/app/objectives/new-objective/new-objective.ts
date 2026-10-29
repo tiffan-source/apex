@@ -66,7 +66,10 @@ export class NewObjective {
         return undefined;
       },
       onInvalid: () => {
-        const firstInvalid = [this.draft.title, this.draft.dueDate].find((field) => field().invalid());
+        // Dans l'ordre de l'écran.
+        const firstInvalid = [this.draft.title, this.draft.why, this.draft.dueDate, this.draft.description].find((field) =>
+          field().invalid(),
+        );
         firstInvalid?.().focusBoundControl();
       },
     },

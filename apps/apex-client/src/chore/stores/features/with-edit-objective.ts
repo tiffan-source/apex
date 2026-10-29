@@ -51,14 +51,15 @@ export function withEditObjective() {
             map((data)=>({...data, oldObj: store.objectives().find(obj=>obj.id === data.id)})),
             // Rien à modifier si l'objectif n'est pas (ou plus) chargé
             filter((data): data is typeof data & { oldObj: ObjectiveViewModel } => data.oldObj !== undefined),
+            // Un champ absent reste tel qu'il est affiché, comme l'API le laisse en base.
             map((data) => ({
               ...data,
               optimistic: {
                 id: data.id,
                 title: data.title,
-                description: data.description || "",
-                why: data.why || "",
-                dueDate: data.dueDate?.toISOString() || "",
+                description: data.description ?? data.oldObj.description,
+                why: data.why ?? data.oldObj.why,
+                dueDate: data.dueDate?.toISOString() ?? data.oldObj.dueDate,
                 parentId: data.oldObj.parentId
               } satisfies ObjectiveViewModel,
             })),
