@@ -1,5 +1,7 @@
 import type { Signal } from '@angular/core';
 import { email, hidden, minLength, required, validate, type SchemaFn } from '@angular/forms/signals';
+import { NETWORK_ERROR } from '../../chore/api/api-error';
+import { EMAIL_CONFIRMATION_REQUIRED } from '../../chore/stores/session.store';
 
 /*
  * Le formulaire de connexion et de création de compte (Signal Forms), et les phrases qu'il dit à la
@@ -74,7 +76,6 @@ export const AUTH_SERVER_MESSAGES = {
   passwordTooWeak: 'Ce mot de passe est trop simple. Allonge-le, puis réessaie.',
   emailNotConfirmed: "Ton adresse n'est pas encore confirmée. Ouvre le lien reçu par e-mail, puis connecte-toi.",
   confirmEmail: 'Confirme ton adresse : ouvre le lien reçu par e-mail, puis connecte-toi.',
-  signupClosed: "La création de compte est fermée pour l'instant. Connecte-toi avec un compte existant.",
   tooManyAttempts: "Trop d'essais à la suite. Attends une minute, puis réessaie.",
   unreachable: "Je n'arrive pas à joindre Apex. Vérifie ta connexion, puis réessaie.",
   signInFallback: "Je n'ai pas pu te connecter. Vérifie ta connexion, puis réessaie.",
@@ -82,44 +83,35 @@ export const AUTH_SERVER_MESSAGES = {
 } as const;
 
 /**
- * Traduit le message brut que SessionStore.error() garde (Supabase ou le domaine, en anglais) en une
- * phrase dans la voix, rattachée au champ concerné quand il y en a un. Le message brut n'est jamais
- * montré : un cas inconnu donne la phrase de repli de l'action.
+ * Traduit le code que SessionStore.error() garde (le code d'erreur de l'API, voir son contrat) en une phrase
+ * dans la voix, rattachée au champ concerné quand il y en a un. Le message technique de l'API n'arrive
+ * jamais ici : un code inconnu donne la phrase de repli de l'action.
  */
-export function translateAuthError(message: string, mode: AuthMode): AuthErrorReport {
-  const raw = message.toLowerCase();
-  const has = (...parts: string[]) => parts.some((part) => raw.includes(part));
-
-  if (has('invalid login credentials', 'invalid credentials')) {
-    return { field: 'password', text: AUTH_SERVER_MESSAGES.wrongCredentials };
+export function translateAuthError(code: string, mode: AuthMode): AuthErrorReport {
+  switch (code) {
+    case 'INVALID_CREDENTIALS':
+      return { field: 'password', text: AUTH_SERVER_MESSAGES.wrongCredentials };
+    case 'USER_ALREADY_EXIST':
+      return { field: 'email', text: AUTH_SERVER_MESSAGES.accountExists };
+    case 'EMAIL_NOT_CONFIRMED':
+      return { field: null, text: AUTH_SERVER_MESSAGES.emailNotConfirmed };
+    // Compte créé, mais sans session : l'adresse attend sa confirmation.
+    case EMAIL_CONFIRMATION_REQUIRED:
+      return { field: null, text: AUTH_SERVER_MESSAGES.confirmEmail };
+    case 'TOO_MANY_REQUESTS':
+      return { field: null, text: AUTH_SERVER_MESSAGES.tooManyAttempts };
+    case 'WEAK_PASSWORD':
+      return { field: 'password', text: AUTH_SERVER_MESSAGES.passwordTooWeak };
+    // Le formulaire vérifie déjà le mot de passe : ce que l'API refuse encore, c'est l'adresse.
+    case 'INVALID_EMAIL':
+    case 'VALIDATION_ERROR':
+      return { field: 'email', text: AUTH_SERVER_MESSAGES.emailRejected };
+    case NETWORK_ERROR:
+      return { field: null, text: AUTH_SERVER_MESSAGES.unreachable };
+    default:
+      return {
+        field: null,
+        text: mode === AuthMode.SignIn ? AUTH_SERVER_MESSAGES.signInFallback : AUTH_SERVER_MESSAGES.createUserFallback,
+      };
   }
-  if (has('already registered', 'already exists', 'already been registered')) {
-    return { field: 'email', text: AUTH_SERVER_MESSAGES.accountExists };
-  }
-  if (has('email not confirmed')) {
-    return { field: null, text: AUTH_SERVER_MESSAGES.emailNotConfirmed };
-  }
-  // Compte créé, mais sans session : l'adresse attend sa confirmation.
-  if (mode === AuthMode.CreateUser && has('session missing', 'no user found')) {
-    return { field: null, text: AUTH_SERVER_MESSAGES.confirmEmail };
-  }
-  if (has('rate limit', 'too many', 'security purposes')) {
-    return { field: null, text: AUTH_SERVER_MESSAGES.tooManyAttempts };
-  }
-  if (has('signups not allowed', 'signup is disabled', 'signups are disabled')) {
-    return { field: null, text: AUTH_SERVER_MESSAGES.signupClosed };
-  }
-  if (has('password should', 'weak password', 'password is known', 'weak_password')) {
-    return { field: 'password', text: AUTH_SERVER_MESSAGES.passwordTooWeak };
-  }
-  if (has('unable to validate email', 'invalid format') || (raw.includes('email') && raw.includes('invalid'))) {
-    return { field: 'email', text: AUTH_SERVER_MESSAGES.emailRejected };
-  }
-  if (has('fetch', 'network', 'load failed', 'timeout', 'timed out')) {
-    return { field: null, text: AUTH_SERVER_MESSAGES.unreachable };
-  }
-  return {
-    field: null,
-    text: mode === AuthMode.SignIn ? AUTH_SERVER_MESSAGES.signInFallback : AUTH_SERVER_MESSAGES.createUserFallback,
-  };
 }

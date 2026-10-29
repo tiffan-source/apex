@@ -1,6 +1,7 @@
 import { motsAEviter } from '@empreinte-studio/angular/core';
 import { QUADRANTS } from '@empreinte-studio/angular/matrice';
 import {
+  CREATE_OBJECTIVE_FAILURES,
   FAILURE_REPORTS,
   SUCCESS_ANNOUNCEMENTS,
   failureReport,
@@ -41,9 +42,30 @@ describe('failureReport', () => {
     expect(failureReport('moveTask', 'UNKNOWN_ERROR')).toBe(FAILURE_REPORTS.moveTask);
   });
 
-  it('dit ce qui manque quand le domaine ne retrouve plus l’objectif ou le pas', () => {
+  it('dit ce qui manque quand l’API ne retrouve plus l’objectif ou le pas', () => {
     expect(failureReport('addTask', 'OBJECTIVE_NOT_FOUND')).toBe(FAILURE_REPORTS.objectiveNotFound);
     expect(failureReport('editTask', 'TASK_NOT_FOUND')).toBe(FAILURE_REPORTS.taskNotFound);
+  });
+
+  it('dit ce que l’API refuse : un texte trop long, trop de gestes à la suite', () => {
+    expect(failureReport('addTask', 'VALIDATION_ERROR')).toBe(FAILURE_REPORTS.textTooLong);
+    expect(failureReport('editObjective', 'PAYLOAD_TOO_LARGE')).toBe(FAILURE_REPORTS.textTooLong);
+    expect(failureReport('editObjective', 'TOO_MANY_REQUESTS')).toBe(FAILURE_REPORTS.tooManyRequests);
+    // Sans réponse de l'API, la phrase de l'action (qui dit de vérifier la connexion).
+    expect(failureReport('toggleTask', 'NETWORK_ERROR')).toBe(FAILURE_REPORTS.toggleTask);
+  });
+
+  it('dit que la session a pris fin quand l’API refuse le jeton, sans parler de connexion', () => {
+    expect(failureReport('addStage', 'UNAUTHENTICATED')).toBe(FAILURE_REPORTS.sessionEnded);
+    expect(failureReport('loadObjectives', 'INVALID_SESSION')).toBe(FAILURE_REPORTS.sessionEnded);
+    expect(FAILURE_REPORTS.sessionEnded).not.toMatch(/connexion/);
+  });
+
+  it('CREATE_OBJECTIVE_FAILURES rassemble les phrases d’une création qui n’aboutit pas', () => {
+    const codes = [undefined, 'FAIL_TO_SAVE_OBJECTIVE', 'VALIDATION_ERROR', 'PAYLOAD_TOO_LARGE', 'TOO_MANY_REQUESTS', 'NETWORK_ERROR', 'UNAUTHENTICATED'];
+    for (const code of codes)
+      expect(CREATE_OBJECTIVE_FAILURES.has(failureReport('createObjective', code)), String(code)).toBe(true);
+    expect(CREATE_OBJECTIVE_FAILURES.has(FAILURE_REPORTS.toggleTask)).toBe(false);
   });
 });
 

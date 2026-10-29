@@ -1,48 +1,74 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { GetConversationsQuery } from '@org/chat';
-import { SendMessageToAIWorkflow, WORKFLOW_READY_FOR_NEW_MESSAGE } from '@org/ai-assistant';
 import { SessionStore } from '../../../chore/stores/session.store';
 import { AnnoncesStore } from '../../../chore/stores/annonces.store';
 import { AkariWritesStore } from '../../../chore/stores/akari-writes.store';
 import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
-import { AKARI_REPLIED, AKARI_REPORTS, AKARI_STATUS, ChatStore } from './chat.store';
+import { AssistantApi } from '../../../chore/api/assistant.api';
+import { ApiError } from '../../../chore/api/api-error';
+import type { ToolCall, WorkflowState } from '../../../chore/api/api.models';
+import { FAILURE_REPORTS, voiceIssues } from '../../../chore/constants/messages.constante';
+import {
+  AKARI_POLL_INTERVAL,
+  AKARI_REPLIED,
+  AKARI_REPORTS,
+  AKARI_STATUS,
+  ChatStore,
+  akariFailureReport,
+  sendFailureReport,
+} from './chat.store';
 
 /*
- * La conversation avec Akari, workflow et requêtes simulés : historique, envoi optimiste,
- * interrogation toutes les secondes, demande d'accord, écriture acceptée confiée à AkariWritesStore, annonces.
+ * La conversation avec Akari, API simulée : historique, envoi optimiste, interrogation de l'état toutes les
+ * secondes, demande d'accord, écriture acceptée confiée à AkariWritesStore, pannes, annonces.
  */
 
-type Snapshot = { value: unknown; context: Record<string, unknown> } | undefined;
+const READY = 'Ready For New Message';
+const STAGE_CALL: ToolCall = { id: 'call-1', name: 'createSubObjective', arguments: { parentObjectiveId: 'semi', title: 'Portfolio' } };
+const TASK_CALL: ToolCall = {
+  id: 'call-2',
+  name: 'createTask',
+  arguments: { objectiveId: 'endurance', title: 'Courir 10 km', importance: 3, urgency: 2 },
+};
 
-const READY = WORKFLOW_READY_FOR_NEW_MESSAGE;
+/** Un état du workflow tel que l'API le rend : au repos par défaut. */
+const ready = (overrides: Partial<WorkflowState> = {}): WorkflowState => ({
+  objectiveId: 'semi',
+  value: READY,
+  status: 'ready',
+  pendingToolCall: null,
+  lastRegisteredMessage: null,
+  lastError: null,
+  ...overrides,
+});
+const processing = (value: WorkflowState['value'], overrides: Partial<WorkflowState> = {}) =>
+  ready({ value, status: 'processing', ...overrides });
+const asking = (call: ToolCall) =>
+  ready({ value: { ExecutingAllTool: 'WaitingForUserPermission' }, status: 'awaiting-permission', pendingToolCall: call });
+const registered = (id: string, sender: string, content: string) => ({ id, sender, content, createdAt: new Date().toISOString() });
 
 function setup() {
-  let snapshot: Snapshot = { value: READY, context: {} };
-  const workflow = {
-    startWorkFlow: vi.fn(async (id: string) => id),
-    getState: vi.fn(() => snapshot),
-    sendMessage: vi.fn(),
-    respondToPermission: vi.fn(),
-  };
-  const conversations = {
-    execute: vi.fn().mockResolvedValue({
+  let state = ready();
+  const assistant = {
+    conversation: vi.fn().mockResolvedValue({
       id: 'c1',
       messages: [
-        { id: 'm2', sender: 'akari', content: 'Bonjour.', createdAt: new Date(2026, 9, 20, 10) },
-        { id: 'm1', sender: 'u1', content: 'Salut.', createdAt: new Date(2026, 9, 20, 9) },
+        { id: 'm2', sender: 'AI', content: 'Bonjour.', createdAt: new Date(2026, 9, 20, 10).toISOString() },
+        { id: 'm1', sender: 'u1', content: 'Salut.', createdAt: new Date(2026, 9, 20, 9).toISOString() },
       ],
     }),
+    state: vi.fn(async () => state),
+    sendMessage: vi.fn(async () => state),
+    respondToPermission: vi.fn(async () => state),
   };
   const akariWrites = { reloadAfterWrite: vi.fn() };
-  const annonces = { annoncer: vi.fn(), signaler: vi.fn() };
+  const annonces = { annoncer: vi.fn(), signaler: vi.fn(), retirer: vi.fn() };
 
   TestBed.configureTestingModule({
     providers: [
       ChatStore,
-      { provide: SessionStore, useValue: { currentUserId: signal('u1') } },
-      { provide: GetConversationsQuery, useValue: conversations },
-      { provide: SendMessageToAIWorkflow, useValue: workflow },
+      { provide: SessionStore, useValue: { isAuthenticated: signal(true) } },
+      { provide: AssistantApi, useValue: assistant },
       { provide: AkariWritesStore, useValue: akariWrites },
       { provide: AnnoncesStore, useValue: annonces },
     ],
@@ -50,11 +76,10 @@ function setup() {
 
   return {
     store: TestBed.inject(ChatStore),
-    workflow,
-    conversations,
+    assistant,
     akariWrites,
     annonces,
-    setSnapshot: (next: Snapshot) => (snapshot = next),
+    setState: (next: WorkflowState) => (state = next),
   };
 }
 
@@ -73,15 +98,15 @@ afterEach(() => {
 });
 
 describe('ChatStore : l’historique', () => {
-  it('charge les messages de l’objectif, dans l’ordre', async () => {
-    const { store, conversations } = setup();
+  it('charge les messages de l’objectif, dans l’ordre ; « AI » est Akari, tout autre expéditeur la personne', async () => {
+    const { store, assistant } = setup();
     expect(store.historyLoaded()).toBe(false);
 
     store.loadChatHistory({ objectifId: 'semi' });
     expect(store.isLoading()).toBe(true);
     await tick();
 
-    expect(conversations.execute).toHaveBeenCalledWith('semi');
+    expect(assistant.conversation).toHaveBeenCalledWith('semi');
     expect(store.isLoading()).toBe(false);
     expect(store.historyLoaded()).toBe(true);
     expect(store.orderLatestMessages().map((m) => [m.id, m.sender])).toEqual([
@@ -91,68 +116,145 @@ describe('ChatStore : l’historique', () => {
   });
 
   it('signale une conversation introuvable, sans message technique', async () => {
-    const { store, conversations, annonces } = setup();
-    conversations.execute.mockRejectedValue(new Error('network down'));
+    const { store, assistant, annonces } = setup();
+    assistant.conversation.mockRejectedValue(new ApiError('CONVERSATION_NOT_FOUND', 404, 'No conversation found for reference semi'));
     store.loadChatHistory({ objectifId: 'semi' });
     await tick();
     expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.loadConversation);
     expect(store.historyLoaded()).toBe(true);
     expect(store.isLoading()).toBe(false);
   });
+
+  it('réessaie une panne passagère avant de rien signaler', async () => {
+    const { store, assistant, annonces } = setup();
+    assistant.conversation.mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+    store.loadChatHistory({ objectifId: 'semi' });
+    await tick();
+    expect(store.isLoading()).toBe(true);
+
+    await tick(1000);
+    expect(assistant.conversation).toHaveBeenCalledTimes(2);
+    expect(store.historyLoaded()).toBe(true);
+    expect(store.messages()).toHaveLength(2);
+    expect(annonces.signaler).not.toHaveBeenCalled();
+  });
+
+  it('signale une panne qui dure, au bout de quelques essais', async () => {
+    const { store, assistant, annonces } = setup();
+    assistant.conversation.mockRejectedValue(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+    store.loadChatHistory({ objectifId: 'semi' });
+    await tick(1000 + 2000 + 4000 + 8000);
+    expect(assistant.conversation).toHaveBeenCalledTimes(5);
+    expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.loadConversation);
+    expect(store.historyLoaded()).toBe(true);
+  });
 });
 
 describe('ChatStore : le workflow', () => {
-  it('reprend le workflow à l’ouverture, sans annoncer l’ancien dernier message', async () => {
-    const { store, workflow, annonces, setSnapshot } = setup();
-    setSnapshot({ value: READY, context: { lastRegisteredMessage: { id: 'm2', sender: 'akari', content: 'Bonjour.', createdAt: new Date() } } });
+  it('lit l’état à l’ouverture, sans annoncer l’ancien dernier message, et s’arrête au repos', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    setState(ready({ lastRegisteredMessage: registered('m2', 'AI', 'Bonjour.') }));
 
     store.initWorkflow('semi');
+    expect(store.canSendMessage()).toBe(false);
     await tick();
-    expect(workflow.startWorkFlow).toHaveBeenCalledWith('semi');
+    expect(assistant.state).toHaveBeenCalledWith('semi');
     expect(store.canSendMessage()).toBe(true);
     expect(store.isStreaming()).toBe(false);
     expect(annonces.annoncer).not.toHaveBeenCalled();
+
+    await tick(3 * AKARI_POLL_INTERVAL);
+    expect(assistant.state).toHaveBeenCalledTimes(1);
   });
 
-  it('signale un workflow qui ne démarre pas', async () => {
-    const { store, workflow, annonces } = setup();
-    workflow.startWorkFlow.mockRejectedValue(new Error('firestore'));
+  it('suit un tour interrompu que le serveur a repris, jusqu’à la réponse', async () => {
+    const { store, annonces, setState } = setup();
+    setState(processing('SendingPromptToAI'));
+    store.initWorkflow('semi');
+    await tick();
+    expect(store.isStreaming()).toBe(true);
+    expect(store.canSendMessage()).toBe(false);
+
+    setState(ready({ lastRegisteredMessage: registered('m3', 'AI', 'Me revoilà.') }));
+    await tick(AKARI_POLL_INTERVAL);
+    expect(store.canSendMessage()).toBe(true);
+    expect(annonces.annoncer).toHaveBeenCalledWith(AKARI_REPLIED);
+  });
+
+  it('signale un workflow qu’on ne peut pas lire', async () => {
+    const { store, assistant, annonces } = setup();
+    assistant.state.mockRejectedValue(new ApiError('CONVERSATION_NOT_FOUND', 404, 'No conversation found for reference semi'));
     store.initWorkflow('semi');
     await tick();
     expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.startConversation);
     expect(store.canSendMessage()).toBe(false);
+    // Un refus ne se réessaie pas.
+    expect(assistant.state).toHaveBeenCalledTimes(1);
+  });
+
+  it('réessaie une panne passagère (serveur qui se réveille) sans rien signaler', async () => {
+    const { store, assistant, annonces } = setup();
+    assistant.state.mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+    store.initWorkflow('semi');
+    await tick();
+    expect(store.canSendMessage()).toBe(false);
+
+    await tick(AKARI_POLL_INTERVAL);
+    expect(assistant.state).toHaveBeenCalledTimes(2);
+    expect(store.canSendMessage()).toBe(true);
+    expect(annonces.signaler).not.toHaveBeenCalled();
+  });
+
+  it('une panne qui dure : la personne est prévenue, l’interrogation continue, la note s’en va quand le serveur répond', async () => {
+    const { store, assistant, annonces } = setup();
+    assistant.state.mockRejectedValue(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+    store.initWorkflow('semi');
+
+    // Essais à 0 s, 1 s, 3 s et 7 s (1 s, 2 s, 4 s d'écart) : au quatrième nouvel essai, la personne l'apprend.
+    await tick(6000);
+    expect(annonces.signaler).not.toHaveBeenCalled();
+    await tick(1000);
+    expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.unreachable);
+    expect(annonces.retirer).not.toHaveBeenCalled();
+
+    assistant.state.mockResolvedValue(ready());
+    await tick(8000);
+    expect(assistant.state).toHaveBeenCalledTimes(5);
+    expect(annonces.retirer).toHaveBeenCalledWith(AKARI_REPORTS.unreachable);
+    expect(store.canSendMessage()).toBe(true);
   });
 
   it('envoie, montre ce que fait Akari, puis annonce sa réponse', async () => {
-    const { store, workflow, annonces, setSnapshot } = setup();
+    const { store, assistant, annonces, setState } = setup();
     store.initWorkflow('semi');
     await tick();
 
-    setSnapshot({ value: 'RegisteringUserMessageInConversation', context: {} });
+    setState(processing('RegisteringUserMessageInConversation'));
     store.sendMessageToAi({ message: 'On commence ?', objectiveId: 'semi' });
-    // Le message de la personne s'affiche tout de suite, avec un id temporaire.
+    // Le message de la personne s'affiche tout de suite, avec un id temporaire ; un second envoi attend.
     expect(store.messages()).toHaveLength(1);
     expect(isTemporaryId(store.messages()[0].id)).toBe(true);
+    expect(store.canSendMessage()).toBe(false);
     await tick();
 
-    expect(workflow.sendMessage).toHaveBeenCalledWith('semi', 'u1', 'semi', 'On commence ?');
+    expect(assistant.sendMessage).toHaveBeenCalledWith('semi', 'On commence ?');
     expect(store.isStreaming()).toBe(true);
     expect(store.canSendMessage()).toBe(false);
     expect(store.processingStatus()).toBe(AKARI_STATUS.RegisteringUserMessageInConversation);
 
     // Le workflow a enregistré le message : l'id temporaire est remplacé.
-    setSnapshot({ value: 'SendingPromptToAI', context: { lastRegisteredMessage: { id: 'm1', sender: 'u1', content: 'On commence ?', createdAt: new Date() } } });
-    await tick(1000);
+    setState(processing('SendingPromptToAI', { lastRegisteredMessage: registered('m1', 'u1', 'On commence ?') }));
+    await tick(AKARI_POLL_INTERVAL);
     expect(store.messages().map((m) => m.id)).toEqual(['m1']);
     expect(store.processingStatus()).toBe('Akari réfléchit…');
 
     // Une étape composée prend la phrase de son étape parente.
-    setSnapshot({ value: { ExecutingAllTool: 'Executing' }, context: {} });
-    await tick(1000);
+    setState(processing({ ExecutingAllTool: 'PreparingNextTool' }));
+    await tick(AKARI_POLL_INTERVAL);
     expect(store.processingStatus()).toBe('Akari regarde ton objectif…');
 
-    setSnapshot({ value: READY, context: { lastRegisteredMessage: { id: 'm2', sender: 'akari', content: 'Voici 4 étapes.', createdAt: new Date() } } });
-    await tick(1000);
+    setState(ready({ lastRegisteredMessage: registered('m2', 'AI', 'Voici 4 étapes.') }));
+    await tick(AKARI_POLL_INTERVAL);
     expect(store.messages().map((m) => [m.id, m.sender])).toEqual([
       ['m1', 'user'],
       ['m2', 'assistant'],
@@ -161,20 +263,19 @@ describe('ChatStore : le workflow', () => {
     expect(store.canSendMessage()).toBe(true);
     expect(annonces.annoncer).toHaveBeenCalledWith(AKARI_REPLIED);
 
-    // Les instantanés répétés n'ajoutent rien.
-    await tick(3000);
+    // Au repos, l'interrogation s'arrête : plus aucune requête, rien n'est ajouté.
+    const reads = assistant.state.mock.calls.length;
+    await tick(3 * AKARI_POLL_INTERVAL);
+    expect(assistant.state).toHaveBeenCalledTimes(reads);
     expect(store.messages()).toHaveLength(2);
   });
 
   it('demande l’accord, puis confie l’étape acceptée à AkariWritesStore, qui recharge l’arête dès qu’elle est écrite', async () => {
-    const { store, workflow, akariWrites, setSnapshot } = setup();
+    const { store, assistant, akariWrites, setState } = setup();
     store.initWorkflow('semi');
     await tick();
 
-    setSnapshot({
-      value: { ExecutingAllTool: 'WaitingForUserPermission' },
-      context: { currentToolCall: { id: 'call-1', name: 'createSubObjective', arguments: { parentObjectiveId: 'semi', title: 'Portfolio' } } },
-    });
+    setState(asking(STAGE_CALL));
     store.sendMessageToAi({ message: 'Propose-moi des étapes.', objectiveId: 'semi' });
     await tick();
 
@@ -182,43 +283,252 @@ describe('ChatStore : le workflow', () => {
     expect(store.isStreaming()).toBe(false);
     expect(store.permissionRequest()).toEqual({ kind: 'stage', title: 'Portfolio', parentId: 'semi' });
 
-    setSnapshot({ value: 'SendingCallResultToAI', context: {} });
+    setState(processing('SendingCallResultToAI'));
     store.respondToPermission(true);
-    expect(workflow.respondToPermission).toHaveBeenCalledWith('semi', true);
+    // La demande quitte l'écran tout de suite ; la réponse part avec l'id de l'outil.
     expect(store.isAwaitingPermission()).toBe(false);
-    expect(akariWrites.reloadAfterWrite).toHaveBeenCalledWith('semi');
-
-    setSnapshot({ value: READY, context: {} });
-    await tick(1000);
+    expect(assistant.respondToPermission).toHaveBeenCalledWith('semi', true, 'call-1');
     expect(akariWrites.reloadAfterWrite).toHaveBeenCalledTimes(1);
+    const [{ objectiveId, answered }] = akariWrites.reloadAfterWrite.mock.calls[0];
+    expect(objectiveId).toBe('semi');
+    // La réponse de l'API à l'accord, partagée : AkariWritesStore attend qu'elle arrive avant d'interroger l'état.
+    expect(typeof answered.then).toBe('function');
+
+    setState(ready());
+    await tick(AKARI_POLL_INTERVAL);
+    expect(akariWrites.reloadAfterWrite).toHaveBeenCalledTimes(1);
+    expect(store.canSendMessage()).toBe(true);
   });
 
   it('ne confie rien quand la personne refuse', async () => {
-    const { store, workflow, akariWrites, setSnapshot } = setup();
+    const { store, assistant, akariWrites, setState } = setup();
     store.initWorkflow('semi');
     await tick();
-    setSnapshot({
-      value: { ExecutingAllTool: 'WaitingForUserPermission' },
-      context: { currentToolCall: { id: 'call-2', name: 'createTask', arguments: { objectiveId: 'endurance', title: 'Courir 10 km', importance: 3, urgency: 2 } } },
-    });
+    setState(asking(TASK_CALL));
     store.sendMessageToAi({ message: 'Un pas ?', objectiveId: 'semi' });
     await tick();
     expect(store.permissionRequest()).toEqual({ kind: 'task', title: 'Courir 10 km', objectiveId: 'endurance' });
 
-    setSnapshot({ value: READY, context: {} });
+    setState(ready());
     store.respondToPermission(false);
-    expect(workflow.respondToPermission).toHaveBeenCalledWith('semi', false);
-    await tick(1000);
+    expect(assistant.respondToPermission).toHaveBeenCalledWith('semi', false, 'call-2');
+    await tick(AKARI_POLL_INTERVAL);
     expect(akariWrites.reloadAfterWrite).not.toHaveBeenCalled();
   });
 
-  it('retire le message et signale quand le workflow ne répond pas à l’envoi', async () => {
-    const { store, workflow, annonces } = setup();
-    workflow.startWorkFlow.mockRejectedValue(new Error('firestore'));
+  it('une demande qui avait déjà sa réponse (un autre onglet) relit l’état sans rien signaler', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    setState(asking(STAGE_CALL));
+    store.initWorkflow('semi');
+    await tick();
+
+    assistant.respondToPermission.mockRejectedValueOnce(new ApiError('NO_PENDING_PERMISSION', 409, 'No pending permission'));
+    setState(ready());
+    store.respondToPermission(true);
+    await tick();
+
+    expect(annonces.signaler).not.toHaveBeenCalled();
+    expect(store.canSendMessage()).toBe(true);
+  });
+
+  it('un envoi resté sans réponse que le serveur a reçu : le message reste en attente, puis prend son id', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    store.initWorkflow('semi');
+    await tick();
+    assistant.sendMessage.mockRejectedValue(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+
+    // La réponse s'est perdue, mais le tour a commencé sur le serveur.
+    setState(processing('SendingPromptToAI'));
+    store.sendMessageToAi({ message: 'On commence ?', objectiveId: 'semi' });
+    await tick();
+    expect(store.messages()).toHaveLength(1);
+    expect(isTemporaryId(store.messages()[0].id)).toBe(true);
+    expect(store.isStreaming()).toBe(true);
+
+    assistant.conversation.mockResolvedValueOnce({
+      id: 'c1',
+      messages: [
+        { id: 'm9', sender: 'u1', content: 'On commence ?', createdAt: new Date().toISOString() },
+        { id: 'm10', sender: 'AI', content: 'Allons-y.', createdAt: new Date().toISOString() },
+      ],
+    });
+    setState(ready({ lastRegisteredMessage: registered('m10', 'AI', 'Allons-y.') }));
+    await tick(AKARI_POLL_INTERVAL);
+
+    expect(store.orderLatestMessages().map((m) => m.id)).toEqual(['m9', 'm10']);
+    expect(annonces.signaler).not.toHaveBeenCalled();
+    expect(store.canSendMessage()).toBe(true);
+  });
+
+  it('un envoi resté sans réponse que le serveur n’a pas reçu : le message quitte la conversation, la personne le sait', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    // La panne d'un tour plus ancien, que l'état rend encore : elle n'est pas redite.
+    setState(ready({ lastError: { code: 'AI_PROVIDER_UNAVAILABLE', step: 'SendingPromptToAI', at: '2026-10-20T09:00:00.000Z' } }));
+    store.loadChatHistory({ objectifId: 'semi' });
+    store.initWorkflow('semi');
+    await tick();
+    assistant.sendMessage.mockRejectedValue(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+
+    store.sendMessageToAi({ message: 'Salut.', objectiveId: 'semi' });
+    await tick();
+
+    // La conversation relue n'a que l'ancien « Salut. », déjà affiché : le nouveau n'est pas arrivé.
+    expect(store.orderLatestMessages().map((m) => m.id)).toEqual(['m1', 'm2']);
+    expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.notSent);
+    expect(annonces.signaler).not.toHaveBeenCalledWith(AKARI_REPORTS.turnInterrupted);
+    expect(store.isStreaming()).toBe(false);
+    expect(store.canSendMessage()).toBe(true);
+  });
+
+  it('un message envoyé pendant la relecture n’est ni doublé ni signalé perdu ; seul celui qui n’est pas arrivé l’est', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    store.initWorkflow('semi');
+    await tick();
+
+    // « Premier » reste sans réponse et n'arrive pas ; la relecture de fin de tour bute une fois sur le réseau.
+    assistant.sendMessage.mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+    assistant.conversation
+      .mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'))
+      .mockResolvedValueOnce({ id: 'c1', messages: [{ id: 'm5', sender: 'u1', content: 'Second', createdAt: new Date().toISOString() }] });
+    store.sendMessageToAi({ message: 'Premier', objectiveId: 'semi' });
+    await tick();
+    expect(store.canSendMessage()).toBe(true);
+
+    // Pendant que la relecture attend, « Second » part ; le serveur l'enregistre (m5) avant qu'elle reprenne.
+    setState(processing('RegisteringUserMessageInConversation'));
+    store.sendMessageToAi({ message: 'Second', objectiveId: 'semi' });
+    await tick(1000);
+    expect(store.messages().map((m) => m.id)).toEqual(['m5']);
+
+    setState(ready({ lastRegisteredMessage: registered('m6', 'AI', 'Bien reçu.') }));
+    await tick(AKARI_POLL_INTERVAL);
+    expect(store.orderLatestMessages().map((m) => m.id)).toEqual(['m5', 'm6']);
+    expect(annonces.signaler.mock.calls).toEqual([[AKARI_REPORTS.notSent]]);
+  });
+
+  it('une relecture refusée laisse le message en attente et le dit', async () => {
+    const { store, assistant, annonces } = setup();
+    store.initWorkflow('semi');
+    await tick();
+    assistant.sendMessage.mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+    assistant.conversation.mockRejectedValueOnce(new ApiError('CONVERSATION_NOT_FOUND', 404, 'No conversation found for reference semi'));
+
+    store.sendMessageToAi({ message: 'Oui', objectiveId: 'semi' });
+    await tick();
+
+    expect(store.messages()).toHaveLength(1);
+    expect(isTemporaryId(store.messages()[0].id)).toBe(true);
+    expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.loadConversation);
+  });
+
+  it('une réponse à une demande d’accord restée sans réponse du serveur : la demande revient, sans note', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    setState(asking(STAGE_CALL));
+    store.initWorkflow('semi');
+    await tick();
+
+    assistant.respondToPermission.mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
+    store.respondToPermission(true);
+    expect(store.isAwaitingPermission()).toBe(false);
+    await tick();
+
+    expect(store.isAwaitingPermission()).toBe(true);
+    expect(annonces.signaler).not.toHaveBeenCalled();
+  });
+
+  it('une réponse à une demande d’accord en panne sur le serveur : la personne peut réessayer', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    setState(asking(STAGE_CALL));
+    store.initWorkflow('semi');
+    await tick();
+
+    assistant.respondToPermission.mockRejectedValueOnce(new ApiError('UNKNOWN_ERROR', 500, 'Internal error'));
+    store.respondToPermission(true);
+    await tick();
+
+    expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.turnInterrupted);
+    expect(store.isAwaitingPermission()).toBe(true);
+  });
+
+  it('un message refusé (trop long) est retiré, la phrase le dit, sans redire une panne plus ancienne', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    setState(ready({ lastError: { code: 'AI_PROVIDER_UNAVAILABLE', step: 'SendingPromptToAI', at: '2026-10-20T09:00:00.000Z' } }));
+    store.initWorkflow('semi');
+    await tick();
+    assistant.sendMessage.mockRejectedValue(new ApiError('VALIDATION_ERROR', 400, 'Invalid request'));
+
+    store.sendMessageToAi({ message: 'Un très long message', objectiveId: 'semi' });
+    await tick();
+
+    expect(store.messages()).toEqual([]);
+    expect(annonces.signaler.mock.calls).toEqual([[AKARI_REPORTS.messageTooLong]]);
+    expect(store.canSendMessage()).toBe(true);
+  });
+
+  it('un tour déjà en cours ailleurs : le message est retiré, la phrase le dit, et l’état réel est suivi', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    store.initWorkflow('semi');
+    await tick();
+    assistant.sendMessage.mockRejectedValue(new ApiError('WORKFLOW_BUSY', 409, 'Workflow busy'));
+    setState(processing('SendingPromptToAI'));
+
     store.sendMessageToAi({ message: 'Bonjour', objectiveId: 'semi' });
     await tick();
+
     expect(store.messages()).toEqual([]);
-    expect(store.isStreaming()).toBe(false);
-    expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.startConversation);
+    expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.busy);
+    expect(store.isStreaming()).toBe(true);
+    expect(store.canSendMessage()).toBe(false);
+
+    setState(ready());
+    await tick(AKARI_POLL_INTERVAL);
+    expect(store.canSendMessage()).toBe(true);
+  });
+
+  it('un tour arrêté par une panne sur le serveur : la personne peut réessayer, son message reprend son id', async () => {
+    const { store, assistant, annonces, setState } = setup();
+    store.initWorkflow('semi');
+    await tick();
+
+    setState(processing('RegisteringUserMessageInConversation'));
+    store.sendMessageToAi({ message: 'On commence ?', objectiveId: 'semi' });
+    await tick();
+
+    // L'interrogation n'a pas vu le message enregistré : à la fin du tour, la conversation est relue.
+    assistant.conversation.mockResolvedValueOnce({
+      id: 'c1',
+      messages: [{ id: 'm9', sender: 'u1', content: 'On commence ?', createdAt: new Date().toISOString() }],
+    });
+    setState(ready({ lastError: { code: 'AI_PROVIDER_UNAVAILABLE', step: 'SendingPromptToAI', at: new Date().toISOString() } }));
+    await tick(AKARI_POLL_INTERVAL);
+
+    expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.turnInterrupted);
+    expect(store.canSendMessage()).toBe(true);
+    expect(store.messages().map((m) => m.id)).toEqual(['m9']);
+  });
+});
+
+describe('la voix d’Akari', () => {
+  it.each(Object.values(AKARI_REPORTS))('« %s » parle comme Empreinte et dit quoi faire', (report) => {
+    expect(voiceIssues(report)).toEqual([]);
+    expect(report).toMatch(/réessaie|recharge la page/i);
+  });
+});
+
+describe('sendFailureReport et akariFailureReport', () => {
+  it('dit pourquoi un message ne part pas, d’après le code de l’API', () => {
+    expect(sendFailureReport('WORKFLOW_BUSY')).toBe(AKARI_REPORTS.busy);
+    expect(sendFailureReport('VALIDATION_ERROR')).toBe(AKARI_REPORTS.messageTooLong);
+    expect(sendFailureReport('PAYLOAD_TOO_LARGE')).toBe(AKARI_REPORTS.messageTooLong);
+    expect(sendFailureReport('TOO_MANY_REQUESTS')).toBe(AKARI_REPORTS.tooManyMessages);
+    expect(sendFailureReport('UNAUTHENTICATED')).toBe(FAILURE_REPORTS.sessionEnded);
+    expect(sendFailureReport('NETWORK_ERROR')).toBe(AKARI_REPORTS.startConversation);
+    expect(sendFailureReport()).toBe(AKARI_REPORTS.startConversation);
+  });
+
+  it('une lecture refusée : la session terminée ou trop de requêtes, sinon la phrase de la lecture', () => {
+    expect(akariFailureReport(AKARI_REPORTS.loadConversation, 'INVALID_SESSION')).toBe(FAILURE_REPORTS.sessionEnded);
+    expect(akariFailureReport(AKARI_REPORTS.loadConversation, 'TOO_MANY_REQUESTS')).toBe(AKARI_REPORTS.tooManyMessages);
+    expect(akariFailureReport(AKARI_REPORTS.loadConversation, 'CONVERSATION_NOT_FOUND')).toBe(AKARI_REPORTS.loadConversation);
   });
 });

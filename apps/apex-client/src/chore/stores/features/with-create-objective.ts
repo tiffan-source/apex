@@ -2,13 +2,14 @@ import { inject } from "@angular/core";
 import { patchState, signalStoreFeature, type, withMethods, withState } from "@ngrx/signals";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";
-import { CreateObjectiveUsecase } from "@org/objective";
+import { ObjectivesApi } from "../../api/objectives.api";
+import { errorCodeOf } from "../../api/api-error";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { from, mergeMap, pipe, tap } from "rxjs";
 import { ObjectiveViewModel } from "../../models/objective.viewmodel";
 import { tapResponse } from "@ngrx/operators";
 import { ObjectiveState } from "../objective.store";
-import { withOwnerId } from "../utils/filter-auth-operation";
+import { whenSignedIn } from "../utils/filter-auth-operation";
 import { swapObjectiveId, withOptimistiqueId } from "../utils/map-optimistique-id";
 import { RequestStatusState } from "../utils/loading-feature";
 import { WriteQueue } from "../utils/write-queue";
@@ -28,7 +29,7 @@ export function withCreateObjective() {
     { state: type<ObjectiveState & RequestStatusState>() },
     withState<CreateObjectiveState>({ lastCreatedObjectiveId: null }),
     withMethods((store,
-      createObjectiveUsecase = inject(CreateObjectiveUsecase),
+      objectivesApi = inject(ObjectivesApi),
       sessionStore = inject(SessionStore),
       annonces = inject(AnnoncesStore),
       writes = inject(WriteQueue)
@@ -40,10 +41,10 @@ export function withCreateObjective() {
         });
 
       return {
-      /** Crée un objectif, d'abord dans l'état (id temporaire) puis en base ; lastCreatedObjectiveId donne l'id définitif. */
+      /** Crée un objectif, d'abord dans l'état (id temporaire) puis par l'API ; lastCreatedObjectiveId donne l'id définitif. */
       createObjective: rxMethod<{ title: string; description?: string; why?: string; dueDate?: Date }>(
         pipe(
-          withOwnerId(sessionStore.currentUserId),
+          whenSignedIn(sessionStore.isAuthenticated),
           withOptimistiqueId(),
           tap(({ title, description, why, dueDate, tempId }) => {
 
@@ -60,30 +61,23 @@ export function withCreateObjective() {
             patchState(store, { objectives: [...store.objectives(), newObjective] });
           }),
           // mergeMap + file d'écritures : deux créations rapprochées reçoivent chacune leur réponse
-          mergeMap(({ title, description, why, dueDate, ownerId, tempId }) =>
-            from(writes.run(() => createObjectiveUsecase.execute({ title, description, why, dueDate, ownerId }))).pipe(
+          mergeMap(({ title, description, why, dueDate, tempId }) =>
+            from(writes.run(() => objectivesApi.create({ title, description, why, dueDate: dueDate?.toISOString() }))).pipe(
               tapResponse({
-                next: (data) => {
-                  if (data.success) {
-                    const realId = data.data.id;
-                    writes.link(tempId, realId);
-                    patchState(store, {
-                      ...swapObjectiveId({ objectives: store.objectives(), tasks: store.tasks() }, tempId, realId),
-                      lastCreatedObjectiveId: realId,
-                      requestStatus: 'fulfilled'
-                    });
+                next: (created) => {
+                  const realId = created.id;
+                  writes.link(tempId, realId);
+                  patchState(store, {
+                    ...swapObjectiveId({ objectives: store.objectives(), tasks: store.tasks() }, tempId, realId),
+                    lastCreatedObjectiveId: realId,
+                    requestStatus: 'fulfilled'
+                  });
 
-                    annonces.annoncer(SUCCESS_ANNOUNCEMENTS.objectiveCreated);
-                  } else {
-                    const report = failureReport('createObjective', data.error.code);
-                    annonces.signaler(report);
-                    removeTemporary(tempId);
-                    patchState(store, { requestStatus: { error: report } });
-                  }
+                  annonces.annoncer(SUCCESS_ANNOUNCEMENTS.objectiveCreated);
                 },
                 error: (error) => {
                   console.error(error);
-                  const report = failureReport('createObjective');
+                  const report = failureReport('createObjective', errorCodeOf(error));
                   annonces.signaler(report);
                   removeTemporary(tempId);
                   patchState(store, { requestStatus: { error: report } });

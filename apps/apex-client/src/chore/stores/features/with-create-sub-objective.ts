@@ -5,11 +5,12 @@ import { from, mergeMap, pipe, tap } from "rxjs";
 import { inject } from "@angular/core";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";
-import { AddSubObjectiveUsecase } from "@org/objective";
+import { ObjectivesApi } from "../../api/objectives.api";
+import { errorCodeOf } from "../../api/api-error";
 import { isTemporaryId, swapObjectiveId, withOptimistiqueId } from "../utils/map-optimistique-id";
 import { tapResponse } from "@ngrx/operators";
 import { RequestStatusState } from "../utils/loading-feature";
-import { withOwnerId } from "../utils/filter-auth-operation";
+import { whenSignedIn } from "../utils/filter-auth-operation";
 import { WriteQueue } from "../utils/write-queue";
 import { ObjectiveViewModel } from "../../models/objective.viewmodel";
 import { SUCCESS_ANNOUNCEMENTS, failureReport } from "../../constants/messages.constante";
@@ -20,7 +21,7 @@ export function withCreateSubObjective() {
     withMethods((store,
       sessionStore = inject(SessionStore),
       annonces = inject(AnnoncesStore),
-      addSubObjectiveUsecase = inject(AddSubObjectiveUsecase),
+      objectivesApi = inject(ObjectivesApi),
       writes = inject(WriteQueue)
     )=>{
       /** Retire l'étape optimiste, et les pas posés dessus entre-temps. */
@@ -31,10 +32,10 @@ export function withCreateSubObjective() {
         });
 
       return {
-      /** Ajoute une étape (sous-objectif direct) à un objectif, d'abord dans l'état puis en base. */
+      /** Ajoute une étape (sous-objectif direct) à un objectif, d'abord dans l'état puis par l'API. */
       addSubObjective: rxMethod<{ objectiveId: string; subObjectiveTitle: string }>(
         pipe(
-          withOwnerId(sessionStore.currentUserId),
+          whenSignedIn(sessionStore.isAuthenticated),
           withOptimistiqueId(),
           tap(({ objectiveId, subObjectiveTitle, tempId }) => {
             patchState(store, { requestStatus: 'pending' });
@@ -50,36 +51,31 @@ export function withCreateSubObjective() {
 
             patchState(store, { objectives: [...store.objectives(), newSubObjective] });
           }),
-          mergeMap(({ objectiveId, subObjectiveTitle, ownerId, tempId }) =>
+          mergeMap(({ objectiveId, subObjectiveTitle, tempId }) =>
             from(writes.run(async () => {
               // L'objectif a pu être créé entre-temps : son id définitif est connu ici
               const parentObjectiveId = writes.resolve(objectiveId);
               if (isTemporaryId(parentObjectiveId)) return null; // sa création n'a pas abouti (déjà signalé)
-              return addSubObjectiveUsecase.execute({ parentObjectiveId, title: subObjectiveTitle, ownerId });
+              return objectivesApi.addSubObjective(parentObjectiveId, { title: subObjectiveTitle });
             })).pipe(
               tapResponse({
-                next: (data) => {
-                  if (data === null) {
+                next: (created) => {
+                  if (created === null) {
                     removeTemporary(tempId);
                     patchState(store, { requestStatus: 'idle' });
-                  } else if (data.success) {
-                    writes.link(tempId, data.data.id);
-                    patchState(store, {
-                      ...swapObjectiveId({ objectives: store.objectives(), tasks: store.tasks() }, tempId, data.data.id),
-                      requestStatus: 'fulfilled'
-                    });
-
-                    annonces.annoncer(SUCCESS_ANNOUNCEMENTS.stageAdded);
-                  } else {
-                    const report = failureReport('addStage', data.error.code);
-                    annonces.signaler(report);
-                    removeTemporary(tempId);
-                    patchState(store, { requestStatus: { error: report } });
+                    return;
                   }
+                  writes.link(tempId, created.id);
+                  patchState(store, {
+                    ...swapObjectiveId({ objectives: store.objectives(), tasks: store.tasks() }, tempId, created.id),
+                    requestStatus: 'fulfilled'
+                  });
+
+                  annonces.annoncer(SUCCESS_ANNOUNCEMENTS.stageAdded);
                 },
                 error: (error) => {
                   console.error(error);
-                  const report = failureReport('addStage');
+                  const report = failureReport('addStage', errorCodeOf(error));
                   annonces.signaler(report);
                   removeTemporary(tempId);
                   patchState(store, { requestStatus: { error: report } });

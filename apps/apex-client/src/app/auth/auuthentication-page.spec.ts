@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { motsAEviter } from '@empreinte-studio/angular/core';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
-import { SessionStore, type LoginInput, type SignupInput } from '../../chore/stores/session.store';
+import { EMAIL_CONFIRMATION_REQUIRED, SessionStore, type LoginInput, type SignupInput } from '../../chore/stores/session.store';
 import { voiceIssues } from '../../chore/constants/messages.constante';
 import { AUTH_TEXTS, AuuthenticationPage } from './auuthentication-page';
 import {
@@ -15,7 +15,7 @@ import {
 } from './auth.form';
 import { present } from '../../testing/present';
 
-/** Un SessionStore simulé : les signaux que l'écran lit, et les deux actions qu'il appelle. */
+/** Un SessionStore simulé : les signaux que l'écran lit (error : le code de l'API), et les deux actions qu'il appelle. */
 function createSessionStub() {
   const stub = {
     isAuthenticated: signal(false),
@@ -153,7 +153,7 @@ describe('AuuthenticationPage', () => {
 
     it('rattache un mot de passe refusé au champ, puis l’efface dès qu’il change', async () => {
       session.login.mockImplementation(async () => {
-        session.error.set('Erreur lors de la connexion: Invalid login credentials');
+        session.error.set('INVALID_CREDENTIALS');
       });
       write('auth-email', 'lea@exemple.com');
       write('auth-password', 'secret1');
@@ -176,7 +176,7 @@ describe('AuuthenticationPage', () => {
 
     it('efface le mot de passe refusé dès que l’adresse change', async () => {
       session.login.mockImplementation(async () => {
-        session.error.set('Erreur lors de la connexion: Invalid login credentials');
+        session.error.set('INVALID_CREDENTIALS');
       });
       write('auth-email', 'lea@exemple.com');
       write('auth-password', 'secret1');
@@ -189,7 +189,7 @@ describe('AuuthenticationPage', () => {
 
     it('fait dire à Akari, au-dessus du bouton, ce qui ne concerne aucun champ', async () => {
       session.login.mockImplementation(async () => {
-        session.error.set('Erreur lors de la connexion: Failed to fetch');
+        session.error.set('NETWORK_ERROR');
       });
       write('auth-email', 'lea@exemple.com');
       write('auth-password', 'secret1');
@@ -279,7 +279,7 @@ describe('AuuthenticationPage', () => {
 
     it('rattache une adresse déjà prise au champ de l’adresse', async () => {
       session.signup.mockImplementation(async () => {
-        session.error.set('Erreur lors de l’inscription: User already registered');
+        session.error.set('USER_ALREADY_EXIST');
       });
       write('auth-email', 'lea@exemple.com');
       write('auth-password', 'secret1');
@@ -298,7 +298,7 @@ describe('AuuthenticationPage', () => {
 
     it('revient à la connexion en gardant l’adresse, sans la réponse précédente', async () => {
       session.signup.mockImplementation(async () => {
-        session.error.set('Network request failed');
+        session.error.set('NETWORK_ERROR');
       });
       write('auth-email', 'lea@exemple.com');
       write('auth-password', 'secret1');
@@ -323,18 +323,17 @@ describe('AuuthenticationPage', () => {
 
   describe('la voix', () => {
     const serverSamples: [string, AuthMode][] = [
-      ['Erreur lors de la connexion: Invalid login credentials', AuthMode.SignIn],
-      ["Erreur lors de l'inscription: User already registered", AuthMode.CreateUser],
-      ['A user with the email lea@exemple.com already exists.', AuthMode.CreateUser],
-      ['Erreur lors de la connexion: Email not confirmed', AuthMode.SignIn],
-      ["Erreur lors de la récupération de l'utilisateur: Auth session missing!", AuthMode.CreateUser],
-      ['Erreur lors de la connexion: Failed to fetch', AuthMode.SignIn],
-      ['Request rate limit reached', AuthMode.SignIn],
-      ['Signups not allowed for this instance', AuthMode.CreateUser],
-      ['Password should be at least 6 characters.', AuthMode.CreateUser],
-      ['Unable to validate email address: invalid format', AuthMode.CreateUser],
-      ['An unknown error occurred while logging in the user.', AuthMode.SignIn],
-      ['An unknown error occurred while creating a new user.', AuthMode.CreateUser],
+      ['INVALID_CREDENTIALS', AuthMode.SignIn],
+      ['USER_ALREADY_EXIST', AuthMode.CreateUser],
+      ['EMAIL_NOT_CONFIRMED', AuthMode.SignIn],
+      [EMAIL_CONFIRMATION_REQUIRED, AuthMode.CreateUser],
+      ['NETWORK_ERROR', AuthMode.SignIn],
+      ['TOO_MANY_REQUESTS', AuthMode.SignIn],
+      ['WEAK_PASSWORD', AuthMode.CreateUser],
+      ['INVALID_EMAIL', AuthMode.CreateUser],
+      ['VALIDATION_ERROR', AuthMode.CreateUser],
+      ['UNKNOWN_ERROR', AuthMode.SignIn],
+      ['UNKNOWN_ERROR', AuthMode.CreateUser],
     ];
 
     const screenTexts = [
@@ -375,46 +374,25 @@ describe('AuuthenticationPage', () => {
 
 describe('translateAuthError', () => {
   it.each<[string, AuthMode, AuthErrorReport]>([
-    [
-      'Erreur lors de la connexion: Invalid login credentials',
-      AuthMode.SignIn,
-      { field: 'password', text: AUTH_SERVER_MESSAGES.wrongCredentials },
-    ],
-    [
-      "Erreur lors de l'inscription: User already registered",
-      AuthMode.CreateUser,
-      { field: 'email', text: AUTH_SERVER_MESSAGES.accountExists },
-    ],
-    [
-      'A user with the email lea@exemple.com already exists.',
-      AuthMode.CreateUser,
-      { field: 'email', text: AUTH_SERVER_MESSAGES.accountExists },
-    ],
-    ['Email not confirmed', AuthMode.SignIn, { field: null, text: AUTH_SERVER_MESSAGES.emailNotConfirmed }],
-    ['Auth session missing!', AuthMode.CreateUser, { field: null, text: AUTH_SERVER_MESSAGES.confirmEmail }],
-    ['TypeError: Failed to fetch', AuthMode.SignIn, { field: null, text: AUTH_SERVER_MESSAGES.unreachable }],
-    ['Email rate limit exceeded', AuthMode.CreateUser, { field: null, text: AUTH_SERVER_MESSAGES.tooManyAttempts }],
-    ['Signups not allowed for this instance', AuthMode.CreateUser, { field: null, text: AUTH_SERVER_MESSAGES.signupClosed }],
-    [
-      'Password should be at least 6 characters.',
-      AuthMode.CreateUser,
-      { field: 'password', text: AUTH_SERVER_MESSAGES.passwordTooWeak },
-    ],
-    [
-      'Unable to validate email address: invalid format',
-      AuthMode.CreateUser,
-      { field: 'email', text: AUTH_SERVER_MESSAGES.emailRejected },
-    ],
-  ])('« %s » (%s)', (message, mode, expected) => {
-    expect(translateAuthError(message, mode)).toEqual(expected);
+    ['INVALID_CREDENTIALS', AuthMode.SignIn, { field: 'password', text: AUTH_SERVER_MESSAGES.wrongCredentials }],
+    ['USER_ALREADY_EXIST', AuthMode.CreateUser, { field: 'email', text: AUTH_SERVER_MESSAGES.accountExists }],
+    ['EMAIL_NOT_CONFIRMED', AuthMode.SignIn, { field: null, text: AUTH_SERVER_MESSAGES.emailNotConfirmed }],
+    [EMAIL_CONFIRMATION_REQUIRED, AuthMode.CreateUser, { field: null, text: AUTH_SERVER_MESSAGES.confirmEmail }],
+    ['NETWORK_ERROR', AuthMode.SignIn, { field: null, text: AUTH_SERVER_MESSAGES.unreachable }],
+    ['TOO_MANY_REQUESTS', AuthMode.CreateUser, { field: null, text: AUTH_SERVER_MESSAGES.tooManyAttempts }],
+    ['WEAK_PASSWORD', AuthMode.CreateUser, { field: 'password', text: AUTH_SERVER_MESSAGES.passwordTooWeak }],
+    ['INVALID_EMAIL', AuthMode.CreateUser, { field: 'email', text: AUTH_SERVER_MESSAGES.emailRejected }],
+    ['VALIDATION_ERROR', AuthMode.SignIn, { field: 'email', text: AUTH_SERVER_MESSAGES.emailRejected }],
+  ])('« %s » (%s)', (code, mode, expected) => {
+    expect(translateAuthError(code, mode)).toEqual(expected);
   });
 
-  it('ne montre jamais le message brut : un cas inconnu donne la phrase de repli du mode', () => {
-    expect(translateAuthError('Something odd happened', AuthMode.SignIn)).toEqual({
+  it('ne montre jamais le message technique : un code inconnu donne la phrase de repli du mode', () => {
+    expect(translateAuthError('UNKNOWN_ERROR', AuthMode.SignIn)).toEqual({
       field: null,
       text: AUTH_SERVER_MESSAGES.signInFallback,
     });
-    expect(translateAuthError('Something odd happened', AuthMode.CreateUser)).toEqual({
+    expect(translateAuthError('AUTH_PROVIDER_CONFIGURATION_FAILED_ERROR_CODE', AuthMode.CreateUser)).toEqual({
       field: null,
       text: AUTH_SERVER_MESSAGES.createUserFallback,
     });

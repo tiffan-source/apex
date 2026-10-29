@@ -107,12 +107,12 @@ export class AuuthenticationPage {
   /** Le dernier envoi, ou null (aucun envoi, ou le mode a changé depuis). */
   private readonly attempt = signal<AuthAttempt | null>(null);
 
-  /** La réponse du serveur au dernier envoi, dans la voix ; null tant qu'il n'y a rien à dire. */
+  /** La réponse du serveur au dernier envoi (son code d'erreur), dans la voix ; null tant qu'il n'y a rien à dire. */
   private readonly serverReport = computed(() => {
     const attempt = this.attempt();
-    const message = this.session.error();
-    if (!attempt || !message || attempt.mode !== this.mode()) return null;
-    return translateAuthError(message, attempt.mode);
+    const code = this.session.error();
+    if (!attempt || !code || attempt.mode !== this.mode()) return null;
+    return translateAuthError(code, attempt.mode);
   });
 
   /** L'adresse, puis le mot de passe envoyés sont toujours dans leur champ : la réponse les concerne encore. */

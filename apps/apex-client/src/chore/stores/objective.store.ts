@@ -44,10 +44,11 @@ export const ObjectiveStore = signalStore(
   withMoveTaskToQuadrant(),
   withHooks((store, session = inject(SessionStore)) =>({
     onInit() {
+      // Les objectifs de la personne connectée (l'API la reconnaît à son jeton), rechargés quand elle change.
       effect(() => {
         const userId = session.currentUserId();
         if (userId) {
-          store.loadObjectives({ ownerId: userId });
+          store.loadObjectives();
         } else {
           store.clearObjectives();
         }

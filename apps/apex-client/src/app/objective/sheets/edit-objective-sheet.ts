@@ -6,7 +6,7 @@ import { EChamp, ESaisie, ETailleAuto } from '@empreinte-studio/angular/champ';
 import { EFeuille, EFeuilleActions } from '@empreinte-studio/angular/feuille';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { fromDateInputValue, toDateInputValue } from '../../../chore/mapper/date-input.mapper';
-import { requireText } from './sheet-validation';
+import { limitText, requireText } from './sheet-validation';
 
 /** Ce que la feuille « Modifier l'objectif » reçoit : l'objectif tel qu'il est affiché. */
 export type EditObjectiveSheetData = {
@@ -61,6 +61,9 @@ export class EditObjectiveSheet {
     this.model,
     (path) => {
       requireText(path.title, OBJECTIVE_TITLE_REQUIRED);
+      limitText(path.title, 'title');
+      limitText(path.description, 'longText');
+      limitText(path.why, 'longText');
       if (this.initialDueDate) requireText(path.dueDate, OBJECTIVE_HORIZON_KEPT);
     },
     { submission: { action: async () => this.save() } },

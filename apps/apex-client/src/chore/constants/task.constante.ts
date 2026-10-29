@@ -2,7 +2,7 @@ import type { OptionSelection } from '@empreinte-studio/angular/selection';
 
 /*
  * Les niveaux d'importance et d'urgence d'un pas (1 à 5), prêts pour e-selection.
- * Le seuil de la matrice est 3 (ApexLibsMetier.getEisenhowerCategory) : à partir de 3, un pas
+ * Le seuil de la matrice est 3 (EISENHOWER_THRESHOLD, matrix.mapper.ts) : à partir de 3, un pas
  * est « important » ou « urgent ». Les libellés suivent les axes de la matrice d'Empreinte.
  */
 

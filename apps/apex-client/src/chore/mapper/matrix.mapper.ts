@@ -1,29 +1,16 @@
-import { ApexLibsMetier, EisenhowerCategory } from '@org/apex-library';
 import type { Quadrant } from '@empreinte-studio/angular/matrice';
 import type { ObjectiveViewModel, TaskViewModel } from '../models/objective.viewmodel';
 import type { MatrixTaskViewModel, MatrixViewModel } from '../models/matrix.viewmodel';
 
 /*
- * La matrice d'Eisenhower d'Empreinte, branchée sur la règle métier d'Apex
- * (ApexLibsMetier.getEisenhowerCategory reste la source : seuil 3 sur l'importance et l'urgence).
+ * La matrice d'Eisenhower d'Empreinte, rangée d'après l'importance et l'urgence que l'API rend pour chaque
+ * pas. Le seuil (3) est la convention d'Apex que le serveur applique aussi (les outils d'Akari) ; l'API ne
+ * rend pas encore le quadrant d'un pas ni ne sait déplacer un pas vers un quadrant : tant qu'elle ne le fait
+ * pas, ce rangement et levelsForQuadrant restent ici (voir docs/technical/data-flow.md).
  */
 
-/** Le seuil d'ApexLibsMetier : à partir de 3, un pas est important (ou urgent). */
+/** À partir de 3, un pas est important (ou urgent). */
 export const EISENHOWER_THRESHOLD = 3;
-
-const CATEGORY_TO_QUADRANT: Readonly<Record<EisenhowerCategory, Quadrant>> = {
-  [EisenhowerCategory.DO]: 'maintenant',
-  [EisenhowerCategory.SCHEDULE]: 'planifier',
-  [EisenhowerCategory.DELEGATE]: 'confier',
-  [EisenhowerCategory.DELETE]: 'laisser-filer',
-};
-
-const QUADRANT_TO_CATEGORY: Readonly<Record<Quadrant, EisenhowerCategory>> = {
-  maintenant: EisenhowerCategory.DO,
-  planifier: EisenhowerCategory.SCHEDULE,
-  confier: EisenhowerCategory.DELEGATE,
-  'laisser-filer': EisenhowerCategory.DELETE,
-};
 
 /** Ce que chaque quadrant demande : important ou secondaire, urgent ou pas urgent. */
 const QUADRANT_AXES: Readonly<Record<Quadrant, { important: boolean; urgent: boolean }>> = {
@@ -33,21 +20,12 @@ const QUADRANT_AXES: Readonly<Record<Quadrant, { important: boolean; urgent: boo
   'laisser-filer': { important: false, urgent: false },
 };
 
-/** DO → maintenant, SCHEDULE → planifier, DELEGATE → confier, DELETE → laisser-filer. */
-export function categoryToQuadrant(category: EisenhowerCategory): Quadrant {
-  return CATEGORY_TO_QUADRANT[category];
-}
-
-/** Le retour : maintenant → DO, planifier → SCHEDULE, confier → DELEGATE, laisser-filer → DELETE. */
-export function quadrantToCategory(quadrant: Quadrant): EisenhowerCategory {
-  return QUADRANT_TO_CATEGORY[quadrant];
-}
-
-/** Le quadrant d'un pas, selon la règle métier d'Apex. */
+/** Le quadrant d'un pas : important et urgent → maintenant, important → planifier, urgent → confier, sinon laisser filer. */
 export function quadrantOf(levels: { importance: number; urgency: number }): Quadrant {
-  return categoryToQuadrant(
-    ApexLibsMetier.getEisenhowerCategory({ importance: levels.importance, urgency: levels.urgency }),
-  );
+  const important = levels.importance >= EISENHOWER_THRESHOLD;
+  const urgent = levels.urgency >= EISENHOWER_THRESHOLD;
+  if (important) return urgent ? 'maintenant' : 'planifier';
+  return urgent ? 'confier' : 'laisser-filer';
 }
 
 /**

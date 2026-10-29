@@ -1,4 +1,5 @@
 import {
+  maxLength,
   requiredError,
   validate,
   type FieldTree,
@@ -6,6 +7,7 @@ import {
   type SchemaPath,
   type SchemaPathRules,
 } from '@angular/forms/signals';
+import { TEXT_MAX_LENGTH } from '../../../chore/api/api.models';
 
 /*
  * La validation commune aux feuilles de l'arête (Signal Forms). Une erreur s'écrit en encre, avec ce
@@ -18,6 +20,19 @@ export function requireText<TPathKind extends PathKind = PathKind.Root>(
   message: string,
 ): void {
   validate(path, (context) => (context.value().trim() ? undefined : requiredError({ message })));
+}
+
+/**
+ * Un texte que l'API borne (TEXT_MAX_LENGTH) : un nom, une description, un pourquoi. [formField] pose la
+ * longueur sur le contrôle natif (maxlength) ; un texte déjà plus long (écrit avant que l'API le borne)
+ * arrête l'enregistrement, et e-champ dit « C'est un peu long : … caractères au plus. ». Sans cela, la
+ * feuille se fermerait sur un texte que l'API refuse ensuite.
+ */
+export function limitText<TPathKind extends PathKind = PathKind.Root>(
+  path: SchemaPath<string, SchemaPathRules.Supported, TPathKind>,
+  kind: 'title' | 'longText',
+): void {
+  maxLength(path, TEXT_MAX_LENGTH[kind]);
 }
 
 /**
