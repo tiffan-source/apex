@@ -1,8 +1,15 @@
-import { ObjectiveOutput, TaskOutput, GetAllObjectiveAndTaskOutput } from "@org/objective";
+import type { ObjectiveOutput, ObjectivesResponse, TaskOutput } from "../api/api.models";
 import { ObjectiveViewModel, TaskViewModel } from "../models/objective.viewmodel";
 import { ObjectiveState } from "../stores/objective.store";
 
-/** Du résultat du chargement (domaine) aux modèles de l'état d'ObjectiveStore. */
+/** Une échéance de l'API (ISO 8601) au format de l'état (ISO, en UTC) ; vide sans échéance ou illisible. */
+function toIsoDueDate(dueDate: string | null): string {
+  if (!dueDate) return "";
+  const date = new Date(dueDate);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+}
+
+/** De la réponse de GET /v1/objectives aux modèles de l'état d'ObjectiveStore. */
 export class ObjectiveMapper {
 
   private static toTaskViewModel(task: TaskOutput): TaskViewModel {
@@ -20,15 +27,15 @@ export class ObjectiveMapper {
     return {
       id: objective.id,
       title: objective.title,
-      why: objective.why,
-      dueDate: objective.dueDate ? objective.dueDate.toISOString() : "",
-      description: objective.description,
+      why: objective.why ?? "",
+      dueDate: toIsoDueDate(objective.dueDate),
+      description: objective.description ?? "",
       parentId: objective.parentObjective
     };
   }
 
   public static fromLoadToObjectiveViewModels(
-    input: GetAllObjectiveAndTaskOutput
+    input: ObjectivesResponse
   ): ObjectiveState {
     return {
       objectives: input.objectives.map(ObjectiveMapper.toObjectiveViewModel),

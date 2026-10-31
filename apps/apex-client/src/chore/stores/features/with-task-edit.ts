@@ -4,11 +4,12 @@ import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { filter, from, map, mergeMap, pipe, tap } from "rxjs";
 import { RequestStatusState } from "../utils/loading-feature";
 import { TaskViewModel } from "../../models/objective.viewmodel";
-import { EditMyTaskUsecase } from "@org/objective";
+import { ObjectivesApi } from "../../api/objectives.api";
+import { errorCodeOf } from "../../api/api-error";
 import { inject } from "@angular/core";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";
-import { withOwnerId } from "../utils/filter-auth-operation";
+import { whenSignedIn } from "../utils/filter-auth-operation";
 import { isTemporaryId } from "../utils/map-optimistique-id";
 import { WriteQueue } from "../utils/write-queue";
 import { tapResponse } from "@ngrx/operators";
@@ -27,7 +28,7 @@ export function withTaskEdit() {
     { state: type<ObjectiveState & RequestStatusState>() },
     withMethods((
       store,
-      editMyTaskUsecase = inject(EditMyTaskUsecase),
+      objectivesApi = inject(ObjectivesApi),
       sessionStore = inject(SessionStore),
       annonces = inject(AnnoncesStore),
       writes = inject(WriteQueue)
@@ -53,10 +54,10 @@ export function withTaskEdit() {
       };
 
       return {
-        /** Modifie un pas, d'abord dans l'état puis en base ; retour en arrière si l'enregistrement n'aboutit pas. */
+        /** Modifie un pas, d'abord dans l'état puis par l'API ; retour en arrière si l'enregistrement n'aboutit pas. */
         editTask: rxMethod<{ taskId: string; input: EditTaskInput }>(
           pipe(
-            withOwnerId(sessionStore.currentUserId),
+            whenSignedIn(sessionStore.isAuthenticated),
             map(data => ({...data, oldTask: store.tasks().find(task => task.id === data.taskId)})),
             // Rien à modifier si le pas n'est pas (ou plus) chargé
             filter((data): data is typeof data & { oldTask: TaskViewModel } => data.oldTask !== undefined),
@@ -78,34 +79,31 @@ export function withTaskEdit() {
                 tasks: store.tasks().map((task) => task.id === taskId ? updatedTask : task)
               });
             }),
-            mergeMap(({input, oldTask, taskId, ownerId})=>
+            mergeMap(({input, oldTask, taskId})=>
               from(writes.run(async () => {
                 const id = writes.resolve(taskId);
                 const objectiveId = writes.resolve(input.objectiveId);
                 if (isTemporaryId(id) || isTemporaryId(objectiveId)) return null; // une création n'a pas abouti (déjà signalé)
-                return editMyTaskUsecase.execute({
-                  ownerId,
-                  task: { id, title: input.title, importance: input.importance, urgency: input.urgency, objectiveId }
+                return objectivesApi.editTask(id, {
+                  title: input.title,
+                  objectiveId,
+                  importance: input.importance,
+                  urgency: input.urgency,
                 });
               })).pipe(
                 tapResponse({
-                  next: (data) => {
-                    if (data === null) {
+                  next: (saved) => {
+                    if (saved === null) {
                       restore(oldTask, input);
                       patchState(store, { requestStatus: 'idle' });
-                    } else if(data.success) {
-                      patchState(store, { requestStatus: 'fulfilled' });
-                      annonces.annoncer(SUCCESS_ANNOUNCEMENTS.taskSaved);
-                    }else{
-                      const report = failureReport('editTask', data.error.code);
-                      patchState(store, { requestStatus: { error: report } });
-                      annonces.signaler(report);
-                      restore(oldTask, input);
+                      return;
                     }
+                    patchState(store, { requestStatus: 'fulfilled' });
+                    annonces.annoncer(SUCCESS_ANNOUNCEMENTS.taskSaved);
                   },
                   error: (error) => {
                     console.error(error);
-                    const report = failureReport('editTask');
+                    const report = failureReport('editTask', errorCodeOf(error));
                     annonces.signaler(report);
                     patchState(store, { requestStatus: { error: report } });
                     restore(oldTask, input);

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Apex is a goal/objective-management app (objectives → sub-objectives → tasks, an Eisenhower matrix, a daily focus, and an AI assistant). It is an **Nx 23 monorepo** with an **Angular 22** client (TypeScript 6), domain/infrastructure libraries, and an **XState** workflow package. The codebase is written in English, but **docs, code comments, UI strings, and commit messages are in French** — match that when editing those.
+Apex is a goal/objective-management app (objectives → stages/sub-objectives → steps/tasks, an Eisenhower matrix, and the Akari AI assistant). This repository is the **web client**: an **Nx 23 monorepo** with a single **Angular 22** app, `apex-client` (TypeScript 6). **The business rules, the data and Akari live in Apex Brain**, the server (repo `tiffan-source/apex-brain`, NestJS, hosted on Render at `https://apex-brain-kapj.onrender.com`): the client displays and calls its REST API. The contract is `docs/api.md` in apex-brain, and `/docs` (Swagger UI) or `/docs-json` on the server. The codebase is written in English, but **docs, code comments, UI strings, and commit messages are in French** — match that when editing those.
 
 ## Commands
 
@@ -14,71 +14,57 @@ Apex is a goal/objective-management app (objectives → sub-objectives → tasks
 |------|---------|
 | Serve the app (dev) | `npx nx serve apex-client` |
 | Build | `npx nx build apex-client` |
-| Unit tests (one project) | `npx nx vite:test <project>` |
-| Unit tests (all) | `npx nx run-many -t vite:test` |
+| Unit tests | `npx nx vite:test apex-client` |
 | Single test file | `npx nx vite:test apex-client -- src/app/path/to/file.spec.ts` |
-| Lint | `npx nx lint <project>` |
-| Typecheck | `npx nx typecheck <project>` |
+| Lint | `npx nx lint apex-client` |
+| Typecheck | `npx nx typecheck apex-client` |
 | Only what changed | `npx nx affected -t vite:test lint typecheck` |
 
 - The unit test target is `vite:test` (not `test`). Tests are **Vitest + jsdom** via `@analogjs/vite-plugin-angular`; `.spec.ts` files are colocated with sources. E2E is Playwright (`e2e` target) when a project has a Playwright config.
-- Project names: `apex-client`, `objective`, `chat`, `ai`, `gemini`, `supabase`, `firebase`, `chore`, `auth`, `ai-assistant`, `apex-library`.
-- **The workflow package lives under the misspelled directory `worklfows/` — use that exact path.**
-- `nx serve apex-client` declares `dependsOn: ["api:serve"]`, but **no `api` project exists** (stale config, also referenced in `nx.json` `release` and `.vscode/launch.json`). If serve fails on a missing `api` dependency, that is why — run `npx nx run apex-client:serve --excludeTaskDependencies`.
+- `npx nx serve apex-client` calls Apex Brain at `http://localhost:3000` (`src/environments/environment.development.ts`): start the API from its repo (`npx nx serve api`, with its own `.env`, whose `CORS_ORIGINS` allows `http://localhost:4200`). To work against the hosted API, serve the production configuration (`npx nx serve apex-client --configuration=production`); its origin must then be in the hosted API's `CORS_ORIGINS`. The free Render instance sleeps when idle: the first request after a pause can take about a minute.
 - **Node ^22.22.3, ^24.15 or ≥ 26 is required** (Angular 22; Node 25 is not supported). `.nvmrc` pins Node 24.22.0: run `nvm use` first; the system Node in `/usr/local/bin` (24.8) is too old.
 - **The UI library is Empreinte** (`@empreinte-studio/angular` + `@empreinte-studio/tokens`, versioned together), published on **GitHub Packages**: `.npmrc` maps the `@empreinte-studio` scope to `npm.pkg.github.com` and reads `NODE_AUTH_TOKEN`, so `npm install` needs a GitHub token with `read:packages` exported as `NODE_AUTH_TOKEN`. Its peers `@angular/aria` and `@angular/cdk` follow Angular's version — align them with `nx migrate`, not by hand. PrimeNG is uninstalled (migration, `docs/features/migration-empreinte.md`): never bring it back.
 - TypeScript 6: `tsconfig.base.json` has no `baseUrl` and uses `moduleResolution: bundler` — import app files with relative paths, never `apps/...`. `tsconfck` (via `vite-tsconfig-paths`) has a TS 5-only optional peer, forced via `overrides` in `package.json`.
 
-### Local services & config
+### Configuration
 
-- Runtime secrets/config live in `apps/apex-client/env/env.ts` (and `env.dev.ts`): Gemini API key, Firebase config, Supabase URL/key. Imported directly as `env` in `app.config.ts`.
-- **Supabase** is the primary datastore (objectives, tasks, conversations), expected locally at `http://127.0.0.1:54321`. SQL migrations are in `supabase/migrations/`; note the Postgres RPC `get_objective_subtree` used for recursive objective loading.
-- **Firebase** (Firestore) persists XState workflow state only.
+- `apps/apex-client/src/environments/environment.ts` (production: the hosted API) and `environment.development.ts` (swapped in by `fileReplacements` for the development configuration) hold **only the API's URL**. No secret lives in the client: the Supabase, Gemini and Firebase keys are the server's.
+- The deployed client is served by **Firebase Hosting** (`firebase.json`, `.firebaserc`, from `dist/apps/apex-client/browser`); its origin must be in the API's `CORS_ORIGINS` (Render environment).
+- The database schema (Supabase migrations) and Akari's workflow are in apex-brain. `apps/apex-client/env/env.ts` and `supabase/functions/.env` are obsolete local files, kept in `.gitignore` so a leftover copy is never committed.
 
 ## Architecture
 
-This is a **clean/hexagonal architecture**. The dependency rule is strict: domain and workflow code depend only on **abstractions** (abstract classes used as ports), and concrete infrastructure is injected at the composition root. `docs/features/send-message-to-ai-prd.md` and `docs/technical/*.md` are the authoritative design docs — read them before changing the AI workflow or layering.
+The client does **no business operation**: no use case, repository, domain model, nor Supabase, Firebase or Gemini SDK. It sends the person's gestures to the API and renders what the API returns. The few rules the API does not expose yet are listed in `docs/technical/data-flow.md` (« Rules still in the client ») — do not add new ones: add an endpoint to apex-brain instead.
 
-### Three data representations (`docs/technical/data-flow.md`)
+### Calling the API (`apps/apex-client/src/chore/api/`)
 
-Data crosses three layers, each with its own shape, bridged by **mappers**:
-- **Domain Model** (`libs/*/models/`) — rich classes with encapsulated state and business rules (e.g. `Objective`, `Task` extend `TodoBase`). The "working" state.
-- **Persistence Data** (`libs/supabase/...mapper/`) — flat DB rows. `ObjectiveMapper.flatten` / `.toDomain` convert the objective tree ↔ rows.
-- **Client ViewModel** (`apps/apex-client/src/chore/models/*.viewmodel.ts`) — UI-ready, mapped in `apps/apex-client/src/chore/mapper/`.
+- `api.models.ts` holds the HTTP contract (bodies and responses, dates in ISO 8601). `ObjectivesApi` (`objectives.api.ts`: objectives, stages, steps), `AssistantApi` (`assistant.api.ts`: a root objective's conversation and Akari's workflow) and `AuthApi` (`auth.api.ts`): one method per route, returning a `Promise` (the stores chain their writes on promises).
+- Every failure becomes an **`ApiError`** (`api-error.ts`) read from the API's error body `{ error: { code, message, details? } }`. The **code** is the contract (`OBJECTIVE_NOT_FOUND`, `VALIDATION_ERROR`, `WORKFLOW_BUSY`…, and `NETWORK_ERROR` when the server did not answer); screens pick one French sentence per code (`failureReport`, `translateAuthError`, `sendFailureReport`) — **never display `message`** (technical, in English). Transient failures (no answer, 429, 5xx: `isTransientError`) can be retried with backoff by `retryWhileTransient` (1 s, 2 s, 4 s, 8 s, then every 10 s; wrap the call in `defer`); `isUnknownOutcome` (no answer, 5xx) means the server may have done the work before the answer was lost.
+- `ApiSession` (`api-session.ts`) keeps the session — `{ user, session: { accessToken, refreshToken, expiresAt } }` — in `localStorage` (`apex:session`), shared between tabs. `authInterceptor` adds `Authorization: Bearer` to requests to the API only (never to another host, nor to `/v1/auth/login|register|refresh`), refreshes the token shortly before it expires or on a 401 (one refresh at a time, then a single retry). Only a refresh the API refuses (`INVALID_SESSION`) closes the session (`provideSessionEndRedirect` then sends the person to `/auth`, and a queued write says « Ta session a pris fin »); any other failure (network, 429, 5xx, a proxy's 401) keeps it, and the interceptor rethrows that failure instead of the 401 so the screen says to check the connection. A request only ever carries the token of the person it was sent for (`ApiSession.ownerId()`, captured by the interceptor), and a queued write whose person is no longer signed in is not sent (`WriteQueue.run` → `UNAUTHENTICATED`): a gesture never lands in another person's account when someone else signs in from another tab. Closing never erases a session another tab has just opened.
+- The owner is never sent: the API derives the person from the token. `provideApi(environment.apiUrl)` (`chore/providers/api.provider.ts`) wires `HttpClient` (fetch) and the interceptor.
 
-### Library layout
+### Two data representations (`docs/technical/data-flow.md`)
 
-- **Domain libs** (`libs/objective`, `libs/chat`, `libs/auth`) contain **use cases** (`*.usecase.ts`, business logic, return `Result<T>`), **ports** (`protocols/*.repository.ts`, `protocols/*.provider.ts` — abstract classes), **models**, **queries/commands**, and **errors**. They have **no knowledge of each other, of the AI, or of any infrastructure.**
-- **`libs/ai`** defines the generic generation capability (`AIProvider`, `InteractiveAIProvider` abstract classes) — knows nothing about chat/objectives.
-- **`libs/gemini`** adapts the Google GenAI SDK to the `libs/ai` ports. Nothing outside the composition root may import it.
-- **`libs/supabase` / `libs/firebase`** implement the domain repository/query ports against their SDKs.
-- **`libs/chore`** is the shared kernel: `Result<T>` + `runWithResult`, `CoreError`, `IdGenerator`.
-
-### Result & error handling
-
-- Use cases return `Promise<Result<T>>` (a `{success:true,data}` | `{success:false,error}` union). Wrap the body in `runWithResult(action, [ExpectedError, ...], fallbackMessage)` — only the listed domain errors (subclasses of `CoreError`, which carry a stable `code`) become structured failures; anything else collapses to `UNKNOWN_ERROR`.
-- **CQRS split** (`docs/technical/queries.md`): **query classes** (`*.query.ts`) only fetch and shape data — **no business logic and no error handling** (log and return an empty result on failure). If logic creeps in, make it a **use case** instead.
-
-### The AI assistant workflow (`worklfows/ai-assistant`)
-
-`SendMessageToAIWorkflow` is a **transversal application orchestrator** — it composes `chat`, `objective`, and `ai` but owns none of their concepts, and never touches Gemini/Firebase/Supabase directly (all injected as ports: `IChatActor`, `IAIActor`, `IToolExecutor`, `IToolExecutionPolicy`, `IToolRegistry`, `IWorkflowStateRepository`).
-
-- The core is an **XState v5 machine** (`lib/workflow/machine.ts`): register user message → send prompt to AI → branch on `text` vs `toolCall` → run tools (each gated by a `ToolPolicy` that can require user permission) → feed results back → persist the AI response. Tools are registered in a `ToolRegistry` (e.g. `GetObjectiveTreeTool`).
-- One actor exists **per objective id**. `startWorkFlow(id)` resumes a persisted machine (via `IWorkflowStateRepository` → Firebase) or starts fresh; every transition is persisted. There is no streaming — the client **polls `getState()` every second** (see `apps/apex-client/src/app/objective/akari/chat.store.ts`). After the person accepts a write tool (a stage, a step), `AkariWritesStore` (`chore/stores/akari-writes.store.ts`, provided by the shell next to `ObjectiveStore`) reloads the objectives as soon as the tool has run, even if the Akari screen is gone.
+- **HTTP contract** (`chore/api/api.models.ts`) — what the API sends and receives.
+- **Client ViewModel** (`apps/apex-client/src/chore/models/*.viewmodel.ts`) — UI-ready, mapped in `apps/apex-client/src/chore/mapper/` (`objective.mapper.ts` turns `GET /v1/objectives` into the store state).
 
 ### Client state (NgRx Signals)
 
-- State lives in **`signalStore`s** under `apps/apex-client/src/chore/stores/`, assembled from composable **`signalStoreFeature`s** named `with-*.ts` (e.g. `ObjectiveStore` composes `withObjectiveQuery`, `withObjectivesLoaded`, `withCreateObjective`, `withObjectiveViews`, `withMoveTaskToQuadrant`, …). `signalStore()` has typed overloads for at most 15 features: past that, group features in one `signalStoreFeature`.
-- Async work uses `rxMethod` + `tapResponse`. **Optimistic updates** are the norm: insert a row with a temporary id (`withOptimistiqueId`), then reconcile or roll back on the use-case `Result` (see `features/with-create-objective.ts`). Writes and the objectives load go one at a time through `WriteQueue` (`stores/utils/write-queue.ts`); a load keeps the optimistic rows still in flight (`keepOptimistic`), and a reload that a gesture overtook is discarded and read again (`WriteQueue.enqueued`), so it never erases that gesture from the screen. `requestStatus` is shared by every action: before showing an empty state or « introuvable », screens read `objectivesLoaded()`. Outcomes go through **`AnnoncesStore`** (`chore/stores/annonces.store.ts`, provided in root): `annoncer(text)` for a success (screen-reader announcement via the CDK `LiveAnnouncer`, nothing shown), `signaler(text)` for a failure (an Akari note shown in the page by the shell). No toasts; never display a domain `error.message` — write one French sentence per error code, with the fix (migration doc § 6-7).
-- `SessionStore` restores the session in an app initializer; routes are guarded by `authGuard` (`app.routes.ts`).
+- State lives in **`signalStore`s** under `apps/apex-client/src/chore/stores/`, assembled from composable **`signalStoreFeature`s** named `with-*.ts` (e.g. `ObjectiveStore` composes `withObjectiveQuery`, `withObjectivesLoaded`, `withCreateObjective`, `withObjectiveViews`, `withMoveTaskToQuadrant`, …), which call `ObjectivesApi`. `signalStore()` has typed overloads for at most 15 features: past that, group features in one `signalStoreFeature`.
+- Async work uses `rxMethod` + `tapResponse`. **Optimistic updates** are the norm: insert a row with a temporary id (`withOptimistiqueId`), then swap in the id the API returns, or roll back on an `ApiError` (see `features/with-create-objective.ts`). Writes and the objectives load go one at a time through `WriteQueue` (`stores/utils/write-queue.ts`) — the server's use cases read then rewrite a whole objective tree, two concurrent writes could overwrite each other; a load keeps the optimistic rows still in flight (`keepOptimistic`), and a reload that a gesture overtook is discarded and read again (`WriteQueue.enqueued`), so it never erases that gesture from the screen. Gestures pass `whenSignedIn` (no session, nothing is sent). `requestStatus` is shared by every action: before showing an empty state or « introuvable », screens read `objectivesLoaded()`. Outcomes go through **`AnnoncesStore`** (`chore/stores/annonces.store.ts`, provided in root): `annoncer(text)` for a success (screen-reader announcement via the CDK `LiveAnnouncer`, nothing shown), `signaler(text)` for a failure (an Akari note shown in the page by the shell), `retirer(text)` to withdraw that note once its cause is gone. No toasts; one French sentence per error code, with the fix (migration doc § 6-7).
+- `SessionStore` derives the signed-in person from `ApiSession` (restored from the browser at start-up, without waiting for the server), signs in and creates accounts through `AuthApi`, and keeps the API's error code in `error()` for the sign-in screen. Routes are guarded by `authGuard` (`app.routes.ts`).
 
-### Dependency injection = composition root
+### Akari
 
-Everything is wired in **`apps/apex-client/src/chore/providers/*.ts`**, aggregated in `app.config.ts`. Ports (abstract classes) are bound to concrete implementations with `useFactory`/`deps` — this is the only place domain abstractions meet infrastructure. **When you add a use case, port, or adapter, wire it here.**
+The workflow (XState machine, Gemini, tools) runs **in the server**, one per root objective; there is no streaming. `ChatStore` (`app/objective/akari/chat.store.ts`, provided by the Akari screen) loads the conversation (`GET …/conversation`), sends a message (`POST …/assistant/messages`, 202) or the answer to a permission request (`POST …/assistant/permission` with the `toolCallId`), then **polls `GET …/assistant` every second** while `status` is `processing` — it stops at `ready` or `awaiting-permission`. `value` picks the status line; a new `lastError` (a turn stopped by a server-side failure; the state keeps it until the next message, so only a new `at` is reported) is reported once. The poll (and the conversation re-read at the end of a turn) never gives up on a transient failure: with the fourth retry (about 7 s in) the shell's note says Akari cannot answer and keeps trying, and it is withdrawn (`AnnoncesStore.retirer`) as soon as the server answers. A message whose send got no clear answer (`isUnknownOutcome`) stays pending (`enAttente`) while the state is polled; at the end of the turn the conversation is re-read (`refreshHistory`): every pending message takes the place of its registered copy (same text, not shown yet), or leaves the thread with « Ton message ne m'est pas parvenu… ». A permission answer without a clear answer is followed by the poll (the request comes back if it did not arrive). After the person accepts a write tool (a stage, a step), `AkariWritesStore` (`chore/stores/akari-writes.store.ts`, provided by the shell next to `ObjectiveStore`) waits for the tool to run and reloads the objectives, even if the Akari screen is gone; if the answer got no clear answer, the state is refused or the tool runs for over a minute, it reloads anyway.
+
+### Dependency injection
+
+`app.config.ts` gathers the providers: Empreinte, the router, `A11yProviders`, `provideApi(environment.apiUrl)` and `provideSessionEndRedirect()` (`chore/providers/*.ts`). The API services are `providedIn: 'root'`; tests replace them (`{ provide: ObjectivesApi, useValue: … }`) or exercise them with `provideHttpClientTesting()`.
 
 ### Module boundaries
 
-`eslint.config.mjs` configures `@nx/enforce-module-boundaries` with intended scopes (`scope:shared`, `scope:apex-client`, `scope:api`) and `type:data`. Only `apex-client` currently carries a tag (`scope:apex-client`); if you add tags to libs, respect those constraints.
+`eslint.config.mjs` configures `@nx/enforce-module-boundaries` with intended scopes (`scope:shared`, `scope:apex-client`, `scope:api`) and `type:data`. `apex-client` is the only project (`scope:apex-client`).
 
 ## Front-end & design system
 
@@ -94,6 +80,6 @@ Apex's UI is built on the **Empreinte** design system, which supplies the identi
 
 ## Conventions
 
-- File suffixes signal role: `*.usecase.ts`, `*.repository.ts`, `*.query.ts`, `*.command.ts`, `*.mapper.ts`, `*.provider.ts` (Angular DI providers), `*.store.ts`, `with-*.ts` (store features), `*.viewmodel.ts`, `*.error.ts`, `*.protocols.ts` / `protocols/*.ts` (ports).
-- Angular uses standalone components with the modern flat naming (`akari.ts` / `akari.html` / `chat.store.ts`, not `*.component.ts`); UI components come from `@empreinte-studio/angular` (standalone, signal-based, with a French API: `eBouton="sceau"`, `[(fait)]`, `marquee`…); TS path aliases are `@org/<lib>` (see `tsconfig.base.json`).
-- `TODO.md` (root) and `libs/objective/src/lib/usecases/TODO.md` track the current backlog (French).
+- File suffixes signal role: `*.api.ts` (the HTTP client of one API context), `*.mapper.ts`, `*.provider.ts` (Angular DI providers), `*.store.ts`, `with-*.ts` (store features), `*.viewmodel.ts`, `*.form.ts`, `*.constante.ts`.
+- Angular uses standalone components with the modern flat naming (`akari.ts` / `akari.html` / `chat.store.ts`, not `*.component.ts`); UI components come from `@empreinte-studio/angular` (standalone, signal-based, with a French API: `eBouton="sceau"`, `[(fait)]`, `marquee`…).
+- `TODO.md` (root) tracks the current backlog (French); the server's is `docs/plan.md` in apex-brain.

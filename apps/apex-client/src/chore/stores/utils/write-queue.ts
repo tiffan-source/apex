@@ -1,4 +1,6 @@
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
+import { ApiError } from "../../api/api-error";
+import { SessionStore } from "../session.store";
 
 /**
  * La file des écritures d'ObjectiveStore.
@@ -12,9 +14,13 @@ import { Injectable } from "@angular/core";
  *   déjà parties. Un geste fait pendant qu'il attend n'est écrit qu'après sa lecture : une création garde son
  *   élément optimiste (keepOptimistic), et un rechargement voit par `enqueued` qu'un geste est passé derrière
  *   lui, et relit la base au lieu de l'effacer de l'écran.
+ * - Une écriture part pour la personne qui a fait le geste : si une autre s'est connectée entre-temps (dans
+ *   un autre onglet), elle ne part pas (UNAUTHENTICATED, « Ta session a pris fin »), plutôt que d'aller dans
+ *   le compte de cette autre personne.
  */
 @Injectable({ providedIn: 'root' })
 export class WriteQueue {
+  private readonly session = inject(SessionStore);
   private tail: Promise<unknown> = Promise.resolve();
   private readonly realIds = new Map<string, string>();
   private count = 0;
@@ -24,10 +30,16 @@ export class WriteQueue {
     return this.count;
   }
 
-  /** Lance l'écriture après les précédentes, qu'elles aient abouti ou non. */
+  /** Lance l'écriture après les précédentes, qu'elles aient abouti ou non, si la personne du geste est encore là. */
   run<T>(write: () => Promise<T>): Promise<T> {
     this.count++;
-    const result = this.tail.then(() => write());
+    const owner = this.session.currentUserId();
+    const result = this.tail.then(() => {
+      if (this.session.currentUserId() !== owner) {
+        throw new ApiError('UNAUTHENTICATED', 401, 'The signed-in person changed before this write was sent.');
+      }
+      return write();
+    });
     this.tail = result.catch(() => undefined);
     return result;
   }

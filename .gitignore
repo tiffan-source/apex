@@ -55,6 +55,8 @@ vitest.config.*.timestamp*
 .nx/self-healing
 .nx/migrate-runs
 
+# Anciennes configurations locales (clés Supabase, Firebase, Gemini) : le client ne les lit plus, tout passe
+# par l'API d'Apex Brain. Toujours ignorées pour qu'une copie restée sur un poste ne soit jamais commitée.
 apps/apex-client/env/env.ts
 
 supabase/functions/.env

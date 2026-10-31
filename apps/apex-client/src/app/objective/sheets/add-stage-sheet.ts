@@ -5,7 +5,7 @@ import { EBouton } from '@empreinte-studio/angular/bouton';
 import { EChamp, ESaisie } from '@empreinte-studio/angular/champ';
 import { EFeuille, EFeuilleActions } from '@empreinte-studio/angular/feuille';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
-import { requireText } from './sheet-validation';
+import { limitText, requireText } from './sheet-validation';
 
 /** Ce que la feuille « Ajouter une étape » reçoit : l'objectif qui reçoit l'étape. */
 export type AddStageSheetData = {
@@ -32,9 +32,14 @@ export class AddStageSheet {
 
   protected readonly model = signal({ title: '' });
 
-  protected readonly fields = form(this.model, (path) => requireText(path.title, STAGE_TITLE_REQUIRED), {
-    submission: { action: async () => this.add() },
-  });
+  protected readonly fields = form(
+    this.model,
+    (path) => {
+      requireText(path.title, STAGE_TITLE_REQUIRED);
+      limitText(path.title, 'title');
+    },
+    { submission: { action: async () => this.add() } },
+  );
 
   private add(): void {
     this.store.addSubObjective({ objectiveId: this.data.objectiveId, subObjectiveTitle: this.model().title.trim() });

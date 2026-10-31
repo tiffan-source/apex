@@ -9,7 +9,7 @@ import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { IMPORTANCE_OPTIONS, URGENCY_OPTIONS } from '../../../chore/constants/task.constante';
 import type { StageTaskViewModel } from '../../../chore/models/objective-detail.viewmodel';
 import { namedStageOptions } from '../stage-labels';
-import { requireText } from './sheet-validation';
+import { limitText, requireText } from './sheet-validation';
 
 /** Ce que la feuille « Modifier le pas » reçoit. */
 export type EditTaskSheetData = {
@@ -52,9 +52,14 @@ export class EditTaskSheet {
     urgency: this.data.task.urgency,
   });
 
-  protected readonly fields = form(this.model, (path) => requireText(path.title, TASK_TITLE_TO_SAVE_REQUIRED), {
-    submission: { action: async () => this.save() },
-  });
+  protected readonly fields = form(
+    this.model,
+    (path) => {
+      requireText(path.title, TASK_TITLE_TO_SAVE_REQUIRED);
+      limitText(path.title, 'title');
+    },
+    { submission: { action: async () => this.save() } },
+  );
 
   private save(): void {
     const { title, stageId, importance, urgency } = this.model();

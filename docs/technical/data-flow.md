@@ -1,7 +1,7 @@
 DATA FLOW
 =========
 
-During its lifecycle, data exists in three different representations: the domain layer, the persistence layer, and the client layer.
+During its lifecycle, data exists in four different representations: the domain and persistence layers, which live in the server (Apex Brain), the HTTP contract the server and its clients exchange, and the client layer.
 
 Domain Layer
 ------------
@@ -53,20 +53,41 @@ flowchart LR
 A[User Action]
 B[Objective Model<br/>Domain]
 C[Objective Data<br/>Persistence]
+E[Objective Output<br/>HTTP contract]
 D[Objective ViewModel<br/>Client]
 
-A --> B
+A --> E
+E --> B
 B --> C
-B --> D
+B --> E
+E --> D
 ```
+
+The domain and persistence layers live in the server. Between the server and the clients, data travels in a fourth shape: the **HTTP contract** (the request and response schemas of the API, documented in `docs/api.md` of apex-brain). The clients build their View Models from it.
 
 
 Applications
 ------------
 
-There are currently two software systems:
+There are currently three software systems:
 
--   `apex-client`: the application used by the user.
--   `engine`: the library containing the core business logic.
+-   `apex-brain` (repository `tiffan-source/apex-brain`): the server. It holds the domain and persistence layers — the core business logic, Supabase, Gemini, Firebase and Akari's workflow — and exposes the capabilities over a REST API.
+-   `apex-client` (this repository): the web application used by the person.
+-   the mobile application (React Native, Expo).
 
-The client is a complete application with its own architecture and data flow. It only consumes the capabilities provided by the engine.
+The clients are complete applications with their own architecture and data flow. They only consume the capabilities exposed by the API. In the web client:
+
+-   `apps/apex-client/src/chore/api/` calls the API: `api.models.ts` describes the HTTP contract, one service per context (`ObjectivesApi`, `AssistantApi`, `AuthApi`) calls its routes, and every failure becomes an `ApiError` carrying the API's error code;
+-   the stores (`chore/stores/`) send the person's gestures through these services, optimistically;
+-   the mappers (`chore/mapper/`) turn the HTTP contract into View Models.
+
+
+Rules still in the client
+-------------------------
+
+The API does not expose these yet, so the web client still derives them from what `GET /v1/objectives` returns. Each one should move to the server (a computed field or a use case), where the mobile application can share it:
+
+-   the Eisenhower quadrant of a step (threshold 3 on importance and urgency, `quadrantOf`) and the levels a step gets when it is moved to a quadrant (`levelsForQuadrant`), in `chore/mapper/matrix.mapper.ts`. The quadrant in `TaskOutput` and a `MoveTaskToQuadrant` use case would replace them;
+-   the progress of an objective and of its stages — a stage done, the stage in progress, the next step, an objective « accomplished » (`isStageDone`, `stageStates`, `nextTaskOf`, `isAccomplished`), in `chore/mapper/objective-view.mapper.ts`.
+
+No other business rule belongs in the client: a new one goes into the API first.

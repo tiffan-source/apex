@@ -41,7 +41,7 @@ function createStoreMock(options: { withSession?: boolean } = {}) {
   };
 
   const createObjective = vi.fn((input: { title: string }) => {
-    // Sans session, le vrai store ignore le geste (withOwnerId) : rien ne change.
+    // Sans session, le vrai store ignore le geste (whenSignedIn) : rien ne change.
     if (options.withSession ?? true) start(input.title);
   });
 
@@ -63,10 +63,10 @@ function createStoreMock(options: { withSession?: boolean } = {}) {
       lastCreatedObjectiveId.set(id);
       requestStatus.set('fulfilled');
     },
-    /** La plus ancienne création en attente n'aboutit pas. */
-    fail(temporaryId = oldestPending()) {
+    /** La plus ancienne création en attente n'aboutit pas (avec la phrase que le store choisit d'après le code de l'API). */
+    fail(temporaryId = oldestPending(), report: string = FAILURE_REPORTS.createObjective) {
       objectiveOptions.update((list) => list.filter((option) => option.valeur !== temporaryId));
-      requestStatus.set({ error: FAILURE_REPORTS.createObjective });
+      requestStatus.set({ error: report });
     },
     /** Une autre écriture (un pas coché juste avant…) n'aboutit pas : requestStatus est partagé. */
     otherWriteFails(report: string) {
@@ -377,6 +377,23 @@ describe('NewObjective', () => {
       expect(store.createObjective).toHaveBeenCalledTimes(2);
       expectWaiting();
     });
+
+    it.each([FAILURE_REPORTS.textTooLong, FAILURE_REPORTS.tooManyRequests])(
+      "rend la main quand l'API refuse la création : « %s »",
+      async (report) => {
+        await setup();
+        write(titleInput(), 'Courir un semi-marathon');
+        await engage();
+        expectWaiting();
+
+        store.fail(undefined, report);
+        await settle();
+
+        expect(navigate).not.toHaveBeenCalled();
+        expectReleased();
+        expect(titleInput().value).toBe('Courir un semi-marathon');
+      },
+    );
 
     it("garde la main si une autre écriture n'aboutit pas pendant l'enregistrement", async () => {
       await setup();
