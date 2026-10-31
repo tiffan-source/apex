@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import type { WritableSignal } from '@angular/core';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { motsAEviter } from '../../../ui';
 import { quadrantOf } from '../../../chore/mapper/matrix.mapper';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
@@ -38,9 +38,10 @@ describe('AddTaskSheet', () => {
   });
 
   const model = () => (fixture.componentInstance as unknown as { model: WritableSignal<Model> }).model;
-  const selections = () => [...element.querySelectorAll('.e-selection__valeur')].map((value) => value.textContent?.trim());
+  const selections = () =>
+    [...element.querySelectorAll<HTMLSelectElement>('ax-select select')].map((select) => select.selectedOptions[0]?.textContent?.trim());
   const type = (value: string) => {
-    const input = element.querySelector<HTMLInputElement>('input[eSaisie]') as HTMLInputElement;
+    const input = element.querySelector<HTMLInputElement>('input[axControl]') as HTMLInputElement;
     input.value = value;
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -52,11 +53,11 @@ describe('AddTaskSheet', () => {
   };
 
   it("propose les étapes de l'objectif, l'étape choisie par défaut, et les niveaux", () => {
-    expect(element.querySelector('.e-feuille__titre')?.textContent?.trim()).toBe('Ajouter un pas');
+    expect(element.querySelector('ax-sheet h2')?.textContent?.trim()).toBe('Ajouter un pas');
     expect(store.stageOptions).toHaveBeenCalledWith('obj-1');
     // Un nouveau pas naît « À planifier » : important, pas urgent.
     expect(selections()).toEqual(['Endurance', 'Important', 'Pas urgent']);
-    const labels = [...element.querySelectorAll('.e-champ__libelle')].map((label) => label.textContent?.trim());
+    const labels = [...element.querySelectorAll('ax-field label')].map((label) => label.textContent?.trim());
     expect(labels).toEqual(['Le pas', 'Étape', 'Importance', 'Urgence']);
   });
 
@@ -89,16 +90,13 @@ describe('AddTaskSheet', () => {
     });
   });
 
-  it("prend l'étape choisie dans la liste", async () => {
-    const combobox = element.querySelector<HTMLElement>('.e-selection') as HTMLElement;
-    combobox.click();
+  it("prend l'étape choisie dans la liste", () => {
+    const select = element.querySelector<HTMLSelectElement>('ax-select select') as HTMLSelectElement;
+    const index = [...select.options].findIndex((option) => option.textContent?.trim() === 'Programme');
+    expect(index).toBeGreaterThanOrEqual(0);
+    select.selectedIndex = index;
+    select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
-    await fixture.whenStable();
-    const option = [...document.querySelectorAll<HTMLElement>('.e-option')].find((el) => el.textContent?.includes('Programme'));
-    expect(option).toBeDefined();
-    option?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
     expect(model()().stageId).toBe('stage-1');
     expect(selections()[0]).toBe('Programme');
   });
@@ -125,8 +123,7 @@ describe('AddTaskSheet', () => {
     expect(store.addTaskToObjective).not.toHaveBeenCalled();
   });
 
-  it("n'a pas de sceau et parle dans la voix d'Empreinte", () => {
-    expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
+  it("parle dans la voix d'Apex", () => {
     for (const value of [element.textContent ?? '', TASK_TITLE_REQUIRED, TASK_STAGE_REQUIRED]) {
       expect(motsAEviter(value)).toEqual([]);
       expect(voiceIssues(value)).toEqual([]);

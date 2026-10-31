@@ -1,62 +1,110 @@
 <main class="screen">
-  <form eSurface class="ds-panel ds-gap-8 form" [formRoot]="credentials" aria-labelledby="auth-title">
-    <header class="ds-stack ds-gap-6">
-      <e-marque>Apex</e-marque>
-      <div class="ds-stack ds-gap-2">
-        <h1 class="objectif ds-break" id="auth-title">{{ texts().title }}</h1>
-        <p class="voix ds-muted">{{ tagline }}</p>
-      </div>
-    </header>
+  <!-- Le panneau d'encre : la marque et sa promesse. L'aperçu du prochain pas est décoratif. -->
+  <section class="story card--nuit stage" aria-label="Apex">
+    <span class="glow" aria-hidden="true"></span>
+    <svg class="grain" aria-hidden="true">
+      <filter id="grain-connexion"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" /></filter>
+      <rect width="100%" height="100%" filter="url(#grain-connexion)" />
+    </svg>
+    <svg class="rings" viewBox="0 0 600 600" aria-hidden="true">
+      <circle cx="300" cy="300" r="120" />
+      <circle cx="300" cy="300" r="190" />
+      <circle cx="300" cy="300" r="260" />
+    </svg>
 
-    <div class="ds-stack">
-      <e-champ libelle="Ton adresse e-mail" [erreur]="emailServerError()">
-        <input eSaisie id="auth-email" type="email" autocomplete="username" [formField]="credentials.email" />
-      </e-champ>
+    <p class="logo">
+      <span class="logo-mark" aria-hidden="true"><ax-icon name="objectifs" [size]="16" /></span>
+      Apex
+    </p>
 
-      <e-champ
-        libelle="Ton mot de passe"
-        [aide]="creatingAccount() ? passwordHelp : undefined"
-        [erreur]="passwordServerError()"
-      >
-        <input
-          eSaisie
-          id="auth-password"
-          type="password"
-          [attr.autocomplete]="creatingAccount() ? 'new-password' : 'current-password'"
-          [formField]="credentials.password"
-        />
-      </e-champ>
-
-      @if (creatingAccount()) {
-        <e-champ libelle="Confirme ton mot de passe">
-          <input
-            eSaisie
-            id="auth-confirm-password"
-            type="password"
-            autocomplete="new-password"
-            [formField]="credentials.confirmPassword"
-          />
-        </e-champ>
-      }
+    <div class="pitch">
+      <p class="display tagline">Chaque pas laisse une <span class="serif accent">empreinte.</span></p>
+      <p class="body soft lead">{{ pitch }}</p>
     </div>
 
-    @if (note(); as text) {
-      <aside eNote>
-        <p role="alert">{{ text }}</p>
-      </aside>
-    }
-
-    <div class="ds-stack ds-gap-3">
-      <div class="ds-row ds-wrap">
-        <button eBouton="sceau" type="submit" [attr.aria-disabled]="pending() ? 'true' : null">
-          {{ texts().submit }}
-        </button>
-        <p class="detail ds-muted" role="status">{{ status() }}</p>
+    <div class="preview glass" aria-hidden="true">
+      <div class="preview-top">
+        <span class="label accent">Ton prochain pas</span>
+        <span class="chip chip--nuit">Maintenant</span>
       </div>
-      <div class="ds-row ds-wrap ds-gap-2">
-        <p class="detail ds-muted" id="auth-question">{{ texts().question }}</p>
+      <div class="preview-task">
+        <span class="preview-check"><ax-icon name="coche" [size]="12" /></span>
+        <span class="t3">Écrire l'étude de cas du projet Apex</span>
+      </div>
+      <div class="steps preview-steps"><span class="done"></span><span class="now"></span><span></span><span></span></div>
+    </div>
+  </section>
+
+  <section class="side">
+    <form class="form" [formRoot]="credentials" aria-labelledby="auth-title">
+      <div class="head">
+        <h1 class="t1" id="auth-title">{{ texts().title }}</h1>
+        <p class="body soft">{{ texts().subtitle }}</p>
+      </div>
+
+      <div class="fields">
+        <ax-field label="Ton adresse e-mail" [error]="emailServerError()">
+          <input
+            axControl
+            id="auth-email"
+            type="email"
+            autocomplete="username"
+            placeholder="toi@exemple.fr"
+            [formField]="credentials.email"
+          />
+        </ax-field>
+
+        <ax-field
+          label="Ton mot de passe"
+          [hint]="creatingAccount() ? passwordHelp : undefined"
+          [error]="passwordServerError()"
+        >
+          <input
+            axControl
+            id="auth-password"
+            type="password"
+            [attr.autocomplete]="creatingAccount() ? 'new-password' : 'current-password'"
+            [formField]="credentials.password"
+          />
+        </ax-field>
+
+        @if (creatingAccount()) {
+          <ax-field label="Confirme ton mot de passe">
+            <input
+              axControl
+              id="auth-confirm-password"
+              type="password"
+              autocomplete="new-password"
+              [formField]="credentials.confirmPassword"
+            />
+          </ax-field>
+        }
+      </div>
+
+      <!-- Une réponse du serveur qui ne concerne aucun champ : Akari la dit, en encre, au-dessus du bouton. -->
+      @if (note(); as text) {
+        <aside class="note card" aria-labelledby="auth-note-akari">
+          <span class="note-mark" aria-hidden="true"></span>
+          <div class="note-body">
+            <p class="label soft" id="auth-note-akari">Akari</p>
+            <p class="small" role="alert">{{ text }}</p>
+          </div>
+        </aside>
+      }
+
+      <div class="submit">
+        <button class="btn btn--accent btn--block send" type="submit" [attr.aria-disabled]="pending() ? 'true' : null">
+          {{ texts().submit }}<ax-icon name="fleche" [size]="16" />
+        </button>
+        <p class="small soft status" role="status">{{ status() }}</p>
+      </div>
+
+      <hr class="rule" />
+
+      <p class="small soft switch">
+        <span id="auth-question">{{ texts().question }}</span>
         <button
-          eBouton="nu"
+          class="switch-btn"
           type="button"
           aria-describedby="auth-question"
           [attr.aria-disabled]="pending() ? 'true' : null"
@@ -64,7 +112,7 @@
         >
           {{ texts().switch }}
         </button>
-      </div>
-    </div>
-  </form>
+      </p>
+    </form>
+  </section>
 </main>

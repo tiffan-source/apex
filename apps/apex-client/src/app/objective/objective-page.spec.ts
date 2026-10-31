@@ -2,8 +2,7 @@ import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
-import { Feuilles } from '@empreinte-studio/angular/feuille';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { Feuilles, motsAEviter } from '../../ui';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { rootObjectiveOptions, toObjectiveDetail } from '../../chore/mapper/objective-view.mapper';
@@ -94,6 +93,8 @@ describe('ObjectivePage', () => {
     [...element.querySelectorAll<HTMLElement>('button, a')].find(
       (el) => (el.getAttribute('aria-label') ?? el.textContent ?? '').replace(/\s+/g, ' ').trim() === name,
     );
+  /** Les étapes du chemin, dans l'ordre (le sommet n'est pas cliquable). */
+  const pathButtons = () => [...element.querySelectorAll<HTMLButtonElement>('ax-path .step button')];
   const openedWith = () => feuilles.ouvrir.mock.calls.at(-1) as [unknown, { donnees: unknown; cdk: { injector: unknown } }];
 
   beforeEach(() => {
@@ -119,35 +120,60 @@ describe('ObjectivePage', () => {
   describe('un objectif avec des étapes', () => {
     beforeEach(() => render('obj-1'));
 
-    it("écrit l'en-tête : fil d'Ariane, horizon, titre, pourquoi et description", () => {
-      const crumbs = [...element.querySelectorAll('nav li')].map((li) => li.textContent?.trim());
+    it("écrit l'en-tête : retour aux objectifs, horizon, titre, pourquoi et description", () => {
+      const crumbs = [...element.querySelectorAll('nav[aria-label="Fil d\'Ariane"] li')].map((li) => li.textContent?.trim());
       expect(crumbs).toEqual(['Objectifs', 'Courir un semi-marathon en mai']);
       expect(element.querySelector('nav a')?.getAttribute('href')).toBe('/');
       expect(element.querySelector('nav li[aria-current="page"]')).not.toBeNull();
-      expect(text('h1.manifeste')).toBe('Courir un semi-marathon en mai');
-      expect(text('header p.voix')).toBe('« Pour me prouver que je peux tenir quelque chose sur six mois. »');
+      expect(text('h1')).toBe('Courir un semi-marathon en mai');
+      expect(element.querySelector('h1')?.getAttribute('tabindex')).toBe('-1');
+      expect(text('header p.serif')).toBe('Pour me prouver que je peux tenir quelque chose sur six mois.');
       expect(element.textContent).toContain('Trois sorties par semaine.');
-      expect(element.textContent).toContain("Jusqu'en mai 2027");
+      expect(text('header p.label')).toBe("Objectif · Jusqu'en mai 2027");
     });
 
-    it("dessine l'arête de ses étapes, avec sa légende", () => {
-      expect(text('#titre-arete')).toBe("L'arête · 3 étapes");
-      const legend = [...element.querySelectorAll('ul[aria-label="Légende de l\'arête"] li')].map((li) => li.textContent?.trim());
-      expect(legend).toEqual(['Faite', 'En cours', 'À venir']);
-      expect(element.querySelectorAll('e-arete .etape')).toHaveLength(3);
+    it("porte la couleur de l'objectif et l'anneau de ses pas faits", () => {
+      expect(element.querySelector('header .tile')?.className).toMatch(/l-(ciel|fjord|soleil|aube)/);
+      const rings = element.querySelector('ax-rings');
+      // Les pas des étapes et ceux sans étape : 2 faits sur 5
+      expect(rings?.getAttribute('aria-label')).toBe('2 pas faits sur 5');
+      expect(rings?.textContent?.replace(/\s+/g, '')).toBe('2/5pasfaits');
+    });
+
+    it('dessine le chemin de ses étapes jusqu’au sommet', () => {
+      expect(text('#titre-chemin')).toBe('Le chemin');
+      expect(element.textContent).toContain("3 étapes jusqu'au sommet");
+      expect(pathButtons()).toHaveLength(3);
+      expect(text('ax-path .step--summit .name')).toBe('Courir un semi-marathon en mai');
+      expect(text('ax-path .step--summit .state')).toBe("Jusqu'en mai 2027");
+      // L'étape ouverte est marquée sur le chemin
+      expect(pathButtons().map((button) => button.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+      // Sur mobile, le chemin défile dans son conteneur au lieu d'écraser ses colonnes
+      expect(element.querySelector('ax-path')?.parentElement?.classList).toContain('ds-scroll-x');
+    });
+
+    it('résume l’horizon, les étapes et les pas, sans rien inventer', () => {
+      const facts = [...element.querySelectorAll('[aria-labelledby="titre-en-bref"] dl > div')].map(
+        (row) => `${row.querySelector('dt')?.textContent?.trim()} ${row.querySelector('dd')?.textContent?.trim()}`,
+      );
+      expect(facts).toEqual(["Horizon Jusqu'en mai 2027", 'Étapes 1 étape faite · 2 à venir', 'Pas 2 pas faits · 3 à venir']);
     });
 
     it("ouvre l'étape en cours par défaut, avec ses pas", () => {
       expect(text('#titre-etape')).toBe('Endurance');
       expect(element.textContent).toContain('Étape 2 · en cours');
       expect(element.textContent).toContain('Tenir 30 minutes sans marcher.');
-      const titles = [...element.querySelectorAll('ul[aria-labelledby="titre-etape"] li .e-tache__titre')].map((label) =>
+      const titles = [...element.querySelectorAll('ul[aria-labelledby="titre-etape"] li label')].map((label) =>
         label.textContent?.trim(),
       );
       expect(titles).toEqual(['Courir 3 km', 'Courir 5 km', 'Sortie longue de 7 km']);
-      // Le quadrant d'un pas à faire, en détail
-      expect(element.textContent).toContain('Maintenant');
-      expect(element.textContent).toContain('À planifier');
+      // Chaque case est nommée par l'intitulé de son pas
+      const box = element.querySelector<HTMLInputElement>('ul[aria-labelledby="titre-etape"] input.check');
+      expect(element.querySelector(`label[for="${box?.id}"]`)?.textContent?.trim()).toBe('Courir 3 km');
+      // Le quadrant d'un pas à faire ; « Maintenant » en vermillon
+      const chips = [...element.querySelectorAll('ul[aria-labelledby="titre-etape"] .chip')];
+      expect(chips.map((chip) => chip.textContent?.trim())).toEqual(['Fait', 'Maintenant', 'À planifier']);
+      expect(chips.map((chip) => chip.classList.contains('chip--sceau'))).toEqual([false, true, false]);
     });
 
     it("nomme une étape sans titre, pour qu'on puisse la corriger", () => {
@@ -164,10 +190,10 @@ describe('ObjectivePage', () => {
       expect(store.updateTaskDone).toHaveBeenCalledWith({ taskId: 't3', done: true });
     });
 
-    it("choisir une arête ouvre son étape, et le dit aux lecteurs d'écran", () => {
-      const firstArete = element.querySelector<SVGGElement>('e-arete .etape');
-      firstArete?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    it("choisir une étape sur le chemin l'ouvre, et le dit aux lecteurs d'écran", () => {
+      pathButtons()[0].click();
       fixture.detectChanges();
+      expect(pathButtons()[0].getAttribute('aria-pressed')).toBe('true');
       expect(text('#titre-etape')).toBe('Programme');
       expect(element.textContent).toContain('Étape 1 · faite');
       expect(annonces.annoncer).toHaveBeenCalledWith('Étape 1 · faite : Programme');
@@ -183,7 +209,7 @@ describe('ObjectivePage', () => {
       last.click();
       fixture.detectChanges();
       await fixture.whenStable();
-      // « Équipement » passe en cours sur l'arête, mais le panneau reste sur l'étape qu'on vient d'achever
+      // « Équipement » passe en cours sur le chemin, mais le panneau reste sur l'étape qu'on vient d'achever
       expect(text('#titre-etape')).toBe('Endurance');
       expect(element.textContent).toContain('Étape 2 · faite');
       expect(last.isConnected).toBe(true);
@@ -191,7 +217,7 @@ describe('ObjectivePage', () => {
     });
 
     it("reprend l'étape en cours sur un autre objectif", async () => {
-      element.querySelector<SVGGElement>('e-arete .etape')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      pathButtons()[0].click();
       fixture.detectChanges();
       store.objectives.update((list) => [...list, objective('stage-j1', 'Hiragana', 'obj-2')]);
       fixture.componentRef.setInput('id', 'obj-2');
@@ -199,10 +225,10 @@ describe('ObjectivePage', () => {
       expect(text('#titre-etape')).toBe('Hiragana');
     });
 
-    it("nomme une étape sans titre sur l'arête", () => {
+    it('nomme une étape sans titre sur le chemin', () => {
       store.objectives.update((list) => list.map((item) => (item.id === 'stage-3' ? { ...item, title: ' ' } : item)));
       fixture.detectChanges();
-      const names = [...element.querySelectorAll('e-arete .etape .nom')].map((name) => name.textContent?.trim());
+      const names = [...element.querySelectorAll('ax-path .step:not(.step--summit) .name')].map((name) => name.textContent?.trim());
       expect(names).toEqual(['Programme', 'Endurance', 'Étape sans nom']);
     });
 
@@ -270,7 +296,18 @@ describe('ObjectivePage', () => {
     });
 
     it("propose des pas avec Akari pour l'étape ouverte", () => {
+      expect(text('#titre-akari')).toBe('Des pas pour Endurance');
       expect(buttonNamed('Proposer des pas avec Akari')?.getAttribute('href')).toBe('/objectifs/obj-1/akari?etape=stage-2');
+      pathButtons()[0].click();
+      fixture.detectChanges();
+      expect(buttonNamed('Proposer des pas avec Akari')?.getAttribute('href')).toBe('/objectifs/obj-1/akari?etape=stage-1');
+    });
+
+    it("n'envoie jamais un id temporaire à Akari", () => {
+      store.objectives.update((list) => list.map((item) => (item.id === 'stage-2' ? { ...item, id: 'temp-id-9' } : item)));
+      store.tasks.update((list) => list.map((item) => (item.objectiveId === 'stage-2' ? { ...item, objectiveId: 'temp-id-9' } : item)));
+      fixture.detectChanges();
+      expect(buttonNamed('Proposer des pas avec Akari')?.getAttribute('href')).toBe('/objectifs/obj-1/akari');
     });
 
     it('range à part les pas sans étape, avec une invitation à les ranger', () => {
@@ -287,13 +324,13 @@ describe('ObjectivePage', () => {
       expect(element.querySelector('ul[aria-labelledby="titre-sans-etape"]')?.classList).toContain('ds-break');
     });
 
-    it("n'a qu'un sceau : la tête de l'arête, aucun bouton sceau", () => {
-      expect(element.querySelectorAll('e-arete')).toHaveLength(1);
-      expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
+    it('n’a qu’une action vermillon : « Ajouter une étape »', () => {
+      const accents = [...element.querySelectorAll('.btn--accent')].map((el) => el.textContent?.trim());
+      expect(accents).toEqual(['Ajouter une étape']);
     });
   });
 
-  describe('plus de 8 étapes', () => {
+  describe('un long chemin', () => {
     beforeEach(() => {
       const stages = Array.from({ length: 10 }, (_, index) => objective(`s${index + 1}`, `Étape ${index + 1}`, 'obj-1'));
       store.objectives.set([OBJECTIVES[0], ...stages]);
@@ -302,16 +339,13 @@ describe('ObjectivePage', () => {
       return render('obj-1');
     });
 
-    it("l'arête « Faites » ouvre tour à tour chaque étape faite, de la plus récente à la plus ancienne", () => {
-      const folded = () => element.querySelector<SVGGElement>('e-arete .etape') as SVGGElement;
-      expect(folded().querySelector('.nom')?.textContent?.trim()).toBe('Faites');
-      const opened: string[] = [];
-      for (let i = 0; i < 4; i++) {
-        folded().dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        fixture.detectChanges();
-        opened.push(text('#titre-etape'));
-      }
-      expect(opened).toEqual(['Étape 3', 'Étape 2', 'Étape 1', 'Étape 3']);
+    it('garde chaque étape atteignable, faites comprises', () => {
+      expect(pathButtons()).toHaveLength(10);
+      expect(text('#titre-etape')).toBe('Étape 4');
+      pathButtons()[1].click();
+      fixture.detectChanges();
+      expect(text('#titre-etape')).toBe('Étape 2');
+      expect(element.textContent).toContain('Étape 2 · faite');
     });
   });
 
@@ -319,11 +353,12 @@ describe('ObjectivePage', () => {
     beforeEach(() => render('obj-2'));
 
     it("Akari invite à poser la première étape, ou à lui en demander", () => {
-      const note = element.querySelector('aside.e-note');
+      const note = element.querySelector('aside.invite');
       expect(note?.textContent).toContain(
-        "Une arête commence par une étape. Ajoute la première, ou demande-moi de t'en proposer.",
+        "Un chemin commence par une étape. Ajoute la première, ou demande-moi de t'en proposer.",
       );
-      expect(element.querySelector('e-arete')).toBeNull();
+      expect(element.querySelector('ax-path')).toBeNull();
+      expect(element.querySelector('ax-rings')).toBeNull();
       expect(buttonNamed('Proposer des étapes')?.getAttribute('href')).toBe('/objectifs/obj-2/akari');
     });
 
@@ -335,7 +370,7 @@ describe('ObjectivePage', () => {
       closed.next(undefined);
       fixture.detectChanges();
       await fixture.whenStable();
-      expect(element.querySelector('aside.e-note')).toBeNull();
+      expect(element.querySelector('aside.invite')).toBeNull();
       expect(document.activeElement).toBe(element.querySelector('#titre-etape'));
       expect(text('#titre-etape')).toBe('Hiragana');
     });
@@ -344,14 +379,14 @@ describe('ObjectivePage', () => {
       // Par exemple : la première étape, ajoutée depuis la note, n'a pas été enregistrée.
       annonces.aUnSignalement.set(true);
       fixture.detectChanges();
-      expect(element.querySelector('aside.e-note')).toBeNull();
-      expect(text('p.corps')).toBe('Une arête commence par une étape.');
+      expect(element.querySelector('aside.invite')).toBeNull();
+      expect(text('.invite-plain p')).toBe('Un chemin commence par une étape.');
       expect(buttonNamed('Ajouter une étape')).toBeDefined();
       expect(buttonNamed('Proposer des étapes')?.getAttribute('href')).toBe('/objectifs/obj-2/akari');
 
       annonces.aUnSignalement.set(false); // « Compris »
       fixture.detectChanges();
-      expect(element.querySelectorAll('aside.e-note')).toHaveLength(1);
+      expect(element.querySelectorAll('aside.invite')).toHaveLength(1);
     });
 
     it('« Ajouter une étape » ouvre la feuille, sans doublon dans l’en-tête', () => {
@@ -409,16 +444,16 @@ describe('ObjectivePage', () => {
       expect(element.querySelector('[role="status"]')).toBeNull();
       // La page garde un titre et un chemin ; la note de la coque explique.
       expect(text('h1')).toBe('Tes objectifs ne sont pas chargés');
-      expect(element.querySelector('p.corps')).toBeNull();
+      expect(element.textContent).not.toContain('Vérifie ta connexion');
       expect(buttonNamed('Voir mes objectifs')?.getAttribute('href')).toBe('/');
 
       annonces.aUnSignalement.set(false); // « Compris » : l'écran dit quoi faire
       fixture.detectChanges();
-      expect(text('p.corps')).toBe('Vérifie ta connexion, puis recharge la page.');
+      expect(text('section p')).toBe('Vérifie ta connexion, puis recharge la page.');
     });
   });
 
-  it('parle dans la voix d’Empreinte, dans tous ses états', async () => {
+  it('parle dans la voix d’Apex, dans tous ses états', async () => {
     const texts: string[] = [];
     const collect = () => {
       texts.push(element.textContent ?? '');
@@ -426,9 +461,9 @@ describe('ObjectivePage', () => {
     };
     await render('obj-1');
     collect();
-    // Ce que les lecteurs d'écran entendent quand une arête est choisie
-    element.querySelectorAll<SVGGElement>('e-arete .etape').forEach((arete) => {
-      arete.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // Ce que les lecteurs d'écran entendent quand une étape est choisie
+    pathButtons().forEach((button) => {
+      button.click();
       fixture.detectChanges();
     });
     texts.push(...annonces.annoncer.mock.calls.map(([phrase]) => phrase as string));

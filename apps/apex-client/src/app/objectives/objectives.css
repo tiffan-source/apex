@@ -1,31 +1,124 @@
-/*
- * L'écran Objectifs (l'accueil).
- */
+/* L'écran Objectifs (l'accueil) : le panneau d'encre, les cartes en marche, les accomplis. */
+.home { display: flex; flex-direction: column; gap: 32px; }
 
-/* La trame des cartes : chaque article[eCarte] dessine déjà son propre filet
-   trame. Il déborde d'un trait-fin sur l'écart et le bord de la trame : son
-   filet se pose sur celui de la trame, et deux cartes voisines restent
-   séparées d'un seul filet de trait-fin, comme dans les maquettes (sinon :
-   trois traits entre deux cartes, deux au bord). */
-.cards > * {
-  margin: calc(-1 * var(--trait-fin));
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; }
+
+/* Le panneau d'encre : le bonjour, le prochain pas, les anneaux. */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 48px;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 400px;
+  padding: 52px 56px;
+  border-radius: var(--r-xl);
 }
 
-/* « Accomplis » : un bloc repliable natif (details) entre deux filets trame
-   (Empreinte n'a pas de repli générique). */
-.accomplished {
-  box-shadow:
-    inset 0 var(--trait-fin) 0 var(--trame),
-    inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
+.glow-a { right: -120px; top: -220px; }
+.glow-b { left: -260px; bottom: -380px; opacity: 0.14; }
+.hero-text { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.hero-head { display: flex; flex-direction: column; gap: 10px; }
+.hero-title { font-size: 76px; line-height: 78px; overflow-wrap: anywhere; }
+.hero-line { font-size: 36px; line-height: 42px; color: var(--nocturne-douce); }
+
+.next {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  max-width: 640px;
+  padding: 14px 14px 14px 16px;
+  border-radius: 20px;
 }
 
-/* Son résumé : une rangée (chevron, titre, compte) haute d'une cible tactile,
-   sans la puce du navigateur ; la liste suit. */
-.accomplished > summary {
+.tick { width: 30px; height: 30px; }
+.next-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.next-text label { cursor: pointer; overflow-wrap: anywhere; }
+
+.hero-rings { display: flex; flex-direction: column; align-items: center; gap: 20px; margin: 0; }
+.rings-total { font-size: 44px; line-height: 44px; font-weight: 600; }
+.legend { width: 100%; margin: 0; padding: 0; list-style: none; }
+.legend li { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.legend .dot { background: var(--lumiere); }
+.legend-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Les cartes en marche. */
+.running { display: flex; flex-direction: column; gap: 18px; }
+.section-head { display: flex; align-items: baseline; gap: 12px; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+
+.obj {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding: 24px;
+  transition: transform 240ms var(--courbe), box-shadow 240ms;
+}
+
+.obj:hover { transform: translateY(-3px); box-shadow: var(--ombre-3), inset 0 0 0 1px var(--bord); }
+.obj-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.obj-text { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; }
+.obj-title { font-size: 22px; line-height: 28px; overflow-wrap: anywhere; outline: none; }
+.obj-why { font-size: 20px; line-height: 26px; overflow-wrap: anywhere; }
+.obj-progress { display: flex; flex-direction: column; gap: 10px; }
+.obj-legend { display: flex; justify-content: space-between; gap: 12px; }
+
+.obj-foot {
   display: flex;
   align-items: center;
-  gap: var(--pas-3);
-  min-height: var(--pas-12);
-  list-style: none;
-  cursor: pointer;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--bord);
 }
+
+.next-task { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.next-title { min-width: 0; color: var(--encre-douce); cursor: pointer; overflow-wrap: anywhere; }
+
+/* Les accomplis, repliés. */
+.accomplished { padding: 0 24px; }
+.accomplished > summary { display: flex; align-items: center; gap: 12px; min-height: 60px; list-style: none; cursor: pointer; }
+.accomplished > summary::-webkit-details-marker { display: none; }
+.accomplished-list { margin: 0; padding: 0 0 8px; list-style: none; }
+.accomplished-list li { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: 1px solid var(--bord); }
+.seal { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--sceau); color: var(--sur-sceau); box-shadow: var(--ombre-sceau); }
+.grow { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+
+/* Le premier lancement. */
+.welcome { display: flex; flex-direction: column; gap: 48px; max-width: 900px; margin: 0 auto; padding: 40px 0; }
+.welcome-head { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+.welcome-word { font-size: 1.2em; }
+.lead { max-width: 560px; font-size: 18px; line-height: 27px; }
+.composer { display: flex; flex-direction: column; gap: 18px; padding: 22px 22px 18px 26px; border-radius: var(--r-xl); }
+.composer:focus-within { box-shadow: var(--ombre-3), inset 0 0 0 1.5px var(--sceau); }
+.big { box-sizing: border-box; width: 100%; padding: 6px 0; border: 0; background: transparent; color: var(--encre); font: 500 26px/34px var(--sans); letter-spacing: -0.025em; }
+.big::placeholder { color: var(--trame-forte); }
+.big:focus { outline: none; }
+.composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ideas { display: flex; flex-wrap: wrap; gap: 8px; }
+.idea { appearance: none; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--creux); color: var(--encre); font: 500 13px/18px var(--sans); cursor: pointer; }
+.idea:hover { background: var(--trame); }
+.idea .dot { background: var(--lumiere); }
+.how { display: flex; flex-direction: column; gap: 16px; }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 0; padding: 0; list-style: none; }
+.trio li { display: flex; flex-direction: column; gap: 12px; padding: 24px; }
+
+@media (max-width: 1100px) {
+  .hero { grid-template-columns: 1fr; }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .hero { padding: 28px 22px; gap: 28px; min-height: 0; }
+  .hero-title { font-size: 44px; line-height: 48px; }
+  .hero-line { font-size: 26px; line-height: 32px; }
+  .next { grid-template-columns: auto minmax(0, 1fr); }
+  .next .btn { grid-column: 1 / -1; }
+  .cards, .trio { grid-template-columns: 1fr; }
+  .big { font-size: 20px; line-height: 28px; }
+  .welcome { padding: 8px 0; gap: 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .obj { transition: none; } }

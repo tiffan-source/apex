@@ -1,120 +1,218 @@
-<div class="ds-page">
-  <header class="ds-page-header">
-    <div class="ds-stack ds-gap-2">
-      <p class="repere ds-muted"><time [attr.datetime]="todayIso()">{{ todayLabel() }}</time></p>
-      <h1 class="manifeste ds-break">Mes objectifs</h1>
-      @if (summary(); as line) {
-        <p class="detail ds-muted">{{ line }}</p>
-      }
-    </div>
-    <!-- Le seul sceau de l'écran : l'engagement principal. -->
-    <a eBouton="sceau" routerLink="/objectifs/nouveau"><e-icone nom="plus" [taille]="18" />Nouvel objectif</a>
-  </header>
-
-  @if (cards().length > 0) {
-    <!-- cards : chaque carte dessine déjà son filet ; un seul filet de trait-fin entre deux cartes. -->
-    <div class="ds-panels ds-cols-2 cards">
-      @for (card of cards(); track card.id) {
-        <article eCarte [attr.aria-labelledby]="'objectif-' + card.id">
-          <!-- Grandit pour pousser la progression et le prochain pas en bas de la carte. -->
-          <div class="ds-stack ds-grow">
-            @if (card.horizon) {
-              <p class="detail ds-muted">{{ card.horizon }}</p>
-            }
-            <!-- tabindex="-1" : le focus y revient quand la case cochée disparaît (dernier recours). -->
-            <h2 class="objectif ds-break" [id]="'objectif-' + card.id" tabindex="-1">{{ card.title }}</h2>
-            @if (card.why) {
-              <p class="voix ds-muted ds-break">«&nbsp;{{ card.why }}&nbsp;»</p>
-            }
-          </div>
-
-          @let progress = card.progress;
-          @if (progress.kind === 'cases') {
-            <!-- ds-break : la légende reprend le nom de l'étape en cours, qui peut être un mot très long. -->
-            <e-pas
-              class="ds-break"
-              [faits]="progress.done"
-              [enCours]="progress.inProgress"
-              [aVenir]="progress.upcoming"
-              [unite]="progress.unit"
-              [nomEnCours]="progress.currentName"
-              [legende]="progress.legend"
-            />
-          } @else if (progress.kind === 'legend') {
-            <p class="detail ds-muted ds-break">{{ progress.text }}</p>
-          } @else {
-            <p class="detail ds-muted">Aucune étape pour l'instant. Pose la première quand tu veux.</p>
-          }
-
-          <div class="ds-row ds-wrap ds-between ds-rule-top" [class.ds-justify-end]="card.nextTasks.length === 0">
-            @for (next of card.nextTasks; track next.id) {
-              <div class="ds-check ds-grow">
-                <input
-                  #box
-                  type="checkbox"
-                  eCase
-                  [id]="'prochain-pas-' + next.id"
-                  [attr.aria-describedby]="'prochain-pas-detail-' + next.id"
-                  [checked]="next.done"
-                  (change)="toggleTask(card.id, next.id, box.checked)"
-                />
-                <label class="corps ds-break" [for]="'prochain-pas-' + next.id">{{ next.title }}</label>
-                <span class="detail ds-muted" [id]="'prochain-pas-detail-' + next.id">Prochain pas</span>
-              </div>
-            }
-            @if (card.openable) {
-              <a
-                eBouton="trait"
-                petit
-                [id]="'ouvrir-' + card.id"
-                [routerLink]="['/objectifs', card.id]"
-                [attr.aria-describedby]="'objectif-' + card.id"
-                >Ouvrir</a
-              >
-            } @else {
-              <!-- Pas encore enregistré : son adresse n'existe pas encore. -->
-              <button eBouton="trait" petit type="button" disabled>Ouvrir</button>
-            }
-          </div>
-        </article>
-      }
-    </div>
-  } @else if (empty()) {
-    <aside eNote>
-      <p>Qu'est-ce que tu veux construire ?</p>
-      <p>Dis-le-moi en une phrase : on trouve les étapes ensemble.</p>
-      <div eNoteActions>
-        <a eBouton="trait" petit routerLink="/objectifs/nouveau">Commencer</a>
+<div class="home">
+  @if (empty()) {
+    <!-- Premier lancement : la question d'Akari, et l'objectif s'écrit tout de suite. -->
+    <section class="welcome rise" aria-labelledby="titre-bienvenue">
+      <div class="welcome-head">
+        <span class="chip chip--sceau"><span class="diamond" aria-hidden="true"></span>Akari</span>
+        <h1 class="display" id="titre-bienvenue">
+          Qu'est-ce que tu veux <span class="serif accent welcome-word">construire&nbsp;?</span>
+        </h1>
+        <p class="body soft lead">Dis-le en une phrase. On trouve les étapes ensemble, puis tu avances un pas à la fois.</p>
       </div>
-    </aside>
-  } @else if (loading()) {
-    <p class="detail ds-muted" role="status">Chargement de tes objectifs…</p>
-  } @else if (loadFailed() && !hasReport()) {
-    <!-- La note de la coque a été lue (« Compris ») : l'écran dit encore quoi faire. -->
-    <p class="corps ds-measure">Tes objectifs ne sont pas chargés. Vérifie ta connexion, puis recharge la page.</p>
+
+      <form class="card composer" (submit)="$event.preventDefault(); start(firstObjective.value)">
+        <label class="sr-only" for="premier-objectif">Ton objectif</label>
+        <input #firstObjective class="big" id="premier-objectif" type="text" autocomplete="off" placeholder="Décrocher un stage cet été" />
+        <div class="composer-foot">
+          <div class="ideas">
+            @for (idea of ideas; track idea.title) {
+              <button class="idea" type="button" (click)="start(idea.title)">
+                <span class="dot" [class]="'l-' + idea.lumiere" aria-hidden="true"></span>{{ idea.title }}
+              </button>
+            }
+          </div>
+          <button class="btn btn--accent" type="submit">Commencer<ax-icon name="fleche" [size]="16" /></button>
+        </div>
+      </form>
+
+      <section class="how" aria-labelledby="titre-comment">
+        <h2 class="label soft" id="titre-comment">Comment avance un objectif</h2>
+        <ol class="trio">
+          <li class="card">
+            <span class="tile l-ciel" aria-hidden="true"><ax-icon name="objectifs" [size]="22" /></span>
+            <h3 class="t3">Un objectif</h3>
+            <p class="small soft">Ce que tu veux atteindre, pour quand, et pourquoi ça compte pour toi.</p>
+          </li>
+          <li class="card">
+            <span class="tile l-fjord" aria-hidden="true"><ax-icon name="sommet" [size]="22" /></span>
+            <h3 class="t3">Des étapes</h3>
+            <p class="small soft">Akari t'aide à les trouver. Mises bout à bout, elles tracent ton chemin.</p>
+          </li>
+          <li class="card">
+            <span class="tile l-aube" aria-hidden="true"><ax-icon name="coche" [size]="22" /></span>
+            <h3 class="t3">Des pas</h3>
+            <p class="small soft">De petites actions, à cocher une par une. Chaque pas fait laisse une empreinte.</p>
+          </li>
+        </ol>
+      </section>
+    </section>
+  } @else {
+    <div class="topbar rise">
+      <p class="t3">Objectifs</p>
+      <a class="btn btn--accent" routerLink="/objectifs/nouveau"><ax-icon name="plus" [size]="16" />Nouvel objectif</a>
+    </div>
+
+    <section class="card card--nuit stage hero rise" aria-labelledby="titre-accueil" style="--d: 60ms">
+      <span class="glow glow-a" aria-hidden="true"></span>
+      <span class="glow glow-b" aria-hidden="true"></span>
+      <svg class="grain" aria-hidden="true">
+        <filter id="grain-accueil"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" /></filter>
+        <rect width="100%" height="100%" filter="url(#grain-accueil)" />
+      </svg>
+
+      <div class="hero-text">
+        <div class="hero-head">
+          <p class="label soft"><time [attr.datetime]="todayIso()">{{ todayLabel() }}</time></p>
+          <h1 class="display hero-title" id="titre-accueil">{{ greeting() }}</h1>
+          @if (summary()) {
+            <p class="serif hero-line">{{ summary() }}</p>
+          }
+        </div>
+
+        @if (focus(); as f) {
+          <div class="next glass">
+            <input
+              #focusBox
+              class="check check--nuit tick"
+              type="checkbox"
+              [id]="'focus-' + f.task.id"
+              [checked]="f.task.done"
+              (change)="toggleTask(f.cardId, f.task.id, focusBox.checked, true)"
+            />
+            <div class="next-text">
+              <span class="label accent">Ton prochain pas</span>
+              <label class="t3" [for]="'focus-' + f.task.id">{{ f.task.title }}</label>
+              <span class="small soft">{{ f.objectiveTitle }}{{ f.stageName ? ' · ' + f.stageName : '' }}</span>
+            </div>
+            @if (f.openable) {
+              <a class="btn btn--on-nuit btn--sm" [routerLink]="['/objectifs', f.cardId]">Ouvrir l'objectif</a>
+            }
+          </div>
+        } @else if (loading()) {
+          <p class="body soft" role="status">Chargement de tes objectifs…</p>
+        } @else if (loadFailed() && !hasReport()) {
+          <!-- La note de la coque a été lue (« Compris ») : l'écran dit encore quoi faire. -->
+          <p class="body soft">Tes objectifs ne sont pas chargés. Vérifie ta connexion, puis recharge la page.</p>
+        }
+      </div>
+
+      @if (rings().length) {
+        <figure class="hero-rings">
+          <ax-rings [rings]="rings()" [label]="ringsLabel()" [size]="232" [stroke]="14" style="--ax-rings-track: rgba(255, 255, 255, 0.07)">
+            <span class="num rings-total">{{ taskTotals().done }}</span>
+            <span class="small soft">sur {{ taskTotals().total }} pas</span>
+          </ax-rings>
+          <ul class="legend">
+            @for (card of ringCards(); track card.id) {
+              <li>
+                <span class="dot" [class]="'l-' + card.lumiere" aria-hidden="true"></span>
+                <span class="small legend-name">{{ card.title }}</span>
+                <span class="small mono soft">{{ card.taskCount.done }}/{{ card.taskCount.total }}</span>
+              </li>
+            }
+          </ul>
+        </figure>
+      }
+    </section>
+
+    @if (cards().length > 0) {
+      <section class="running" aria-labelledby="titre-en-marche">
+        <div class="section-head rise" style="--d: 140ms">
+          <h2 class="t2" id="titre-en-marche">En marche</h2>
+          <span class="small mono soft">{{ cards().length }}</span>
+        </div>
+
+        <div class="cards">
+          @for (card of cards(); track card.id; let i = $index) {
+            <article class="card obj rise" [style.--d]="180 + i * 60 + 'ms'" [attr.aria-labelledby]="'objectif-' + card.id">
+              <div class="obj-top">
+                <span class="tile" [class]="'l-' + card.lumiere" aria-hidden="true"><ax-icon name="objectifs" [size]="22" /></span>
+                @if (card.horizon) {
+                  <span class="chip">{{ card.horizon }}</span>
+                }
+              </div>
+
+              <div class="obj-text">
+                <!-- tabindex="-1" : le focus y revient quand la case cochée disparaît (dernier recours). -->
+                <h3 class="t3 obj-title" [id]="'objectif-' + card.id" tabindex="-1">{{ card.title }}</h3>
+                @if (card.why) {
+                  <p class="serif soft obj-why">{{ card.why }}</p>
+                }
+              </div>
+
+              @let progress = card.progress;
+              <div class="obj-progress">
+                @if (progress.kind === 'cases') {
+                  <ax-steps [done]="progress.done" [inProgress]="progress.inProgress" [upcoming]="progress.upcoming" [unit]="progress.unit" />
+                  <div class="obj-legend">
+                    <span class="small">{{ progress.legend ?? stageLine(card) }}</span>
+                    <span class="small mono soft">{{ card.taskCount.done }}/{{ card.taskCount.total }} pas</span>
+                  </div>
+                } @else if (progress.kind === 'legend') {
+                  <p class="small soft">{{ progress.text }}</p>
+                } @else {
+                  <p class="small soft">Aucune étape pour l'instant. Pose la première quand tu veux.</p>
+                }
+              </div>
+
+              <div class="obj-foot">
+                @for (next of card.nextTasks; track next.id) {
+                  <div class="next-task">
+                    <input
+                      #box
+                      class="check"
+                      type="checkbox"
+                      [id]="'prochain-pas-' + next.id"
+                      [attr.aria-describedby]="'prochain-pas-detail-' + next.id"
+                      [checked]="next.done"
+                      (change)="toggleTask(card.id, next.id, box.checked)"
+                    />
+                    <label class="small next-title" [for]="'prochain-pas-' + next.id">{{ next.title }}</label>
+                    <span class="sr-only" [id]="'prochain-pas-detail-' + next.id">Prochain pas</span>
+                  </div>
+                } @empty {
+                  <span class="small soft">Pas de prochain pas</span>
+                }
+                @if (card.openable) {
+                  <a
+                    class="btn btn--line btn--sm"
+                    [id]="'ouvrir-' + card.id"
+                    [routerLink]="['/objectifs', card.id]"
+                    [attr.aria-describedby]="'objectif-' + card.id"
+                    >Ouvrir</a
+                  >
+                } @else {
+                  <!-- Pas encore enregistré : son adresse n'existe pas encore. -->
+                  <button class="btn btn--line btn--sm" type="button" disabled>Ouvrir</button>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
   }
 
   @if (accomplished().length > 0) {
     <details
       #accomplishedDetails
-      class="accomplished"
+      class="card accomplished"
       [open]="accomplishedOpen()"
       (toggle)="accomplishedOpen.set(accomplishedDetails.open)"
     >
       <summary id="accomplis-resume">
-        <e-icone [nom]="accomplishedOpen() ? 'chevron-bas' : 'chevron-droite'" />
-        <span class="section">Accomplis</span>
-        <span class="detail ds-muted">{{ accomplished().length }}</span>
+        <ax-icon [name]="accomplishedOpen() ? 'chevron-bas' : 'chevron-droite'" [size]="18" />
+        <span class="t3">Accomplis</span>
+        <span class="small mono soft">{{ accomplished().length }}</span>
       </summary>
-      <ul class="ds-divided">
+      <ul class="accomplished-list">
         @for (objective of accomplished(); track objective.id) {
-          <li class="ds-row ds-gap-4">
-            <e-empreinte class="ds-no-shrink" decorative />
-            <div class="ds-stack ds-gap-0-5 ds-grow">
-              <p class="corps ds-break" [id]="'accompli-' + objective.id">{{ objective.title }}</p>
-              <p class="detail ds-muted">Accompli</p>
-            </div>
-            <a eBouton="trait" petit [routerLink]="['/objectifs', objective.id]" [attr.aria-describedby]="'accompli-' + objective.id">Ouvrir</a>
+          <li>
+            <span class="seal" aria-hidden="true"><ax-icon name="coche" [size]="14" /></span>
+            <p class="body strong grow" [id]="'accompli-' + objective.id">{{ objective.title }}</p>
+            <span class="small soft">Accompli</span>
+            <a class="btn btn--ghost btn--sm" [routerLink]="['/objectifs', objective.id]" [attr.aria-describedby]="'accompli-' + objective.id">Ouvrir</a>
           </li>
         }
       </ul>

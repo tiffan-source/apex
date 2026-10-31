@@ -22,11 +22,7 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { filter } from 'rxjs';
-import { EBouton } from '@empreinte-studio/angular/bouton';
-import { type PreferenceTheme, Theme } from '@empreinte-studio/angular/core';
-import { type ElementMenu, EMenu } from '@empreinte-studio/angular/menu';
-import { ELienNav, EMarque } from '@empreinte-studio/angular/navigation';
-import { ENote, ENoteActions } from '@empreinte-studio/angular/note';
+import { AxIcon, AxMenu, type ElementMenu, type PreferenceTheme, Theme, lumiereDe } from '../../ui';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AkariWritesStore } from '../../chore/stores/akari-writes.store';
@@ -39,7 +35,7 @@ export const THEME_CHOICES: readonly { readonly valeur: PreferenceTheme; readonl
   { valeur: 'systeme', libelle: "Comme l'appareil" },
 ];
 
-/** Ce qui suit le libellé de l'entrée retenue, pour qu'elle se lise (e-menu ne marque pas son choix). */
+/** Ce qui suit le libellé de l'entrée retenue, pour qu'elle se lise (le menu ne marque pas son choix). */
 export const CHOSEN_SUFFIX = ' · choisi';
 
 /** Ce qui est dit aux lecteurs d'écran quand le thème change (rien ne s'affiche). */
@@ -49,28 +45,26 @@ export const THEME_ANNOUNCEMENTS: Readonly<Record<PreferenceTheme, string>> = {
   systeme: 'Le thème suit ton appareil.',
 };
 
+/** Le thème retenu, en un mot, sous le nom de la personne. */
+const THEME_NAMES: Readonly<Record<PreferenceTheme, string>> = {
+  jour: 'Jour',
+  nuit: 'Nuit',
+  systeme: "Comme l'appareil",
+};
+
 /** Comparaison des chemins seulement : ni les paramètres de requête ni le fragment ne changent l'entrée courante. */
 const PATHS_ONLY: Partial<IsActiveMatchOptions> = { queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' };
 
 /**
- * La coque d'Apex : la navigation (Objectifs, Matrice ; en bas, la personne et ses réglages) et la page.
- * Elle affiche en haut du contenu ce qui n'a pas marché (AnnoncesStore.signaler), dans une note d'Akari.
+ * La coque d'Apex : la navigation d'encre (Objectifs, Matrice, les objectifs en marche ; en bas, la personne et
+ * ses réglages) et la page. Elle affiche en haut du contenu ce qui n'a pas marché (AnnoncesStore.signaler), dans
+ * une note d'Akari.
  * ObjectiveStore est fourni ici : tous les écrans de la coque partagent les mêmes objectifs. AkariWritesStore
  * aussi : ce qu'Akari ajoute recharge ces objectifs, même après le départ de l'écran Akari.
  */
 @Component({
   selector: 'app-shell',
-  imports: [
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    ELienNav,
-    EMarque,
-    EMenu,
-    ENote,
-    ENoteActions,
-    EBouton,
-  ],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, AxIcon, AxMenu],
   templateUrl: './shell.html',
   styleUrl: './shell.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -80,6 +74,7 @@ export class Shell {
   protected readonly annonces = inject(AnnoncesStore);
   private readonly session = inject(SessionStore);
   private readonly theme = inject(Theme);
+  private readonly objectives = inject(ObjectiveStore);
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
@@ -111,11 +106,18 @@ export class Shell {
    * « Objectifs » est l'entrée courante sur l'accueil (« / », exactement : sinon elle le serait partout)
    * et sur les pages d'un objectif (/objectifs/…), comme dans les maquettes Arête et Akari.
    * routerLinkActive ne sait pas dire « / exactement, ou sous /objectifs » : on lit le routeur.
-   * La corne d'Empreinte n'est dessinée que pour aria-current="page".
    */
   private readonly onHome = isActive('/', this.router, { ...PATHS_ONLY, paths: 'exact' });
   private readonly inObjectives = isActive('/objectifs', this.router, { ...PATHS_ONLY, paths: 'subset' });
   protected readonly objectivesCurrent = computed(() => (this.onHome() || this.inObjectives() ? 'page' : null));
+
+  /** Les objectifs en marche, dans la navigation, chacun avec sa lumière. */
+  protected readonly running = computed(() =>
+    this.objectives.objectiveCards().map((card) => ({ id: card.id, title: card.title, lumiere: lumiereDe(card.id) })),
+  );
+
+  /** Le thème retenu, sous le nom de la personne. */
+  protected readonly themeName = computed(() => THEME_NAMES[this.theme.preference()]);
 
   /** Le nom de la personne, sinon son adresse. */
   protected readonly identity = computed(() => {

@@ -1,10 +1,10 @@
 import { ApexLibsMetier, EisenhowerCategory } from '@org/apex-library';
-import type { Quadrant } from '@empreinte-studio/angular/matrice';
+import type { Quadrant } from '../../ui';
 import type { ObjectiveViewModel, TaskViewModel } from '../models/objective.viewmodel';
 import type { MatrixTaskViewModel, MatrixViewModel } from '../models/matrix.viewmodel';
 
 /*
- * La matrice d'Eisenhower d'Empreinte, branchée sur la règle métier d'Apex
+ * La matrice d'Eisenhower, branchée sur la règle métier d'Apex
  * (ApexLibsMetier.getEisenhowerCategory reste la source : seuil 3 sur l'importance et l'urgence).
  */
 
@@ -71,7 +71,7 @@ function adjustLevel(value: number, high: boolean): number {
   return value >= EISENHOWER_THRESHOLD ? EISENHOWER_THRESHOLD - 1 : value;
 }
 
-/** Une matrice vide, les quadrants dans l'ordre d'Empreinte. */
+/** Une matrice vide, les quadrants dans l'ordre de la matrice. */
 export function emptyMatrix(): MatrixViewModel {
   return { maintenant: [], planifier: [], confier: [], 'laisser-filer': [] };
 }

@@ -3,7 +3,7 @@
  * La progression se lit par étapes : ce qui est fait, l'étape en cours, ce qui vient.
  */
 
-/** La progression d'un objectif par étapes, prête pour e-pas / eCarteObjectif (unite="etape"). */
+/** La progression d'un objectif par étapes, prête pour ax-steps (unit="etape"). */
 export type StageProgressViewModel = {
   /** Les étapes faites. */
   done: number;

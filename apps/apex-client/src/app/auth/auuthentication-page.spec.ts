@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { motsAEviter } from '../../ui';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { SessionStore, type LoginInput, type SignupInput } from '../../chore/stores/session.store';
 import { voiceIssues } from '../../chore/constants/messages.constante';
@@ -85,14 +85,17 @@ describe('AuuthenticationPage', () => {
 
   /** Le message affiché par le champ qui entoure ce contrôle. */
   function fieldMessage(id: string): string {
-    return present(present(input(id), `le champ #${id}`).closest('e-champ'), `l'e-champ de #${id}`).querySelector('[aria-live]')?.textContent?.trim() ?? '';
+    return present(present(input(id), `le champ #${id}`).closest('ax-field'), `l'ax-field de #${id}`).querySelector('[aria-live]')?.textContent?.trim() ?? '';
   }
 
   describe('en connexion', () => {
-    it('montre la marque, « Te revoilà. », la phrase en voix et les deux champs', () => {
-      expect(host.querySelector('e-marque')?.textContent).toContain('Apex');
+    it('montre la marque, la promesse, « Te revoilà. » et les deux champs', () => {
+      expect(host.querySelector('.logo')?.textContent).toContain('Apex');
       expect(host.querySelector('h1')?.textContent?.trim()).toBe('Te revoilà.');
-      expect(host.querySelector('p.voix')?.textContent?.trim()).toBe('Chaque pas laisse une empreinte.');
+      expect(host.querySelector('p.display')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(AUTH_TEXTS.tagline);
+      expect(host.querySelector('p.display .serif.accent')?.textContent?.trim()).toBe('empreinte.');
+      expect(text()).toContain(AUTH_TEXTS.pitch);
+      expect(text()).toContain(AUTH_TEXTS[AuthMode.SignIn].subtitle);
       expect(text()).toContain('Ton adresse e-mail');
       expect(text()).toContain('Ton mot de passe');
       expect(input('auth-confirm-password')).toBeNull();
@@ -114,10 +117,16 @@ describe('AuuthenticationPage', () => {
       expect(input('auth-password')?.name).toBe('auth.password');
     });
 
-    it('porte un seul sceau, le bouton « Me connecter », et une bascule en bouton nu', () => {
-      expect(host.querySelectorAll('.e-btn--sceau')).toHaveLength(1);
-      expect(submitButton().classList).toContain('e-btn--sceau');
-      expect(switchButton().classList).toContain('e-btn--nu');
+    it("porte un seul bouton d'accent, « Me connecter », et une bascule écrite comme un lien", () => {
+      expect(host.querySelectorAll('.btn--accent')).toHaveLength(1);
+      expect(submitButton().classList).toContain('btn--accent');
+      expect(switchButton().classList).not.toContain('btn');
+    });
+
+    it("garde l'aperçu du prochain pas hors de portée des lecteurs d'écran", () => {
+      const preview = present(host.querySelector('.preview'), "l'aperçu");
+      expect(preview.getAttribute('aria-hidden')).toBe('true');
+      expect(preview.textContent).toContain('Ton prochain pas');
     });
 
     it("n'affiche aucune note d'Akari tant que rien n'est arrivé", () => {
@@ -196,10 +205,11 @@ describe('AuuthenticationPage', () => {
       await submit();
 
       const note = host.querySelector('aside');
-      expect(note?.classList).toContain('e-note');
+      expect(note?.classList).toContain('note');
+      expect(note?.querySelector('.note-mark')).not.toBeNull();
       expect(note?.textContent).toContain('Akari');
       expect(note?.querySelector('[role="alert"]')?.textContent?.trim()).toBe(AUTH_SERVER_MESSAGES.unreachable);
-      // La note précède le bouton sceau.
+      // La note précède le bouton d'envoi.
       expect(present(note, 'la note').compareDocumentPosition(submitButton()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       // Aucun champ n'est en cause : le focus ne bouge pas vers un champ.
       expect(document.activeElement).not.toBe(input('auth-email'));
@@ -246,7 +256,8 @@ describe('AuuthenticationPage', () => {
       expect(submitButton().textContent?.trim()).toBe('Créer mon compte');
       expect(switchButton().textContent?.trim()).toBe('Me connecter');
       expect(host.querySelector('#auth-question')?.textContent?.trim()).toBe('Déjà un compte ?');
-      expect(host.querySelectorAll('.e-btn--sceau')).toHaveLength(1);
+      expect(text()).toContain(AUTH_TEXTS[AuthMode.CreateUser].subtitle);
+      expect(host.querySelectorAll('.btn--accent')).toHaveLength(1);
     });
 
     it('demande un nouveau mot de passe au gestionnaire de mots de passe', () => {
@@ -339,6 +350,7 @@ describe('AuuthenticationPage', () => {
 
     const screenTexts = [
       AUTH_TEXTS.tagline,
+      AUTH_TEXTS.pitch,
       AUTH_TEXTS.passwordHelp,
       ...Object.values(AUTH_TEXTS[AuthMode.SignIn]),
       ...Object.values(AUTH_TEXTS[AuthMode.CreateUser]),
@@ -347,13 +359,13 @@ describe('AuuthenticationPage', () => {
       ...serverSamples.map(([message, mode]) => translateAuthError(message, mode).text),
     ];
 
-    it.each(screenTexts)('« %s » parle comme Empreinte', (phrase) => {
+    it.each(screenTexts)("« %s » parle dans la voix d'Apex", (phrase) => {
       expect(motsAEviter(phrase)).toEqual([]);
       expect(voiceIssues(phrase)).toEqual([]);
       expect(phrase).not.toMatch(/erreur|échec|échou|invalide|vous|votre/i);
     });
 
-    it('chaque bouton garde moins de 4 mots (brand book, Bouton)', () => {
+    it('chaque bouton garde moins de 4 mots', () => {
       for (const mode of [AuthMode.SignIn, AuthMode.CreateUser]) {
         for (const label of [AUTH_TEXTS[mode].submit, AUTH_TEXTS[mode].switch]) {
           expect(label.trim().split(/\s+/).length, label).toBeLessThan(4);
@@ -361,7 +373,7 @@ describe('AuuthenticationPage', () => {
       }
     });
 
-    it('l’écran rendu, dans les deux modes, parle comme Empreinte', async () => {
+    it("l’écran rendu, dans les deux modes, parle dans la voix d'Apex", async () => {
       const rendered = [text()];
       await switchMode();
       rendered.push(text());

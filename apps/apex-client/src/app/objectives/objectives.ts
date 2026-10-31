@@ -8,30 +8,21 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import {
-  EBouton,
-  ECarte,
-  ECase,
-  EEmpreinte,
-  EIcone,
-  ENote,
-  ENoteActions,
-  EPas,
-  compter,
-  legendeProgression,
-} from '@empreinte-studio/angular';
+import { Router, RouterLink } from '@angular/router';
+import { AxIcon, AxRings, AxSteps, type Anneau, type Lumiere, compter, legendeProgression, lumiereDe } from '../../ui';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { isTemporaryId } from '../../chore/stores/utils/map-optimistique-id';
 import { formatToday, injectToday } from '../../chore/clock/today';
 import { toDateInputValue } from '../../chore/mapper/date-input.mapper';
 import type { NextTaskViewModel, ObjectiveCardViewModel } from '../../chore/models/objective-card.viewmodel';
+import { SessionStore } from '../../chore/stores/session.store';
+import { firstName } from '../../chore/mapper/person.mapper';
 
-/** Au-delà de 12 cases, le brand book demande de ne plus allonger la barre : la légende suffit. */
+/** Au-delà de 12 étapes, la barre deviendrait illisible : la légende suffit. */
 const MAX_CASES = 12;
 
-/** La progression d'une carte : des cases (e-pas), une légende seule, ou l'invitation à poser une étape. */
+/** La progression d'une carte : la barre d'étapes (ax-steps), une légende seule, ou l'invitation à poser une étape. */
 export type CardProgress =
   | {
       kind: 'cases';
@@ -40,7 +31,7 @@ export type CardProgress =
       inProgress: boolean;
       upcoming: number;
       currentName?: string;
-      /** Remplace la légende calculée par e-pas (et son nom accessible). */
+      /** Remplace la légende de la carte (« Étape 2 · Portfolio »). */
       legend?: string;
     }
   | { kind: 'legend'; text: string }
@@ -56,7 +47,33 @@ export type ObjectiveCardView = ObjectiveCardViewModel & {
   nextTasks: NextTaskViewModel[];
   /** Faux tant que l'objectif n'est pas enregistré : un id temporaire ne va jamais dans une URL. */
   openable: boolean;
+  /** La couleur de l'objectif, la même dans la navigation et sur les anneaux. */
+  lumiere: Lumiere;
 };
+
+/** Le prochain pas mis en avant dans le panneau d'encre. */
+export type FocusView = {
+  cardId: string;
+  objectiveTitle: string;
+  stageName?: string;
+  task: NextTaskViewModel;
+  openable: boolean;
+};
+
+/** Des idées pour un premier objectif. */
+export const FIRST_IDEAS: readonly { title: string; lumiere: Lumiere }[] = [
+  { title: 'Courir un 10 km', lumiere: 'fjord' },
+  { title: 'Lancer mon portfolio', lumiere: 'ciel' },
+  { title: 'Lire 12 livres cette année', lumiere: 'soleil' },
+];
+
+/** Au plus trois anneaux dans le panneau d'encre. */
+const MAX_RINGS = 3;
+
+/** « Bonjour » le jour, « Bonsoir » à partir de 18 h. */
+export function greetingWord(hour: number): string {
+  return hour >= 18 || hour < 5 ? 'Bonsoir' : 'Bonjour';
+}
 
 /**
  * La progression d'un objectif sur sa carte (cahier de migration, § 4) : par étapes s'il en a,
@@ -96,12 +113,14 @@ export function cardProgress(card: ObjectiveCardViewModel): CardProgress {
 const ACCOMPLISHED_SUMMARY_ID = 'accomplis-resume';
 
 /**
- * L'écran Objectifs, l'accueil (maquette « Objectifs ») : les objectifs en marche en cartes, chacun
- * avec sa progression et son prochain pas à cocher, puis les objectifs accomplis dans une liste repliée.
+ * L'écran Objectifs, l'accueil : le panneau d'encre (le bonjour, le prochain pas à cocher, un anneau par
+ * objectif), les objectifs en marche en cartes, chacun avec sa progression et son prochain pas, puis les
+ * objectifs accomplis dans une liste repliée. Sans objectif, la question d'Akari : l'objectif s'écrit tout de
+ * suite et ouvre le nouvel objectif.
  */
 @Component({
   selector: 'app-objectives',
-  imports: [RouterLink, EBouton, ECarte, ECase, EEmpreinte, EIcone, ENote, ENoteActions, EPas],
+  imports: [RouterLink, AxIcon, AxRings, AxSteps],
   templateUrl: './objectives.html',
   styleUrl: './objectives.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -109,6 +128,8 @@ const ACCOMPLISHED_SUMMARY_ID = 'accomplis-resume';
 export class Objectives {
   private readonly store = inject(ObjectiveStore);
   private readonly annonces = inject(AnnoncesStore);
+  private readonly session = inject(SessionStore);
+  private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
 
@@ -123,19 +144,61 @@ export class Objectives {
       progress: cardProgress(card),
       nextTasks: card.nextTask ? [card.nextTask] : [],
       openable: !isTemporaryId(card.id),
+      lumiere: lumiereDe(card.id),
     })),
   );
 
+  protected readonly ideas = FIRST_IDEAS;
+
+  /** « Bonsoir, Léa. » (le prénom, s'il est connu). */
+  protected readonly greeting = computed(() => {
+    this.today();
+    const name = firstName(this.session.currentUser()?.name, '');
+    const word = greetingWord(new Date().getHours());
+    return name ? `${word}, ${name}.` : `${word}.`;
+  });
+
+  /** Le premier prochain pas, dans l'ordre des cartes. */
+  protected readonly focus = computed<FocusView | null>(() => {
+    for (const card of this.cards()) {
+      const task = card.nextTask;
+      if (task) {
+        return {
+          cardId: card.id,
+          objectiveTitle: card.title,
+          stageName: card.stageProgress.inProgressName,
+          task,
+          openable: card.openable,
+        };
+      }
+    }
+    return null;
+  });
+
+  /** Les objectifs qui ont des pas, un anneau chacun. */
+  protected readonly ringCards = computed(() => this.cards().filter((card) => card.taskCount.total > 0).slice(0, MAX_RINGS));
+  protected readonly rings = computed<Anneau[]>(() =>
+    this.ringCards().map((card) => ({ done: card.taskCount.done, total: card.taskCount.total, lumiere: card.lumiere })),
+  );
+  protected readonly taskTotals = computed(() =>
+    this.ringCards().reduce((sum, card) => ({ done: sum.done + card.taskCount.done, total: sum.total + card.taskCount.total }), {
+      done: 0,
+      total: 0,
+    }),
+  );
+  protected readonly ringsLabel = computed(() => {
+    const { done, total } = this.taskTotals();
+    return `${compter(done, 'pas fait', 'pas faits')} sur ${total}`;
+  });
+
   protected readonly accomplished = this.store.accomplishedObjectives;
 
-  /** « 4 en marche · 1 accompli » ; vide tant qu'il n'y a rien à compter. */
+  /** « 3 objectifs avancent. Un pas t'attend. » ; vide tant qu'il n'y a rien à dire. */
   protected readonly summary = computed(() => {
-    const parts: string[] = [];
     const running = this.cards().length;
-    const accomplished = this.accomplished().length;
-    if (running > 0) parts.push(compter(running, 'en marche', 'en marche'));
-    if (accomplished > 0) parts.push(compter(accomplished, 'accompli'));
-    return parts.join(' · ');
+    if (running === 0) return '';
+    const head = running === 1 ? 'Un objectif avance.' : `${running} objectifs avancent.`;
+    return this.focus() ? `${head} Un pas t'attend.` : head;
   });
 
   /**
@@ -163,6 +226,25 @@ export class Objectives {
     () => !this.store.objectivesLoaded() && !!this.store.error() && this.cards().length === 0,
   );
 
+  /** « Étape 2 · Portfolio », ou la légende de la progression par pas. */
+  protected stageLine(card: ObjectiveCardView): string {
+    const progress = card.progress;
+    if (progress.kind !== 'cases') return '';
+    if (progress.unit === 'etape') {
+      const index = progress.done + 1;
+      return progress.inProgress && progress.currentName
+        ? `Étape ${index} · ${progress.currentName}`
+        : legendeProgression({ faits: progress.done, enCours: progress.inProgress, aVenir: progress.upcoming }, { unite: 'etape' });
+    }
+    return legendeProgression({ faits: progress.done, enCours: progress.inProgress, aVenir: progress.upcoming });
+  }
+
+  /** Le premier objectif : le nouvel objectif s'ouvre avec ce titre. */
+  protected start(title: string): void {
+    const titre = title.trim();
+    void this.router.navigate(['/objectifs/nouveau'], titre ? { queryParams: { titre } } : {});
+  }
+
   /** La liste « Accomplis » est repliée au départ. */
   protected readonly accomplishedOpen = signal(false);
 
@@ -171,26 +253,30 @@ export class Objectives {
    * La case cochée disparaît aussitôt (le prochain pas change, ou la carte passe dans « Accomplis ») : le
    * focus tomberait sur la page, et le clavier repartirait du début. Il va au nouveau prochain pas.
    */
-  protected toggleTask(cardId: string, taskId: string, done: boolean): void {
+  protected toggleTask(cardId: string, taskId: string, done: boolean, fromFocus = false): void {
     this.store.updateTaskDone({ taskId, done });
-    afterNextRender({ write: () => this.recoverFocus(cardId) }, { injector: this.injector });
+    afterNextRender({ write: () => this.recoverFocus(cardId, fromFocus) }, { injector: this.injector });
   }
 
   /**
    * Si le focus est perdu : le nouveau prochain pas de la carte, sinon son lien « Ouvrir », sinon son titre.
    * La carte est passée dans « Accomplis » : le résumé de la liste repliée.
    */
-  private recoverFocus(cardId: string): void {
+  private recoverFocus(cardId: string, fromFocus: boolean): void {
     const active = this.document.activeElement;
     if (active && active !== this.document.body && active.isConnected) return;
+    const focus = this.focus();
+    // Coché depuis le panneau d'encre : le focus va au nouveau prochain pas mis en avant.
+    const inHero = fromFocus && focus ? [`focus-${focus.task.id}`] : [];
     const card = this.cards().find((item) => item.id === cardId);
     const targets = card
       ? [
+          ...inHero,
           ...card.nextTasks.map((next) => `prochain-pas-${next.id}`),
           ...(card.openable ? [`ouvrir-${card.id}`] : []),
           `objectif-${card.id}`,
         ]
-      : [ACCOMPLISHED_SUMMARY_ID];
+      : [...inHero, ACCOMPLISHED_SUMMARY_ID];
     for (const id of targets) {
       const target = this.document.getElementById(id);
       if (target) {

@@ -1,5 +1,5 @@
-import type { EtatEtape } from '@empreinte-studio/angular/arete';
-import type { OptionSelection } from '@empreinte-studio/angular/selection';
+import type { EtatEtape } from '../../ui';
+import type { OptionSelection } from '../../ui';
 
 import { UNTITLED_STAGE } from '../../chore/mapper/objective-view.mapper';
 
@@ -23,7 +23,7 @@ export const STAGE_STATE_TITLES: Readonly<Record<EtatEtape, string>> = {
   'a-venir': 'À venir',
 };
 
-/** Les étapes d'un objectif pour e-selection, sans option vide. */
+/** Les étapes d'un objectif pour ax-select, sans option vide. */
 export function namedStageOptions(options: readonly OptionSelection<string>[]): OptionSelection<string>[] {
   return options.map((option) => (option.libelle.trim() ? option : { ...option, libelle: UNTITLED_STAGE }));
 }

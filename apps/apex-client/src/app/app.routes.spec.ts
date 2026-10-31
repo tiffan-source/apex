@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { provideRouter, Router, RouterOutlet, type Route, type Routes } from '@angular/router';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { motsAEviter } from '../ui';
 import { voiceIssues } from '../chore/constants/messages.constante';
 import { routes } from './app.routes';
 import { authGuard } from './auth.guard';
@@ -63,7 +63,7 @@ describe('routes', () => {
       expect(titles).toEqual([
         'Objectifs · Apex',
         'Nouvel objectif · Apex',
-        "L'arête · Apex",
+        "L'objectif · Apex",
         'Akari · Apex',
         'La matrice · Apex',
         'Connexion · Apex',
@@ -95,7 +95,7 @@ describe('routes', () => {
     it.each([
       ['/', '', 'Objectifs · Apex'],
       ['/objectifs/nouveau', 'objectifs/nouveau', 'Nouvel objectif · Apex'],
-      ['/objectifs/42', 'objectifs/:id', "L'arête · Apex"],
+      ['/objectifs/42', 'objectifs/:id', "L'objectif · Apex"],
       ['/objectifs/42/akari?etape=7', 'objectifs/:id/akari', 'Akari · Apex'],
       ['/matrice', 'matrice', 'La matrice · Apex'],
       ['/auth', 'auth', 'Connexion · Apex'],

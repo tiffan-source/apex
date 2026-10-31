@@ -1,9 +1,9 @@
-import type { OptionSelection } from '@empreinte-studio/angular/selection';
+import type { OptionSelection } from '../../ui';
 
 /*
- * Les niveaux d'importance et d'urgence d'un pas (1 à 5), prêts pour e-selection.
+ * Les niveaux d'importance et d'urgence d'un pas (1 à 5), prêts pour ax-select.
  * Le seuil de la matrice est 3 (ApexLibsMetier.getEisenhowerCategory) : à partir de 3, un pas
- * est « important » ou « urgent ». Les libellés suivent les axes de la matrice d'Empreinte.
+ * est « important » ou « urgent ». Les libellés suivent les axes de la matrice.
  */
 
 /** L'importance d'un pas, de 1 à 5. */

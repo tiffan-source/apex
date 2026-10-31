@@ -1,84 +1,61 @@
 /*
- * Akari pour un objectif : la conversation à gauche, l'arête à droite.
- * La conversation est le composant e-conversation d'Empreinte (le fil, les répliques, la ligne d'état, la
- * zone de réponse, le défilement). Apex règle sa place dans l'écran : sa hauteur et ses marges.
+ * Akari pour un objectif : la conversation dans sa grande carte à gauche, le chemin à droite.
+ * La conversation est ax-conversation du kit (le fil, la ligne d'état, la zone de réponse, le défilement) :
+ * l'écran règle sa place, sa hauteur et son retrait.
  */
+.screen { display: flex; flex-direction: column; gap: 24px; }
 
-/* Les enfants directs perdent leurs marges par défaut (p) : l'espacement vient
-   de l'écart du conteneur. Spécificité nulle : une marge propre à un
-   composant d'Empreinte l'emporte. */
-:where(.stage > *) {
-  margin: 0;
-}
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; }
+.back { min-width: 0; padding-left: 8px; }
+.here { gap: 8px; }
 
-/* La conversation est un panneau de la trame sans marge propre : Empreinte
-   pose celles du fil et de la zone de réponse, alignées sur les panneaux
-   (--ds-panel-padding-inline). Le fil défile dedans, sous la zone de
-   réponse qui reste au pied. */
-.conversation {
-  --e-conversation-retrait: var(--ds-panel-padding-inline);
-  min-height: 0;
-  background: var(--panneau);
-}
+.head { display: flex; flex-direction: column; gap: 4px; }
+.head p { margin: 0; }
+.word { font-size: 50px; }
 
-/* Une étape de la liste : son numéro dans une colonne étroite (28px), le nom,
-   le compte de pas à droite ; l'état passe sous le nom. */
-.stage {
+.layout {
   display: grid;
-  grid-template-columns: var(--ds-space-7) minmax(0, 1fr) auto;
-  gap: var(--ds-space-0-5) var(--pas-3);
-  align-items: baseline;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
 }
 
-.stage > :nth-child(n + 4) {
-  grid-column: 2 / -1;
-}
+.talk { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border-radius: var(--r-xl); }
+.conversation { --ax-conversation-inset: 36px; flex: 1 1 auto; min-height: 0; }
+.plain { margin: 0; white-space: pre-line; }
 
-/* Au-dessus de 1100px (la conversation et l'arête côte à côte), l'écran tient
-   dans la fenêtre : la coque lui passe la hauteur qui reste (la route porte
-   data.fitsWindow, shell.css), l'en-tête garde la sienne et les deux panneaux
-   prennent le reste. La conversation s'ouvre sur ses dernières répliques avec
-   sa zone de réponse visible, sans faire défiler la page ; l'arête défile aussi
-   quand ses étapes sont nombreuses. Chaque niveau garde min-height: 0 : sans
-   lui, la hauteur de toute la conversation remonterait jusqu'à la page. */
+.trail { display: flex; flex-direction: column; gap: 20px; min-width: 0; padding: 24px; }
+.trail p { margin: 0; }
+.trail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.trail-head h2 { margin: 0; }
+.see { align-self: stretch; justify-content: center; }
+
+.alone { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.alone p, .alone h1 { margin: 0; }
+
+/* Au-dessus de 1100px (la conversation et le chemin côte à côte), l'écran tient dans la fenêtre : la coque lui
+   passe la hauteur qui reste (la route porte data.fitsWindow, shell.css), l'en-tête garde la sienne et les deux
+   cartes prennent le reste. La conversation s'ouvre sur ses dernières répliques avec sa zone de réponse visible,
+   sans faire défiler la page ; le chemin défile aussi quand ses étapes sont nombreuses. Chaque niveau garde
+   min-height: 0 : sans lui, la hauteur de toute la conversation remonterait jusqu'à la page. */
 @media (width > 1100px) {
-  :host {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  .akari {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-
-  .panels {
-    flex: 1 1 0;
-    min-height: 0;
-    grid-template-rows: minmax(0, 1fr);
-  }
-
-  .stages {
-    min-height: 0;
-    overflow-y: auto;
-  }
+  :host { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+  .akari { flex: 1 1 auto; min-height: 0; }
+  .layout { flex: 1 1 0; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  .talk, .trail { min-height: 0; }
+  .trail { overflow-y: auto; }
 }
 
-/* 1100px : une seule colonne. La conversation prend la hauteur de la fenêtre
-   (entière à l'écran, sa zone de réponse y est aussi) et la page y descend à
-   l'ouverture (akari.ts) ; l'arête suit dessous. */
+/* 1100px : une seule colonne. La conversation prend la hauteur de la fenêtre (entière à l'écran, sa zone de
+   réponse y est aussi) et la page y descend à l'ouverture (akari.ts) ; le chemin suit dessous. */
 @media (max-width: 1100px) {
-  .conversation {
-    height: min(calc(100svh - var(--pas-8)), 48rem);
-    min-height: 24rem;
-  }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .conversation { height: min(calc(100svh - 64px), 48rem); min-height: 24rem; }
 }
 
-/* 760px : mobile, les marges plus serrées des panneaux. */
+/* 760px : mobile, des marges plus serrées. */
 @media (max-width: 760px) {
-  .conversation {
-    --e-conversation-retrait: var(--ds-panel-padding-inline-mobile);
-  }
+  .word { font-size: 44px; }
+  .conversation { --ax-conversation-inset: 16px; }
+  .trail { padding: 20px; }
 }

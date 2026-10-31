@@ -3,13 +3,13 @@ import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { A11yProviders } from './a11y.provider';
 
 describe('A11yProviders', () => {
-  it("donne au LiveAnnouncer une zone masquée par e-masque, toujours stylée par Empreinte", async () => {
+  it("donne au LiveAnnouncer une zone masquée par .sr-only, la classe globale d’Apex", async () => {
     TestBed.configureTestingModule({ providers: [...A11yProviders] });
     const announcer = TestBed.inject(LiveAnnouncer);
 
     await announcer.announce('Un pas de plus.');
 
-    const zones = Array.from(document.body.querySelectorAll<HTMLElement>('.e-masque[aria-live]'));
+    const zones = Array.from(document.body.querySelectorAll<HTMLElement>('.sr-only[aria-live]'));
     expect(zones).toHaveLength(1);
     expect(zones[0].textContent).toBe('Un pas de plus.');
     expect(zones[0].getAttribute('aria-atomic')).toBe('true');

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { Route } from '@angular/router';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { motsAEviter } from '../ui';
 import { voiceIssues } from '../chore/constants/messages.constante';
 import { routes } from './app.routes';
 
@@ -23,18 +23,20 @@ const READABLE_ATTRIBUTES = [
   'aria-roledescription',
   'aria-placeholder',
   'aria-valuetext',
-  'libelle',
-  'titre',
-  'legende',
-  'aide',
-  'texteVide',
-  'indication',
+  'label',
+  'hint',
+  'error',
+  'summit',
+  'summitDetail',
+  'inputLabel',
+  'allLabel',
+  'text',
   'placeholder',
   'title',
   'alt',
 ];
 const ATTRIBUTE_NAMES = READABLE_ATTRIBUTES.map((name) => name.replace(/[-.]/g, '\\$&')).join('|');
-/** `libelle="Réglages"` (et pas `[libelle]=…` ni `attr.aria-label=…`). */
+/** `label="Réglages"` (et pas `[label]=…` ni `attr.aria-label=…`). */
 const STATIC_ATTRIBUTE = new RegExp(`(?<![\\w.\\[(-])(?:${ATTRIBUTE_NAMES})\\s*=\\s*"([^"]*)"`, 'g');
 /** `[attr.aria-label]="'Modifier « ' + pas.titre + ' »'"` : les chaînes de l'expression. */
 const BOUND_ATTRIBUTE = new RegExp(`\\[(?:attr\\.)?(?:${ATTRIBUTE_NAMES})\\]\\s*=\\s*"([^"]*)"`, 'g');
@@ -117,7 +119,13 @@ function templateTexts(html: string): string[] {
 /** Après ces mots, une barre oblique ouvre une expression régulière, pas une division. */
 const BEFORE_REGEX = /(?:^|[(,=:[!&|?{};+\-*%<>~^]|\breturn|\btypeof|\bcase|\bin|\bof|\bnew|\bdelete|\bvoid|\bthrow)\s*$/;
 /** Les chaînes qui ne sont pas du texte : chemin d'un import, sélecteur, gabarit, feuille de style, message pour la console. */
-const NOT_TEXT_BEFORE = /(?:\bfrom|\bimport\s*\(|\bselector\s*:|\btemplateUrl\s*:|\bstyleUrls?\s*:|\bstyleUrls\s*:\s*\[[^\]]*)\s*$/;
+const NOT_TEXT_BEFORE =
+  /(?:\bfrom|\bimport\s*\(|\bselector\s*:|\btemplateUrl\s*:|\btemplate\s*:|\bstyles\s*:|\bstyleUrls?\s*:|\bstyleUrls\s*:\s*\[[^\]]*)\s*$/;
+
+/** Le gabarit écrit dans le composant (`template: \`…\``), lu comme un fichier .html. */
+function inlineTemplates(source: string): string[] {
+  return [...source.matchAll(/\btemplate\s*:\s*`([\s\S]*?)`/g)].map((match) => match[1]);
+}
 
 /**
  * Les chaînes littérales d'un fichier TypeScript ('…', "…" et `…`, dont les ${…} deviennent des espaces),
@@ -218,15 +226,26 @@ function issuesOf({ file, text }: Found): string[] {
   return issues.map((issue) => `${file} : « ${text} » → ${issue}`);
 }
 
-describe('la voix de tout src/app', () => {
-  const templates = filesUnder(APP_DIR, '.html');
-  const components = filesUnder(APP_DIR, '.ts').filter((path) => !path.endsWith('.spec.ts'));
+/** Le kit d'interface (src/ui) parle aussi à la personne ; sa liste de mots à éviter, elle, les contient. */
+const UI_DIR = join(APP_DIR, '..', 'ui');
+const UI_WORD_LIST = join(UI_DIR, 'voice.ts');
+
+describe('la voix de tout src/app et du kit', () => {
+  const templates = [...filesUnder(APP_DIR, '.html'), ...filesUnder(UI_DIR, '.html')];
+  const components = [...filesUnder(APP_DIR, '.ts'), ...filesUnder(UI_DIR, '.ts')].filter(
+    (path) => !path.endsWith('.spec.ts') && path !== UI_WORD_LIST,
+  );
   const found: Found[] = [
     ...templates.flatMap((path) =>
       templateTexts(readFileSync(path, 'utf8')).map((text) => ({ file: relative(APP_DIR, path), text })),
     ),
     ...components.flatMap((path) =>
       codeStrings(readFileSync(path, 'utf8')).map((text) => ({ file: relative(APP_DIR, path), text })),
+    ),
+    ...components.flatMap((path) =>
+      inlineTemplates(readFileSync(path, 'utf8')).flatMap((template) =>
+        templateTexts(template).map((text) => ({ file: relative(APP_DIR, path), text })),
+      ),
     ),
     ...routeTitles(routes).map((text) => ({ file: 'app.routes.ts (title)', text })),
   ];
@@ -237,11 +256,12 @@ describe('la voix de tout src/app', () => {
     expect(components.length).toBeGreaterThanOrEqual(20);
     // Un texte de chaque sorte, pour être sûr que l'extraction ne laisse rien filer
     const samples = [
-      'Mes objectifs', // texte d'un gabarit
+      'En marche', // texte d'un gabarit
       'Aller au contenu', // texte de la coque
-      "Légende de l'arête", // aria-label
+      'Navigation principale', // aria-label
       'Réponds à Akari…', // indication (le texte indicatif de la zone de réponse)
-      'Déplacer «', // chaîne d'un [libelle] lié
+      'Déplacer «', // chaîne d'un [label] lié
+      'Dernières répliques', // texte d'un gabarit du kit
       "Je m'y engage", // bouton sceau du nouvel objectif
       'Objectifs · Apex', // titre de route
     ];
@@ -261,10 +281,10 @@ describe('l’extraction des textes', () => {
       @if (!pret() && total > 3) {
         <p class="corps">Une erreur est survenue&nbsp;!</p>
       } @else {
-        <button eBouton aria-label="Supprimer" [attr.title]="'Raté, ' + nom">{{ ouvert ? 'Fermer' : 'Tâche manquée' }}</button>
+        <button class="btn" aria-label="Supprimer" [attr.title]="'Raté, ' + nom">{{ ouvert ? 'Fermer' : 'Tâche manquée' }}</button>
       }
       @let reste = total - faits;
-      <e-champ libelle="Ton adresse" [aide]="n > 1 ? 'Il te reste 40 %' : ''" (click)="choisir('perdu')" />
+      <ax-field label="Ton adresse" [hint]="n > 1 ? 'Il te reste 40 %' : ''" (click)="choisir('perdu')" />
     `);
     expect(texts).toEqual(
       expect.arrayContaining(['Une erreur est survenue !', 'Supprimer', 'Raté,', 'Fermer', 'Tâche manquée', 'Ton adresse', 'Il te reste 40 %']),
@@ -277,7 +297,7 @@ describe('l’extraction des textes', () => {
 
   it('voit les chaînes d’un composant, pas les imports, les sélecteurs, les commentaires ni les expressions régulières', () => {
     const strings = codeStrings(`
-      import { X } from '@empreinte-studio/angular';
+      import { X } from '@angular/core';
       // Supprimer : un commentaire
       @Component({ selector: 'app-x', templateUrl: './x.html' })
       export class X {
@@ -288,6 +308,6 @@ describe('l’extraction des textes', () => {
       }
     `);
     expect(strings).toEqual(expect.arrayContaining(["Je n'ai pas pu enregistrer ce pas.", 'pas', 'Un de plus !']));
-    expect(strings.join(' ')).not.toMatch(/empreinte-studio|app-x|x\.html|Supprimer|l'erreur|Erreur technique/);
+    expect(strings.join(' ')).not.toMatch(/@angular\/core|app-x|x\.html|Supprimer|l'erreur|Erreur technique/);
   });
 });

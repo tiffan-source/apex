@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { FormField, FormRoot, form } from '@angular/forms/signals';
-import { EBouton } from '@empreinte-studio/angular/bouton';
-import { EChamp, ESaisie, ETailleAuto } from '@empreinte-studio/angular/champ';
-import { EFeuille, EFeuilleActions } from '@empreinte-studio/angular/feuille';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { AxSheet, AxSheetActions, AxField, AxControl } from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { fromDateInputValue, toDateInputValue } from '../../../chore/mapper/date-input.mapper';
 import { requireText } from './sheet-validation';
@@ -36,7 +35,7 @@ export const OBJECTIVE_HORIZON_KEPT = "Pour l'instant, un horizon ne se retire p
  */
 @Component({
   selector: 'app-edit-objective-sheet',
-  imports: [FormField, FormRoot, EFeuille, EFeuilleActions, EChamp, ESaisie, ETailleAuto, EBouton],
+  imports: [FormField, FormRoot, AxSheet, AxSheetActions, AxField, AxControl, CdkTextareaAutosize],
   templateUrl: './edit-objective-sheet.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

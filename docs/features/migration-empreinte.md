@@ -1,5 +1,7 @@
 # Migration d'Apex vers Empreinte
 
+> **Historique.** Depuis le 31 octobre 2026 (branche `farel/changes`), Apex n'utilise plus Empreinte : son interface a son propre système visuel et son kit (`apps/apex-client/src/ui/`, voir `CLAUDE.md` et le skill `frontend-ui`). Ce cahier reste la référence pour le périmètre V1, les routes, le vocabulaire, les règles de données, Akari comme geste, la voix et `AnnoncesStore` ; ses règles propres à Empreinte (sceau, corne, composants `e-*`, catalogue) ne valent plus.
+
 Ce document est le cahier de la migration du client Apex de PrimeNG vers le design system **Empreinte** (`@empreinte-studio/angular` et `@empreinte-studio/tokens`), en suivant les maquettes « Apex » et le périmètre V1 décidé le 19 octobre 2026. Il fait autorité pour tous ceux qui travaillent sur la branche `feat/rebrand-empreinte`.
 
 ## 1. Le contrat
@@ -17,7 +19,7 @@ Ce document est le cahier de la migration du client Apex de PrimeNG vers le desi
 | Brand book Empreinte | design system « Empreinte » https://claude.ai/artifact/QBkmtgtj9oKk8xdJPb2QNe (`project/README.md`, `project/components/*/README.md`) |
 | Périmètre V1 | doc « Apex — périmètre V1 » https://claude.ai/artifact/3mEAfVqPMbkSquRS6Ge3tg |
 | Librairie | `node_modules/@empreinte-studio/angular` (types dans `types/`), `node_modules/@empreinte-studio/tokens/dist` ; dépôt https://github.com/empreinte-studio/empreinte (sources, vitrine `apps/vitrine`) |
-| Catalogue des composants | `.claude/skills/frontend-ui/references/catalogue-empreinte.md` |
+| Catalogue des composants | retiré avec Empreinte (voir `apps/apex-client/src/ui/`) |
 
 ## 3. Le périmètre V1
 

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
+import { QUADRANTS, type Quadrant } from '../../ui';
 import { ApexLibsMetier, EisenhowerCategory } from '@org/apex-library';
 import {
   AddSubObjectiveUsecase,

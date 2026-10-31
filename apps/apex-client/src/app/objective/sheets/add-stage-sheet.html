@@ -1,11 +1,11 @@
-<e-feuille titre="Ajouter une étape">
+<ax-sheet title="Ajouter une étape">
   <form class="ds-stack" id="feuille-ajout-etape" [formRoot]="fields">
-    <e-champ libelle="Le nom de l'étape" aide="Une étape rassemble quelques pas. Par exemple : Endurance.">
-      <input eSaisie autocomplete="off" [formField]="fields.title" />
-    </e-champ>
+    <ax-field label="Le nom de l'étape" hint="Une étape rassemble quelques pas. Par exemple : Endurance.">
+      <input axControl autocomplete="off" [formField]="fields.title" />
+    </ax-field>
   </form>
-  <div eFeuilleActions>
-    <button eBouton="trait" type="submit" form="feuille-ajout-etape">Ajouter</button>
-    <button eBouton="nu" type="button" (click)="ref.close()">Annuler</button>
+  <div axSheetActions>
+    <button class="btn btn--ghost" type="button" (click)="ref.close()">Annuler</button>
+    <button class="btn btn--accent" type="submit" form="feuille-ajout-etape">Ajouter</button>
   </div>
-</e-feuille>
+</ax-sheet>

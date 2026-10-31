@@ -1,5 +1,5 @@
 import { EisenhowerCategory } from '@org/apex-library';
-import { QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
+import { QUADRANTS, type Quadrant } from '../../ui';
 import type { ObjectiveViewModel, TaskViewModel } from '../models/objective.viewmodel';
 import {
   categoryToQuadrant,

@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormField, FormRoot, form } from '@angular/forms/signals';
-import { EBouton, EChamp, EMarque, ENote, ESaisie, ESurface } from '@empreinte-studio/angular';
+import { AxControl, AxField, AxIcon } from '../../ui';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { SessionStore } from '../../chore/stores/session.store';
 import {
@@ -25,14 +25,16 @@ import {
 } from './auth.form';
 
 /**
- * Les textes de l'écran qui changent avec le mode (les libellés fixes sont dans le gabarit). La bascule est un
- * bouton : moins de 4 mots (brand book, Bouton) ; la question qui l'amène est écrite à côté, en détail.
+ * Les textes de l'écran (les libellés des champs sont dans le gabarit). La bascule est un bouton : moins
+ * de 4 mots ; la question qui l'amène est écrite à côté.
  */
 export const AUTH_TEXTS = {
   tagline: 'Chaque pas laisse une empreinte.',
+  pitch: "Pose un objectif. Akari t'aide à trouver les étapes. Tu avances un pas à la fois, jusqu'au sommet.",
   passwordHelp: `Au moins ${PASSWORD_MIN_LENGTH} caractères.`,
   [AuthMode.SignIn]: {
     title: 'Te revoilà.',
+    subtitle: 'Connecte-toi pour reprendre là où tu en étais.',
     submit: 'Me connecter',
     pending: 'Je te connecte…',
     question: 'Pas encore de compte ?',
@@ -40,6 +42,7 @@ export const AUTH_TEXTS = {
   },
   [AuthMode.CreateUser]: {
     title: 'Crée ton compte',
+    subtitle: 'Une adresse, un mot de passe, puis ton premier objectif.',
     submit: 'Créer mon compte',
     pending: 'Je crée ton compte…',
     question: 'Déjà un compte ?',
@@ -51,18 +54,19 @@ export const AUTH_TEXTS = {
 type AuthAttempt = { mode: AuthMode; email: string; password: string };
 
 /**
- * La connexion (/auth), hors de la coque : un panneau étroit au centre de la page, la marque, puis
- * « Te revoilà. » ou « Crée ton compte ». Le bouton sceau (le seul de l'écran) connecte ou crée le
- * compte par SessionStore ; une fois la session ouverte, l'écran mène à l'accueil.
+ * La connexion (/auth), hors de la coque, en deux colonnes : à gauche le panneau d'encre (la marque, « Chaque
+ * pas laisse une empreinte. », un aperçu décoratif d'un prochain pas) ; à droite le formulaire, « Te
+ * revoilà. » ou « Crée ton compte ». Le bouton d'accent (le seul de l'écran) connecte ou crée le compte par
+ * SessionStore ; une fois la session ouverte, l'écran mène à l'accueil. Sous 900px, une seule colonne.
  *
- * Ce qui manque s'écrit sous le champ concerné, en encre, avec la solution (e-champ). Une réponse du
+ * Ce qui manque s'écrit sous le champ concerné, en encre, avec la solution (ax-field). Une réponse du
  * serveur est traduite (translateAuthError) : sous le champ qu'elle concerne, qui reçoit le focus, ou
  * dans une note d'Akari au-dessus du bouton. Elle s'efface dès que la personne change ce qu'elle avait
  * envoyé. La bascule entre les deux modes annonce le nouveau titre aux lecteurs d'écran.
  */
 @Component({
   selector: 'app-auuthentication-page',
-  imports: [FormField, FormRoot, EBouton, EChamp, EMarque, ENote, ESaisie, ESurface],
+  imports: [FormField, FormRoot, AxControl, AxField, AxIcon],
   templateUrl: './auuthentication-page.html',
   styleUrl: './auuthentication-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -78,14 +82,14 @@ export class AuuthenticationPage {
   protected readonly mode = signal<AuthMode>(AuthMode.SignIn);
   protected readonly creatingAccount = computed(() => this.mode() === AuthMode.CreateUser);
   protected readonly texts = computed(() => AUTH_TEXTS[this.mode()]);
-  protected readonly tagline = AUTH_TEXTS.tagline;
+  protected readonly pitch = AUTH_TEXTS.pitch;
   protected readonly passwordHelp = AUTH_TEXTS.passwordHelp;
 
   /** Ce que la personne écrit ; l'adresse et le mot de passe restent d'un mode à l'autre. */
   protected readonly model = signal<AuthCredentials>({ ...EMPTY_CREDENTIALS });
 
   /**
-   * Le formulaire (Signal Forms) : le bouton sceau le soumet. Valide, il part au serveur ; sinon,
+   * Le formulaire (Signal Forms) : le bouton d'accent le soumet. Valide, il part au serveur ; sinon,
    * chaque champ dit ce qui manque et le focus va au premier concerné. Le nom donne aux champs des
    * attributs name stables (auth.email, auth.password), que les gestionnaires de mots de passe retiennent.
    */
@@ -100,7 +104,7 @@ export class AuuthenticationPage {
     },
   });
 
-  /** Vrai pendant l'appel au serveur : le sceau est inactif, le statut le dit. */
+  /** Vrai pendant l'appel au serveur : le bouton est inactif, le statut le dit. */
   protected readonly pending = computed(() => this.session.isPending());
   protected readonly status = computed(() => (this.pending() ? this.texts().pending : ''));
 

@@ -1,8 +1,8 @@
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { motsAEviter } from '@empreinte-studio/angular/core';
-import type { OptionSelection } from '@empreinte-studio/angular/selection';
+import { motsAEviter } from '../../../ui';
+import type { OptionSelection } from '../../../ui';
 import { NEW_OBJECTIVE_TEXTS, NewObjective } from './new-objective';
 import { DRAFT_MESSAGES, isBeforeToday, toCreateObjectiveInput, todayInputValue } from './new-objective.form';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
@@ -87,7 +87,7 @@ describe('NewObjective', () => {
   let currentUser: ReturnType<typeof signal<UserViewModel | null>>;
   let navigate: ReturnType<typeof vi.fn>;
 
-  async function setup(storeMock: StoreMock = createStoreMock()) {
+  async function setup(storeMock: StoreMock = createStoreMock(), titre?: string) {
     store = storeMock;
     currentUser = signal<UserViewModel | null>({ id: 'u1', name: 'Léa Martin', email: 'lea@example.com' });
     await TestBed.configureTestingModule({
@@ -102,6 +102,7 @@ describe('NewObjective', () => {
     navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true) as unknown as ReturnType<typeof vi.fn>;
     fixture = TestBed.createComponent(NewObjective);
     element = fixture.nativeElement as HTMLElement;
+    if (titre !== undefined) fixture.componentRef.setInput('titre', titre);
     fixture.detectChanges();
     await fixture.whenStable();
   }
@@ -155,37 +156,37 @@ describe('NewObjective', () => {
 
     it("présente l'écran dans l'en-tête de la maquette", () => {
       const header = present(element.querySelector('header'), "l'en-tête");
-      expect(clean(header.querySelector('.repere')?.textContent)).toBe('Akari');
-      expect(clean(header.querySelector('h1.manifeste')?.textContent)).toBe('Nouvel objectif');
-      expect(clean(header.querySelector('p.detail')?.textContent)).toBe(
+      expect(clean(header.querySelector('.chip')?.textContent)).toBe('Akari');
+      expect(clean(header.querySelector('h1')?.textContent)).toBe('Nouvel objectif');
+      expect(clean(header.querySelector('p.soft')?.textContent)).toBe(
         "On le construit ensemble. Rien n'est enregistré tant que tu ne t'engages pas.",
       );
     });
 
-    it("pose les questions d'Akari dans le fil, chacune signée de son losange", () => {
-      const notes = Array.from(element.querySelectorAll('ol.e-fil > li.e-replique--assistant'));
-      expect(notes.map((note) => clean(note.querySelector('.e-replique__texte')?.textContent))).toEqual([
+    it("pose les questions d'Akari dans la carte, chacune signée de son losange", () => {
+      const notes = Array.from(element.querySelectorAll('ol.thread .akari'));
+      expect(notes.map((note) => clean(note.querySelector('.question')?.textContent))).toEqual([
         "Qu'est-ce que tu veux construire ?",
         'Pourquoi est-ce que ça compte pour toi ?',
         'Pour quand ?',
         'Tu veux en dire plus ?',
       ]);
-      for (const note of notes) expect(clean(note.querySelector('.e-replique__qui')?.textContent)).toBe('Akari');
+      for (const note of notes) {
+        expect(clean(note.querySelector('.label')?.textContent)).toBe('Akari');
+        expect(note.querySelector('.akari-mark')?.getAttribute('aria-hidden')).toBe('true');
+      }
     });
 
-    it('donne la parole à la personne, par son prénom, dans des champs Empreinte', () => {
-      const authors = Array.from(element.querySelectorAll('.e-replique--personne > .e-replique__qui')).map((p) =>
-        clean(p.textContent),
-      );
+    it('donne la parole à la personne, par son prénom, dans des champs du kit', () => {
+      const authors = Array.from(element.querySelectorAll('.answer > .who')).map((p) => clean(p.textContent));
       expect(authors).toEqual(['Léa', 'Léa', 'Léa', 'Léa']);
-      expect(element.querySelectorAll('e-champ')).toHaveLength(4);
-      expect(titleInput().classList).toContain('e-saisie');
-      expect(dueDateInput().classList).toContain('e-saisie');
-      expect(whyInput().classList).toContain('e-saisie--taille-auto');
-      expect(descriptionInput().classList).toContain('e-saisie--taille-auto');
-      const optional = Array.from(element.querySelectorAll('e-champ')).map((champ) =>
-        champ.querySelector('.e-champ__facultatif') !== null,
-      );
+      expect(element.querySelectorAll('ax-field')).toHaveLength(4);
+      for (const control of [titleInput(), whyInput(), dueDateInput(), descriptionInput()]) {
+        expect(control.classList).toContain('input');
+      }
+      expect(whyInput().classList).toContain('cdk-textarea-autosize');
+      expect(descriptionInput().classList).toContain('cdk-textarea-autosize');
+      const optional = Array.from(element.querySelectorAll('ax-field')).map((field) => field.querySelector('.optional') !== null);
       expect(optional).toEqual([false, true, true, true]);
     });
 
@@ -195,7 +196,7 @@ describe('NewObjective', () => {
       controls.forEach((control, index) => {
         const [questionId, labelId] = (control.getAttribute('aria-labelledby') ?? '').split(' ');
         expect(questionId).toBe(questions[index]);
-        expect(element.querySelector(`#${questionId}`)?.closest('li.e-replique--assistant')).not.toBeNull();
+        expect(element.querySelector(`#${questionId}`)?.closest('.akari')).not.toBeNull();
         const label = element.querySelector(`#${labelId}`);
         expect(label?.tagName).toBe('LABEL');
         expect(label?.getAttribute('for')).toBe(control.id);
@@ -206,26 +207,25 @@ describe('NewObjective', () => {
       expect(dueDateInput().getAttribute('min')).toBe(todayInputValue());
     });
 
-    it("montre un brouillon vide, pas encore enregistré, avec un seul sceau et sans arête", () => {
+    it("montre un brouillon vide, pas encore enregistré, avec un seul bouton d'accent", () => {
       const draft = present(element.querySelector('section[aria-labelledby="draft-title"]'), 'le brouillon');
-      expect(clean(draft.querySelector('.repere')?.textContent)).toBe('Brouillon · pas encore enregistré');
+      expect(draft.classList).toContain('card--nuit');
+      expect(clean(draft.querySelector('.kicker')?.textContent)).toBe('Brouillon · pas encore enregistré');
       expect(clean(draftTitle().textContent)).toBe(NEW_OBJECTIVE_TEXTS.untitled);
-      expect(draftTitle().classList).toContain('ds-muted');
+      expect(draftTitle().classList).toContain('empty');
       expect(draft.textContent).toContain(NEW_OBJECTIVE_TEXTS.noHorizon);
-      expect(draft.getAttribute('aria-current')).toBe('true');
       expect(clean(draft.lastElementChild?.textContent)).toBe(
         "En t'engageant, l'objectif rejoint tes objectifs, puis Akari te propose des étapes.",
       );
-      expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(1);
-      expect(element.querySelector('e-arete')).toBeNull();
+      expect(element.querySelectorAll('.btn--accent')).toHaveLength(1);
     });
 
     it("désactive « Je m'y engage » tant que le titre est vide, et propose « Plus tard » vers l'accueil", () => {
       expect(clean(engageButton().textContent)).toBe("Je m'y engage");
-      expect(engageButton().classList).toContain('e-btn--sceau');
+      expect(engageButton().classList).toContain('btn--accent');
       expect(engageButton().disabled).toBe(true);
       const later = present(Array.from(element.querySelectorAll('a')).find((a) => clean(a.textContent) === 'Plus tard'), '« Plus tard »');
-      expect(later.classList).toContain('e-btn--nu');
+      expect(later.classList).toContain('btn--ghost');
       expect(later.getAttribute('href')).toBe('/');
       expect(clean(status().textContent)).toBe('');
     });
@@ -247,19 +247,19 @@ describe('NewObjective', () => {
       write(dueDateInput(), due);
 
       expect(clean(draftTitle().textContent)).toBe('Décrocher un stage cet été');
-      expect(draftTitle().classList).not.toContain('ds-muted');
+      expect(draftTitle().classList).not.toContain('empty');
       const draft = present(element.querySelector('section[aria-labelledby="draft-title"]'), 'le brouillon');
-      expect(clean(draft.querySelector('p.voix')?.textContent)).toBe('« Savoir si ce métier me plaît. »');
-      expect(clean(draft.querySelector('p.corps')?.textContent)).toBe('Un stage de développement web.');
+      expect(clean(draft.querySelector('p.serif')?.textContent)).toBe('« Savoir si ce métier me plaît. »');
+      expect(clean(draft.querySelector('.draft-description')?.textContent)).toBe('Un stage de développement web.');
       expect(draft.textContent).toContain(formatHorizon(fromDateInputValue(due)));
       expect(draft.textContent).not.toContain(NEW_OBJECTIVE_TEXTS.noHorizon);
       expect(engageButton().disabled).toBe(false);
     });
 
     it("ajoute une dernière réplique d'Akari une fois le titre écrit", () => {
-      expect(element.querySelectorAll('li.e-replique--assistant')).toHaveLength(4);
+      expect(element.querySelectorAll('ol.thread .akari')).toHaveLength(4);
       write(titleInput(), 'Lire 12 livres');
-      const notes = element.querySelectorAll('li.e-replique--assistant');
+      const notes = element.querySelectorAll('ol.thread .akari');
       expect(notes).toHaveLength(5);
       expect(clean(notes[4].textContent)).toContain("Relis ton brouillon. Change ce que tu veux avant de t'engager.");
     });
@@ -476,13 +476,34 @@ describe('NewObjective', () => {
     await setup();
     currentUser.set({ id: 'u1', name: '', email: 'lea@example.com' });
     fixture.detectChanges();
-    const authors = Array.from(element.querySelectorAll('.e-replique--personne > .e-replique__qui')).map((p) =>
-      clean(p.textContent),
-    );
+    const authors = Array.from(element.querySelectorAll('.answer > .who')).map((p) => clean(p.textContent));
     expect(authors).toEqual(['Toi', 'Toi', 'Toi', 'Toi']);
   });
 
-  it("parle dans la voix d'Empreinte, dans tous ses états", async () => {
+  describe("le titre venu de l'accueil (?titre=)", () => {
+    it('remplit le titre et le brouillon, sans encore rien enregistrer', async () => {
+      await setup(createStoreMock(), '  Courir un 10 km  ');
+      expect(titleInput().value).toBe('Courir un 10 km');
+      expect(clean(draftTitle().textContent)).toBe('Courir un 10 km');
+      expect(engageButton().disabled).toBe(false);
+      expect(store.createObjective).not.toHaveBeenCalled();
+    });
+
+    it("s'engage avec ce titre, qui reste modifiable", async () => {
+      await setup(createStoreMock(), 'Courir un 10 km');
+      write(titleInput(), 'Courir un semi-marathon');
+      await engage();
+      expect(store.createObjective).toHaveBeenCalledWith({ title: 'Courir un semi-marathon' });
+    });
+
+    it('laisse le brouillon vide pour un titre fait d’espaces', async () => {
+      await setup(createStoreMock(), '   ');
+      expect(titleInput().value).toBe('');
+      expect(clean(draftTitle().textContent)).toBe(NEW_OBJECTIVE_TEXTS.untitled);
+    });
+  });
+
+  it("parle dans la voix d'Apex, dans tous ses états", async () => {
     await setup();
     const texts: string[] = [];
     const collect = () => {

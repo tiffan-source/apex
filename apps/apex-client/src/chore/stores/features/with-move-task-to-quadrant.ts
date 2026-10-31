@@ -4,7 +4,7 @@ import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { tapResponse } from "@ngrx/operators";
 import { filter, from, map, mergeMap, pipe, tap } from "rxjs";
 import { EditMyTaskUsecase } from "@org/objective";
-import type { Quadrant } from "@empreinte-studio/angular/matrice";
+import type { Quadrant } from "../../../ui";
 import { ObjectiveState } from "../objective.store";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";

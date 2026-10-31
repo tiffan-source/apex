@@ -1,127 +1,155 @@
 /*
- * La coque d'Apex : la navigation d'un côté, la page de l'autre. Sous 760px,
- * la navigation passe en bandeau au-dessus de la page et ne garde que ses
- * icônes. Les entrées elles-mêmes (a[eLienNav], la corne de l'entrée
- * courante) et la marque (a[eMarque]) viennent d'Empreinte.
+ * La coque d'Apex : une navigation d'encre qui flotte à gauche, la page à droite. Sous 900px, la navigation
+ * devient un bandeau arrondi au-dessus de la page et ne garde que ses icônes.
  */
 
-/* Deux colonnes : la navigation (232px dans les maquettes) et la page. Un seul
-   seuil, 760px, fait passer la navigation en bandeau. */
-.shell {
+.app {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: 264px minmax(0, 1fr);
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--fond);
   color: var(--encre);
 }
 
-/* La navigation tient toute la hauteur de l'écran et y reste quand la page
-   défile : son filet trame va jusqu'en bas, et le bas de la navigation (la
-   personne, ses réglages) reste au pied de l'écran. Sur un écran trop bas
-   pour elle, elle défile seule. */
-.nav {
+/* La navigation reste à l'écran quand la page défile ; trop basse pour elle, elle défile seule. */
+.rail {
   position: sticky;
-  top: 0;
+  top: 16px;
   align-self: start;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 40px;
-  height: 100vh;
-  height: 100dvh;
+  gap: 28px;
+  height: calc(100vh - 32px);
+  height: calc(100dvh - 32px);
+  margin: 16px 0 16px 16px;
+  padding: 24px 14px 14px;
   overflow-y: auto;
-  padding: var(--pas-8) 20px var(--pas-6);
-  box-shadow: inset calc(-1 * var(--trait-fin)) 0 0 var(--trame);
+  border-radius: var(--r-xl);
+  background: var(--nocturne);
+  color: var(--sur-nocturne);
+  box-shadow: var(--ombre-3), inset 0 0 0 1px var(--nocturne-trait);
 }
 
-/* La marque, alignée sur le texte des entrées (qui ont un retrait de pas-3). */
-.brand {
-  padding: 0 var(--pas-3);
-}
-
-/* Les entrées, empilées ; chaque lien prend toute la largeur. */
-.links {
+.logo {
   display: flex;
-  flex-direction: column;
-  gap: var(--pas-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  color: var(--sur-nocturne);
+  text-decoration: none;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
-.links > li {
-  display: flex;
+.logo-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--sceau);
+  color: var(--sur-sceau);
+  box-shadow: var(--ombre-sceau);
 }
 
-/* Le bas de la navigation : la personne et ses réglages. */
-.nav-bottom {
-  margin-top: auto;
+.links { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+
+.link {
   display: flex;
-  flex-direction: column;
-  gap: var(--pas-4);
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  color: var(--nocturne-douce);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 160ms, color 160ms;
 }
+
+.link:hover { color: var(--sur-nocturne); background: rgba(255, 255, 255, 0.05); }
+.link[aria-current] { color: var(--sur-nocturne); background: rgba(255, 255, 255, 0.09); box-shadow: inset 0 0 0 1px var(--nocturne-trait); }
+.link-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.count { margin-left: auto; font: 500 12px/16px var(--mono); color: var(--nocturne-douce); }
+.link--objective .dot { background: var(--lumiere); }
+
+.group { display: flex; flex-direction: column; gap: 6px; }
+.group-title { margin: 0; padding: 0 12px; color: var(--nocturne-douce); }
+
+.nav-bottom { margin-top: auto; }
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px 2px 8px;
+  border-top: 1px solid var(--nocturne-trait);
+  padding-top: 14px;
+}
+
+.person .avatar { background: var(--sur-nocturne); color: var(--nocturne); }
+.who { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1 1 auto; min-width: 0; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.theme-name { color: var(--nocturne-douce); }
+
+.mobile-settings { display: none; }
 
 /* La page, à côté de la navigation. */
 .page {
   min-width: 0;
   box-sizing: border-box;
-  padding: var(--pas-12) 56px 72px;
+  padding: 28px 48px 72px;
 }
 
-/* Le contenu de la page : centré, 1120px au plus. */
+.page:focus { outline: none; }
+
+/* Le contenu de la page : centré, 1180px au plus. */
 .content {
-  max-width: 1120px;
+  max-width: 1180px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 24px;
 }
 
-/* Lien d'évitement « Aller au contenu », premier élément de la coque : hors de
-   l'écran tant qu'il n'a pas le focus, puis posé en haut à gauche sur un
-   panneau. (.e-masque d'Empreinte ne convient pas : il reste masqué même au
-   focus.) */
-.skip-link {
-  position: fixed;
-  inset-block-start: calc(-1 * var(--pas-16));
-  inset-inline-start: var(--pas-2);
-  z-index: 10;
-  padding: var(--pas-2) var(--pas-4);
-  background: var(--panneau);
-  color: var(--encre);
+/* La note d'Akari : ce qui n'a pas marché, et la solution. Jamais en rouge. */
+.note {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 16px 16px 20px;
 }
 
-.skip-link:focus {
-  inset-block-start: var(--pas-2);
-}
-
-/* La personne, en bas de la navigation : un retrait de pas-3 à gauche et à
-   droite l'aligne sur le texte des entrées de navigation. */
-.person {
-  padding-inline: var(--pas-3);
-}
-
-/* L'initiale de la personne (« L » à côté de « Léa ») : un carré de pas-8 sur
-   le fond creux, la lettre centrée. La lettre prend un des 8 styles
-   typographiques (class="voix") ; elle est décorative (aria-hidden), le nom
-   est écrit à côté. */
-.initial {
-  box-sizing: border-box;
+.note-mark {
+  flex: none;
   display: grid;
   place-items: center;
-  flex: none;
-  inline-size: var(--pas-8);
-  block-size: var(--pas-8);
-  background: var(--creux);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--nocturne);
 }
 
-/* Une page qui tient dans la fenêtre (la route le dit : data.fitsWindow, pour
-   Akari). Au-dessus de 1100px, la coque prend la hauteur de l'écran et la
-   passe à la page (.outlet, puis l'hôte du composant), moins ses marges et la
-   note d'Akari quand il y en a une : ce qui déborde défile dans les panneaux
-   de la page, pas dans la fenêtre. Sur une fenêtre très basse, la coque garde
-   32rem et la fenêtre défile. Sous 1100px, la page défile normalement. */
+.note-mark::after { content: ''; width: 10px; height: 10px; border-radius: 2px; background: var(--sceau); transform: rotate(45deg); }
+.note-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* Lien d'évitement « Aller au contenu » : hors de l'écran tant qu'il n'a pas le focus. */
+.skip-link {
+  position: fixed;
+  top: -64px;
+  left: 16px;
+  z-index: 20;
+}
+
+.skip-link:focus { top: 16px; }
+
+/* Une page qui tient dans la fenêtre (data.fitsWindow, pour Akari). Au-dessus de 1100px, la coque passe la
+   hauteur de l'écran à la page (.outlet, puis l'hôte du composant) : ce qui déborde défile dans les panneaux
+   de la page, pas dans la fenêtre. Sur une fenêtre très basse, la coque garde 32rem et la fenêtre défile. */
 @media (width > 1100px) {
   .fits-window {
     grid-template-rows: minmax(0, 1fr);
@@ -133,10 +161,9 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    padding-bottom: 28px;
   }
 
-  /* Un élément flexible centré par ses marges ne s'étire plus : la largeur
-     revient à 100% (1120px au plus). */
   .fits-window .content {
     flex: 1 1 auto;
     width: 100%;
@@ -151,54 +178,32 @@
   }
 }
 
-/* 760px : mobile */
-@media (max-width: 760px) {
-  /* Une seule colonne : le bandeau garde sa hauteur, la page prend le reste,
-     même quand elle est courte. */
-  .shell {
+/* 900px : la navigation passe en bandeau, au-dessus de la page. */
+@media (max-width: 900px) {
+  .app {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
   }
 
-  .page {
-    padding: var(--pas-6) var(--pas-4) var(--pas-12);
-  }
-
-  /* La navigation devient un bandeau, avec un filet trame dessous, qui part
-     avec la page quand elle défile. */
-  .nav {
-    position: static;
+  .rail {
+    position: sticky;
+    top: 8px;
+    z-index: 10;
     height: auto;
-    overflow-y: visible;
     flex-direction: row;
-    flex-wrap: wrap;
     align-items: center;
-    gap: var(--pas-2);
-    padding: var(--pas-3) var(--pas-4);
-    box-shadow: inset 0 calc(-1 * var(--trait-fin)) 0 var(--trame);
+    gap: 6px;
+    margin: 8px 8px 0;
+    padding: 8px 8px 8px 12px;
+    overflow: visible;
+    border-radius: var(--r-lg);
   }
 
-  .links {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .nav-bottom {
-    display: none;
-  }
-
-  /* Les entrées ne gardent que leur icône : le libellé n'est plus montré,
-     mais reste lu (nom du lien). */
-  .link {
-    gap: 0;
-  }
-
-  .link-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
+  .logo { padding: 0 6px 0 0; }
+  .links { flex-direction: row; }
+  .link { gap: 0; padding: 0 12px; }
+  .link-label, .count { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .group, .nav-bottom { display: none; }
+  .mobile-settings { display: flex; margin-left: auto; }
+  .page { padding: 20px 16px 56px; }
 }

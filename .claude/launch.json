@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "apex-client",
-      "runtimeExecutable": "/home/blackgenius/.nvm/versions/node/v24.22.0/bin/node",
-      "runtimeArgs": ["node_modules/nx/dist/bin/nx.js", "run", "apex-client:serve", "--excludeTaskDependencies", "--port=4200"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nx", "run", "apex-client:serve", "--excludeTaskDependencies", "--port=4200"],
       "port": 4200
     }
   ]

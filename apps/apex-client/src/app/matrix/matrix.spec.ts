@@ -5,9 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CdkDrag } from '@angular/cdk/drag-drop';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { motsAEviter } from '@empreinte-studio/angular/core';
-import { EMatrice, QUADRANTS, TITRES_QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
-import { EMenu } from '@empreinte-studio/angular/menu';
+import { AxFilters, AxMatrix, AxMenu, QUADRANTS, TITRES_QUADRANTS, lumiereDe, motsAEviter, type Quadrant } from '../../ui';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { filterMatrixByObjective, levelsForQuadrant, toMatrix } from '../../chore/mapper/matrix.mapper';
@@ -103,14 +101,14 @@ describe('Matrix', () => {
 
   const text = (node: Element | null | undefined) => (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
   const all = (selector: string) => Array.from(element.querySelectorAll<HTMLElement>(selector));
-  const repere = () => text(element.querySelector('header p.repere'));
+  const repere = () => text(element.querySelector('header p.label'));
   const quadrantSection = (quadrant: Quadrant) =>
-    all('section.e-quadrant').find((section) => text(section.querySelector('h3')) === TITRES_QUADRANTS[quadrant]);
+    all('ax-matrix section.quadrant').find((section) => text(section.querySelector('h3')) === TITRES_QUADRANTS[quadrant]);
   const taskLabels = (quadrant: Quadrant) => Array.from(quadrantSection(quadrant)?.querySelectorAll('label') ?? []).map(text);
   const checkbox = (taskId: string) => element.querySelector<HTMLInputElement>(`#matrix-task-${taskId}`);
   const label = (taskId: string) => element.querySelector<HTMLLabelElement>(`label[for="matrix-task-${taskId}"]`);
-  const filterButtons = () => all('e-filtres button');
-  const matriceInstance = () => fixture.debugElement.query(By.directive(EMatrice)).componentInstance as EMatrice<MatrixTaskViewModel>;
+  const filterButtons = () => all('ax-filters button');
+  const matriceInstance = () => fixture.debugElement.query(By.directive(AxMatrix)).componentInstance as AxMatrix<MatrixTaskViewModel>;
   const taskOf = (taskId: string): MatrixTaskViewModel => {
     const found = QUADRANTS.flatMap((quadrant) => store.matrix()[quadrant]).find((item) => item.id === taskId);
     if (!found) throw new Error(`Pas introuvable : ${taskId}`);
@@ -131,10 +129,11 @@ describe('Matrix', () => {
   describe('en-tête', () => {
     beforeEach(() => render());
 
-    it('donne la date du jour et le nombre de pas, puis le manifeste « La matrice »', () => {
+    it('donne la date du jour et le nombre de pas, puis le titre « La matrice » et sa ligne', () => {
       expect(repere()).toBe('Lundi 19 octobre · 5 pas');
-      expect(element.querySelector('header p.repere time')?.getAttribute('datetime')).toBe('2026-10-19');
-      expect(text(element.querySelector('h1.manifeste'))).toBe('La matrice');
+      expect(element.querySelector('header p.label time')?.getAttribute('datetime')).toBe('2026-10-19');
+      expect(text(element.querySelector('h1.display'))).toBe('La matrice');
+      expect(text(element.querySelector('header p.serif'))).toBe('Ce qui compte, avant ce qui presse.');
     });
 
     it('propose « Tous les objectifs » puis un filtre par objectif racine, au titre court', () => {
@@ -145,24 +144,41 @@ describe('Matrix', () => {
         'Guitare',
       ]);
       expect(filterButtons()[0].getAttribute('aria-pressed')).toBe('true');
-      expect(element.querySelector('e-filtres [aria-label="Filtrer par objectif"]')).not.toBeNull();
+      expect(element.querySelector('ax-filters[aria-label="Filtrer par objectif"]')).not.toBeNull();
+    });
+
+    it('donne à chaque filtre la lumière de son objectif', () => {
+      // jsdom ne garde pas un `background: var(…)` en ligne : on lit les options données à ax-filters.
+      const filters = fixture.debugElement.query(By.directive(AxFilters)).componentInstance as AxFilters<string>;
+      expect(filters.options().map((option) => option.lumiere)).toEqual(['o1', 'o2', 'o3'].map(lumiereDe));
+      expect(filterButtons().slice(1).every((button) => button.querySelector('.dot') !== null)).toBe(true);
+      expect(filterButtons()[0].querySelector('.dot')).toBeNull();
     });
   });
 
   describe('la matrice', () => {
     beforeEach(() => render());
 
-    it('pose les titres et les axes d’Empreinte, et compte les pas de chaque quadrant', () => {
-      expect(all('h3.e-quadrant__titre').map(text)).toEqual(['Maintenant', 'À planifier', 'À confier', 'À laisser filer']);
-      expect(all('.e-matrice__axe').map(text)).toEqual(['Urgent', 'Pas urgent', 'Important', 'Secondaire']);
-      expect(all('.e-quadrant__compte').map(text)).toEqual(['2 pas', '1 pas', '1 pas', '1 pas']);
+    it('pose les titres et les axes de la matrice, et compte les pas de chaque quadrant', () => {
+      expect(all('ax-matrix .quadrant h3').map(text)).toEqual(['Maintenant', 'À planifier', 'À confier', 'À laisser filer']);
+      expect(all('ax-matrix .axis').map(text)).toEqual(['Urgent', 'Pas urgent', 'Important', 'Secondaire']);
+      expect(all('ax-matrix .count').map(text)).toEqual(['2 pas', '1 pas', '1 pas', '1 pas']);
     });
 
-    it('met la corne et aria-current sur le seul quadrant « Maintenant »', () => {
-      const current = all('section.e-quadrant[aria-current="true"]');
+    it('pose le panneau d’encre et aria-current sur le seul quadrant « Maintenant »', () => {
+      const current = all('ax-matrix section.quadrant[aria-current="true"]');
       expect(current).toHaveLength(1);
       expect(text(current[0].querySelector('h3'))).toBe('Maintenant');
-      expect(current[0].classList.contains('e-corne')).toBe(true);
+      expect(current[0].classList.contains('nuit')).toBe(true);
+      expect(all('ax-matrix section.quadrant.nuit')).toHaveLength(1);
+    });
+
+    it('sur le panneau d’encre, les cases et les menus passent en clair', () => {
+      expect(checkbox('t1')?.classList.contains('check--nuit')).toBe(true);
+      expect(checkbox('t3')?.classList.contains('check--nuit')).toBe(false);
+      const trigger = (taskId: string) => label(taskId)?.closest('li')?.querySelector('ax-menu button');
+      expect(trigger('t1')?.classList.contains('btn--on-nuit')).toBe(true);
+      expect(trigger('t3')?.classList.contains('btn--ghost')).toBe(true);
     });
 
     it('range chaque pas avec sa case, son titre en label, et « objectif · étape » en détail', () => {
@@ -178,11 +194,18 @@ describe('Matrix', () => {
       expect(detailOf('t4')).toBe('Guitare');
     });
 
+    it('marque chaque pas de la lumière de son objectif racine', () => {
+      const dotOf = (taskId: string) => label(taskId)?.parentElement?.querySelector('.meta .dot');
+      expect(dotOf('t1')?.classList.contains(`l-${lumiereDe('o1')}`)).toBe(true);
+      expect(dotOf('t5')?.classList.contains(`l-${lumiereDe('o2')}`)).toBe(true);
+      expect(dotOf('t4')?.classList.contains(`l-${lumiereDe('o3')}`)).toBe(true);
+    });
+
     it('garde les pas faits visibles, cochés, le titre en encre douce', () => {
       expect(checkbox('t2')?.checked).toBe(true);
-      expect(label('t2')?.classList.contains('ds-muted')).toBe(true);
+      expect(label('t2')?.classList.contains('soft')).toBe(true);
       expect(checkbox('t1')?.checked).toBe(false);
-      expect(label('t1')?.classList.contains('ds-muted')).toBe(false);
+      expect(label('t1')?.classList.contains('soft')).toBe(false);
     });
 
     it('relie chaque case à son titre, qui offre la cible', () => {
@@ -201,25 +224,25 @@ describe('Matrix', () => {
     });
 
     it('un pas glissé vers un autre quadrant est déplacé par le store ; remis dans le même, rien ne part', () => {
-      matriceInstance().deplacement.emit({ element: taskOf('t1'), de: 'maintenant', vers: 'planifier', index: 0 });
+      matriceInstance().move.emit({ element: taskOf('t1'), de: 'maintenant', vers: 'planifier', index: 0 });
       expect(store.moveTaskToQuadrant).toHaveBeenCalledWith('t1', 'planifier');
 
       store.moveTaskToQuadrant.mockClear();
-      matriceInstance().deplacement.emit({ element: taskOf('t1'), de: 'maintenant', vers: 'maintenant', index: 1 });
+      matriceInstance().move.emit({ element: taskOf('t1'), de: 'maintenant', vers: 'maintenant', index: 1 });
       expect(store.moveTaskToQuadrant).not.toHaveBeenCalled();
     });
 
     it('chaque pas a un menu « Déplacer vers… » nommé, avec les trois autres quadrants', () => {
-      const menus = fixture.debugElement.queryAll(By.directive(EMenu));
+      const menus = fixture.debugElement.queryAll(By.directive(AxMenu));
       expect(menus).toHaveLength(5);
 
-      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('e-menu button');
+      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('ax-menu button');
       expect(trigger?.getAttribute('aria-label')).toBe('Déplacer « Sortie de 30 minutes en endurance » vers…');
 
       const entries = (taskId: string) => {
-        const host = label(taskId)?.closest('li')?.querySelector('e-menu');
-        const menu = menus.find((debug) => debug.nativeElement === host)?.componentInstance as EMenu<Quadrant>;
-        return menu.entrees().map((entry) => ('libelle' in entry ? entry.libelle : '—'));
+        const host = label(taskId)?.closest('li')?.querySelector('ax-menu');
+        const menu = menus.find((debug) => debug.nativeElement === host)?.componentInstance as AxMenu<Quadrant>;
+        return menu.items().map((entry) => ('libelle' in entry ? entry.libelle : '—'));
       };
       expect(entries('t1')).toEqual(['À planifier', 'À confier', 'À laisser filer']);
       expect(entries('t3')).toEqual(['Maintenant', 'À confier', 'À laisser filer']);
@@ -228,12 +251,12 @@ describe('Matrix', () => {
     });
 
     it('choisir un quadrant dans le menu y déplace le pas', async () => {
-      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('e-menu button');
+      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('ax-menu button');
       trigger?.click();
       fixture.detectChanges();
       await fixture.whenStable();
 
-      const items = Array.from(document.querySelectorAll<HTMLElement>('.e-menu__element'));
+      const items = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'));
       expect(items.map(text)).toEqual(['À planifier', 'À confier', 'À laisser filer']);
 
       items[1].click();
@@ -264,13 +287,13 @@ describe('Matrix', () => {
 
     it('après « Déplacer vers… », le focus revient sur la case du pas, dans son nouveau quadrant', async () => {
       await render(movingStore());
-      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('e-menu button');
+      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('ax-menu button');
       trigger?.focus();
       trigger?.click();
       fixture.detectChanges();
       await fixture.whenStable();
 
-      const items = Array.from(document.querySelectorAll<HTMLElement>('.e-menu__element'));
+      const items = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'));
       items[1].click(); // À confier
       fixture.detectChanges();
       await fixture.whenStable();
@@ -298,7 +321,7 @@ describe('Matrix', () => {
       expect(taskLabels('planifier')).toEqual([]);
       expect(taskLabels('laisser-filer')).toEqual(['Recopier mes fiches au propre']);
       expect(repere()).toBe('Lundi 19 octobre · 2 pas');
-      expect(all('.e-quadrant__compte').map(text)).toEqual(['1 pas', '0 pas', '0 pas', '1 pas']);
+      expect(all('ax-matrix .count').map(text)).toEqual(['1 pas', '0 pas', '0 pas', '1 pas']);
     });
 
     it('revient à tous les pas avec « Tous les objectifs »', () => {
@@ -356,9 +379,9 @@ describe('Matrix', () => {
       await render(createFakeStore([objective('o1', 'Licence')], []));
 
       expect(repere()).toBe('Lundi 19 octobre · 0 pas');
-      expect(all('.e-quadrant__compte').map(text)).toEqual(['0 pas', '0 pas', '0 pas', '0 pas']);
-      expect(all('.e-quadrant__element')).toHaveLength(0);
-      expect(text(element.querySelector('p.corps'))).toBe(
+      expect(all('ax-matrix .count').map(text)).toEqual(['0 pas', '0 pas', '0 pas', '0 pas']);
+      expect(all('ax-matrix li.element')).toHaveLength(0);
+      expect(text(element.querySelector('p.body'))).toBe(
         "Aucun pas pour l'instant. Ajoute des pas à tes objectifs : ils viennent se ranger ici.",
       );
       const link = element.querySelector<HTMLAnchorElement>('a[href="/"]');
@@ -367,26 +390,26 @@ describe('Matrix', () => {
 
     it('un seul objectif : pas de rangée de filtres, filtrer ne changerait rien', async () => {
       await render(createFakeStore([objective('o1', 'Licence')], [task('t1', 'Réviser', 'o1', 4, 4)]));
-      expect(element.querySelector('e-filtres')).toBeNull();
-      expect(element.querySelector('p.corps')).toBeNull();
+      expect(element.querySelector('ax-filters')).toBeNull();
+      expect(element.querySelector('p.body')).toBeNull();
     });
 
     it('tant que les objectifs ne sont pas chargés : une ligne d’état, ni invitation, ni « 0 pas » nulle part', async () => {
       const fake = createFakeStore([], []);
       fake.objectivesLoaded.set(false);
       await render(fake);
-      expect(element.querySelector('p.corps')).toBeNull();
-      expect(element.querySelector('e-filtres')).toBeNull();
+      expect(element.querySelector('p.body')).toBeNull();
+      expect(element.querySelector('ax-filters')).toBeNull();
       expect(repere()).toBe('Lundi 19 octobre');
-      expect(element.querySelector('e-matrice')).toBeNull();
+      expect(element.querySelector('ax-matrix')).toBeNull();
       expect(text(element.querySelector('[role="status"]'))).toBe('Chargement de tes pas…');
 
       // Le chargement aboutit, sans aucun pas : le compte, les quadrants et l'invitation arrivent.
       fake.objectivesLoaded.set(true);
       fixture.detectChanges();
       expect(repere()).toBe('Lundi 19 octobre · 0 pas');
-      expect(element.querySelector('p.corps')).not.toBeNull();
-      expect(all('.e-quadrant__compte').map(text)).toEqual(['0 pas', '0 pas', '0 pas', '0 pas']);
+      expect(element.querySelector('p.body')).not.toBeNull();
+      expect(all('ax-matrix .count').map(text)).toEqual(['0 pas', '0 pas', '0 pas', '0 pas']);
       expect(element.querySelector('[role="status"]')).toBeNull();
     });
 
@@ -398,12 +421,12 @@ describe('Matrix', () => {
       annonces.aUnSignalement.set(true);
       fixture.detectChanges();
       expect(element.querySelector('[role="status"]')).toBeNull();
-      expect(element.querySelector('e-matrice')).toBeNull();
-      expect(element.querySelector('p.corps')).toBeNull();
+      expect(element.querySelector('ax-matrix')).toBeNull();
+      expect(element.querySelector('p.body')).toBeNull();
 
       annonces.aUnSignalement.set(false); // « Compris »
       fixture.detectChanges();
-      expect(text(element.querySelector('p.corps'))).toBe('Tes pas ne sont pas chargés. Vérifie ta connexion, puis recharge la page.');
+      expect(text(element.querySelector('p.body'))).toBe('Tes pas ne sont pas chargés. Vérifie ta connexion, puis recharge la page.');
     });
 
     it('des pas déjà là comptent, même avant la fin du chargement', async () => {
@@ -415,7 +438,7 @@ describe('Matrix', () => {
   });
 
   describe('la voix', () => {
-    it('aucun texte de l’écran ne sort de la voix d’Empreinte', async () => {
+    it('aucun texte de l’écran ne sort de la voix d’Apex', async () => {
       await render();
       filterButtons()[2].click(); // l'annonce d'un filtre choisi
       fixture.detectChanges();

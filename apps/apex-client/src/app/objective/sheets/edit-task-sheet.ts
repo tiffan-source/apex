@@ -1,10 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { FormField, FormRoot, form } from '@angular/forms/signals';
-import { EBouton } from '@empreinte-studio/angular/bouton';
-import { EChamp, ESaisie } from '@empreinte-studio/angular/champ';
-import { EFeuille, EFeuilleActions } from '@empreinte-studio/angular/feuille';
-import { ESelection } from '@empreinte-studio/angular/selection';
+import { AxSheet, AxSheetActions, AxField, AxControl, AxSelect } from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { IMPORTANCE_OPTIONS, URGENCY_OPTIONS } from '../../../chore/constants/task.constante';
 import type { StageTaskViewModel } from '../../../chore/models/objective-detail.viewmodel';
@@ -30,7 +27,7 @@ export const TASK_TITLE_TO_SAVE_REQUIRED = "Écris ce pas en quelques mots pour 
  */
 @Component({
   selector: 'app-edit-task-sheet',
-  imports: [FormField, FormRoot, EFeuille, EFeuilleActions, EChamp, ESaisie, ESelection, EBouton],
+  imports: [FormField, FormRoot, AxSheet, AxSheetActions, AxField, AxControl, AxSelect],
   templateUrl: './edit-task-sheet.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

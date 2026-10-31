@@ -1,18 +1,19 @@
-<div class="ds-page">
-  <header class="ds-stack ds-gap-5">
-    <div class="ds-stack ds-gap-2">
-      <p class="repere ds-muted">
+<div class="page">
+  <header class="head rise">
+    <div class="intro">
+      <p class="label soft">
         <time [attr.datetime]="todayIso()">{{ todayLabel() }}</time>
         @if (loaded()) {
           · {{ taskCount() }}
         }
       </p>
-      <h1 class="manifeste ds-break">La matrice</h1>
+      <h1 class="display title">La matrice</h1>
+      <p class="serif soft line">Ce qui compte, avant ce qui presse.</p>
     </div>
     @if (showFilters()) {
-      <e-filtres
-        libelle="Filtrer par objectif"
-        [libelleTous]="allObjectives"
+      <ax-filters
+        label="Filtrer par objectif"
+        [allLabel]="allObjectives"
         [options]="filterOptions()"
         [selection]="activeFilter()"
         (selectionChange)="chooseFilter($event)"
@@ -21,57 +22,52 @@
   </header>
 
   @if (isEmpty()) {
-    <div class="ds-stack ds-gap-3">
-      <p class="corps ds-muted ds-measure">Aucun pas pour l'instant. Ajoute des pas à tes objectifs : ils viennent se ranger ici.</p>
-      <div class="ds-actions">
-        <a eBouton="trait" petit routerLink="/">Voir mes objectifs</a>
-      </div>
+    <div class="empty">
+      <p class="body soft">Aucun pas pour l'instant. Ajoute des pas à tes objectifs : ils viennent se ranger ici.</p>
+      <a class="btn btn--line btn--sm" routerLink="/">Voir mes objectifs</a>
     </div>
   }
 
   @if (loading()) {
-    <p class="detail ds-muted" role="status">Chargement de tes pas…</p>
+    <p class="small soft" role="status">Chargement de tes pas…</p>
   } @else if (loadFailedHint()) {
-    <p class="corps ds-measure">Tes pas ne sont pas chargés. Vérifie ta connexion, puis recharge la page.</p>
+    <p class="body">Tes pas ne sont pas chargés. Vérifie ta connexion, puis recharge la page.</p>
   }
 
-  <!-- Seulement une fois les pas connus : avant, e-matrice écrirait « 0 pas » dans chaque quadrant. -->
+  <!-- Seulement une fois les pas connus : avant, ax-matrix écrirait « 0 pas » dans chaque quadrant. -->
   @if (loaded()) {
-    <section aria-labelledby="matrix-title">
-      <h2 class="e-masque" id="matrix-title">Tes pas, par urgence et importance</h2>
-      <e-matrice
-        courant="maintenant"
-        [quadrants]="matrix()"
-        [piste]="trackById"
-        [unite]="taskUnit"
-        (deplacement)="move($event)"
-      >
-        <ng-template [eMatriceElement]="matrix()" let-task let-quadrant="quadrant">
-          <div class="ds-row ds-items-start task">
-            <div class="ds-check ds-grow">
-              <input
-                #box
-                type="checkbox"
-                eCase
-                [id]="checkboxId(task)"
-                [checked]="task.done"
-                (change)="toggle(task, box.checked)"
-              />
-              <label class="corps ds-break" [class.ds-muted]="task.done" [for]="checkboxId(task)">{{ task.title }}</label>
-              @if (taskDetail(task); as detail) {
-                <span class="detail ds-muted ds-break">{{ detail }}</span>
-              }
-            </div>
-            <e-menu
-              icone="deplacer"
-              petit
-              [libelle]="'Déplacer « ' + task.title + ' » vers…'"
-              [entrees]="moveTargets[quadrant]"
-              (choix)="moveTo(task, $event)"
+    <section class="rise" aria-labelledby="matrix-title" style="--d: 80ms">
+      <h2 class="sr-only" id="matrix-title">Tes pas, par urgence et importance</h2>
+      <ax-matrix current="maintenant" [quadrants]="matrix()" [track]="trackById" [unit]="taskUnit" [notes]="notes" (move)="move($event)">
+        <ng-template [axMatrixItem]="matrix()" let-task let-quadrant="quadrant" let-nuit="nuit">
+          <div class="task" [class.task--nuit]="nuit">
+            <input
+              #box
+              type="checkbox"
+              class="check"
+              [class.check--nuit]="nuit"
+              [id]="checkboxId(task)"
+              [checked]="task.done"
+              (change)="toggle(task, box.checked)"
             />
+            <label class="body name" [class.soft]="task.done" [for]="checkboxId(task)">{{ task.title }}</label>
+            <ax-menu
+              icon="deplacer"
+              small
+              [variant]="nuit ? 'on-nuit' : 'ghost'"
+              [label]="'Déplacer « ' + task.title + ' » vers…'"
+              [items]="moveTargets[quadrant]"
+              (choose)="moveTo(task, $event)"
+            />
+            @if (taskDetail(task); as detail) {
+              <span class="meta">
+                <span class="dot" [class]="'l-' + lumiereOf(task)" aria-hidden="true"></span>
+                <span class="small soft detail">{{ detail }}</span>
+              </span>
+            }
           </div>
         </ng-template>
-      </e-matrice>
+      </ax-matrix>
     </section>
   }
 </div>

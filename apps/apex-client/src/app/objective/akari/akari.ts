@@ -16,15 +16,14 @@ import {
 import { RouterLink } from '@angular/router';
 import {
   type ActionChoisie,
-  EArete,
-  EBouton,
-  EConversation,
-  EFilAriane,
-  EIcone,
-  ERepliqueContenu,
+  AxConversation,
+  AxIcon,
+  AxPath,
+  AxReplyContent,
+  type EtapeArete,
   type Replique,
   compter,
-} from '@empreinte-studio/angular';
+} from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../../chore/stores/annonces.store';
 import { CRUMB_TITLE_MAX, shortTitle } from '../../../chore/mapper/title.mapper';
@@ -81,7 +80,7 @@ export function stageInvitation(stageTitle: string): AkariInvitation {
 }
 
 /**
- * La demande d'accord d'Akari avant d'ajouter une étape ou un pas, dans la voix d'Empreinte.
+ * La demande d'accord d'Akari avant d'ajouter une étape ou un pas, dans la voix d'Apex.
  * `stageTitleOf` retrouve le nom de l'étape qui recevrait un pas.
  */
 export function permissionPrompt(
@@ -105,19 +104,21 @@ export function permissionPrompt(
   }
 }
 
+/** Une étape sur le chemin de la colonne de droite : son état et son nombre de pas en toutes lettres. */
+export type AkariPathStep = EtapeArete & { readonly id: string };
+
 /**
- * Akari pour un objectif (/objectifs/:id/akari) : la conversation avec Akari à gauche (e-conversation
- * d'Empreinte), l'arête de l'objectif à droite, qui se remplit quand la personne accepte une étape ou un pas.
- * La tête de l'arête est le seul sceau de l'écran.
+ * Akari pour un objectif (/objectifs/:id/akari) : la conversation avec Akari à gauche (ax-conversation du kit),
+ * le chemin de l'objectif à droite, qui se remplit quand la personne accepte une étape ou un pas.
  *
  * Au-dessus de 1100px, l'écran tient dans la fenêtre (data.fitsWindow de sa route, akari.css) : la conversation
  * défile à l'intérieur, s'ouvre sur ses dernières répliques et garde sa zone de réponse au pied. En dessous, elle
- * suit l'en-tête, et la page y descend à l'ouverture. Empreinte suit la fin de la conversation et rend le focus à
+ * suit l'en-tête, et la page y descend à l'ouverture. Le kit suit la fin de la conversation et rend le focus à
  * la zone de réponse quand un bouton d'une réplique disparaît.
  */
 @Component({
   selector: 'app-akari',
-  imports: [RouterLink, EArete, EBouton, EConversation, EFilAriane, EIcone, ERepliqueContenu, MarkdownPipe],
+  imports: [RouterLink, AxConversation, AxIcon, AxPath, AxReplyContent, MarkdownPipe],
   templateUrl: './akari.html',
   styleUrl: './akari.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -135,15 +136,15 @@ export class Akari {
   private readonly session = inject(SessionStore);
   private readonly document = inject(DOCUMENT);
 
-  /** La conversation d'Empreinte, amenée à l'écran à l'ouverture quand elle suit l'en-tête (une seule colonne). */
-  private readonly conversation = viewChild(EConversation, { read: ElementRef });
+  /** La conversation, amenée à l'écran à l'ouverture quand elle suit l'en-tête (une seule colonne). */
+  private readonly conversation = viewChild(AxConversation, { read: ElementRef });
 
   /** Un objectif racine connu : une étape n'a pas de conversation à elle. */
   private readonly known = computed(() => this.objectives.objectiveOptions().some((option) => option.valeur === this.id()));
 
   protected readonly detail = computed(() => (this.known() ? this.objectives.objectiveDetail(this.id()) : undefined));
 
-  /** Le titre de l'objectif dans le fil d'Ariane, coupé comme sur l'arête. */
+  /** Le titre de l'objectif dans le lien de retour, coupé comme sur l'arête. */
   protected readonly crumb = computed(() => shortTitle(this.detail()?.objective.title ?? '', CRUMB_TITLE_MAX));
 
   /** Les objectifs sont chargés (objectivesLoaded), et celui-ci n'en fait pas partie. */
@@ -164,31 +165,32 @@ export class Akari {
     return stageId ? this.detail()?.stages.find((stage) => stage.id === stageId) : undefined;
   });
 
-  /** « Jusqu'en mai · 4 étapes · 13 pas » */
-  protected readonly summary = computed(() => {
-    const detail = this.detail();
-    if (!detail) return '';
-    const stages = detail.stages.length;
-    const tasks = detail.taskCount.total;
-    return [
-      detail.objective.horizon,
-      stages ? compter(stages, 'étape') : '',
-      tasks ? compter(tasks, 'pas', 'pas') : '',
-    ]
-      .filter(Boolean)
-      .join(' · ');
+  /** « 3/7 pas » en tête du chemin, ou vide sans pas. */
+  protected readonly tally = computed(() => {
+    const count = this.detail()?.taskCount;
+    return count?.total ? `${count.done}/${compter(count.total, 'pas', 'pas')}` : '';
   });
 
-  /** Les étapes de la colonne de droite : numéro, nom, nombre de pas, état. */
-  protected readonly stageRows = computed(() =>
+  /** Le chemin de droite : chaque étape, son état et son nombre de pas (« En cours · 2 pas »). */
+  protected readonly pathSteps = computed<AkariPathStep[]>(() =>
     (this.detail()?.stages ?? []).map((stage) => ({
       id: stage.id,
-      index: stage.index,
-      title: stageName(stage.title),
-      taskCount: compter(stage.tasks.length, 'pas', 'pas'),
-      state: [STAGE_STATE_TITLES[stage.state], stage.horizon].filter(Boolean).join(' · '),
+      nom: stageName(stage.title),
+      etat: stage.state,
+      detail: [STAGE_STATE_TITLES[stage.state], compter(stage.tasks.length, 'pas', 'pas'), stage.horizon].filter(Boolean).join(' · '),
     })),
   );
+
+  /**
+   * Les débuts de réponse sous la zone de réponse. Avec une étape (?etape, sinon celle en cours), Akari peut
+   * la découper ; sans étape, il en propose.
+   */
+  protected readonly suggestions = computed(() => {
+    const detail = this.detail();
+    const stage = this.stage() ?? detail?.stages.find((candidate) => candidate.state === 'en-cours');
+    const first = stage ? `Découpe l'étape « ${stageName(stage.title)} »` : 'Propose des étapes';
+    return [first, 'Propose des pas', "Qu'est-ce qui bloque ?"];
+  });
 
   /** « 2 pas sans étape », ou vide. */
   protected readonly looseTasks = computed(() => {
@@ -331,7 +333,7 @@ export class Akari {
     });
   }
 
-  /** La personne envoie un message (Empreinte l'a nettoyé et vide la zone de réponse). */
+  /** La personne envoie un message, ou choisit un début de réponse (le kit l'a nettoyé et vide la zone de réponse). */
   protected say(text: string): void {
     const message = text.trim();
     if (!message || !this.ready()) return;

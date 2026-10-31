@@ -1,14 +1,15 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
-import { EIcone, motsAEviter } from '@empreinte-studio/angular';
+import { Router, provideRouter } from '@angular/router';
+import { AxIcon, motsAEviter } from '../../ui';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
+import { SessionStore } from '../../chore/stores/session.store';
 import { voiceIssues } from '../../chore/constants/messages.constante';
 import type { ObjectiveCardViewModel } from '../../chore/models/objective-card.viewmodel';
 import { TODAY_CHECK_INTERVAL, formatToday } from '../../chore/clock/today';
-import { Objectives, cardProgress } from './objectives';
+import { Objectives, cardProgress, greetingWord } from './objectives';
 
 /** Une carte d'objectif, à compléter selon le cas. */
 function card(overrides: Partial<ObjectiveCardViewModel> = {}): ObjectiveCardViewModel {
@@ -61,6 +62,7 @@ describe('Objectives', () => {
   let annonces: ReturnType<typeof createAnnonces>;
   let fixture: ComponentFixture<Objectives>;
   let element: HTMLElement;
+  let navigate: ReturnType<typeof vi.fn>;
 
   const render = () => {
     fixture.detectChanges();
@@ -79,40 +81,49 @@ describe('Objectives', () => {
         provideRouter([]),
         { provide: ObjectiveStore, useValue: store },
         { provide: AnnoncesStore, useValue: annonces },
+        { provide: SessionStore, useValue: { currentUser: signal({ id: 'u-1', name: 'Léa Martin', email: 'lea@exemple.fr' }) } },
       ],
     }).compileComponents();
 
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(Objectives);
     element = fixture.nativeElement as HTMLElement;
   });
 
-  describe('en-tête', () => {
-    it('dit la date du jour, le manifeste et ce qui est en marche et accompli', () => {
+  describe('le panneau d’encre', () => {
+    it('dit la date du jour, salue la personne par son prénom et dit ce qui avance', () => {
       store.objectivesLoaded.set(true);
       store.objectiveCards.set([card(), card({ id: 'licence', title: 'Valider ma première année' })]);
       store.accomplishedObjectives.set([ACCOMPLISHED]);
       render();
 
-      expect(text('header .repere')).toBe(formatToday(new Date()));
-      expect(text('h1.manifeste')).toBe('Mes objectifs');
-      expect(text('header .detail')).toBe('2 en marche · 1 accompli');
+      expect(text('.hero time')).toBe(formatToday(new Date()));
+      expect(text('.hero h1')).toBe(`${greetingWord(new Date().getHours())}, Léa.`);
+      expect(text('.hero-line')).toBe("2 objectifs avancent. Un pas t'attend.");
+    });
+
+    it('dit « Bonjour » le jour et « Bonsoir » à partir de 18 h', () => {
+      expect(greetingWord(9)).toBe('Bonjour');
+      expect(greetingWord(17)).toBe('Bonjour');
+      expect(greetingWord(18)).toBe('Bonsoir');
+      expect(greetingWord(2)).toBe('Bonsoir');
     });
 
     it('passe au jour suivant à minuit, même si l’écran reste ouvert, et arrête de vérifier en partant', () => {
-      fixture.destroy(); // un seul écran à la fois (et un seul sceau)
+      fixture.destroy();
       vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
       try {
         vi.setSystemTime(new Date(2026, 9, 19, 23, 59, 30));
         const late = TestBed.createComponent(Objectives);
         late.detectChanges();
-        const repere = () => (late.nativeElement as HTMLElement).querySelector('header .repere time') as HTMLTimeElement;
-        expect(repere().textContent?.trim()).toBe('Lundi 19 octobre');
+        const time = () => (late.nativeElement as HTMLElement).querySelector('.hero time') as HTMLTimeElement;
+        expect(time().textContent?.trim()).toBe('Lundi 19 octobre');
         expect(vi.getTimerCount()).toBe(1);
 
         vi.advanceTimersByTime(TODAY_CHECK_INTERVAL);
         late.detectChanges();
-        expect(repere().textContent?.trim()).toBe('Mardi 20 octobre');
-        expect(repere().getAttribute('datetime')).toBe('2026-10-20');
+        expect(time().textContent?.trim()).toBe('Mardi 20 octobre');
+        expect(time().getAttribute('datetime')).toBe('2026-10-20');
 
         late.destroy();
         expect(vi.getTimerCount()).toBe(0);
@@ -126,58 +137,91 @@ describe('Objectives', () => {
       expect(formatToday(new Date(2026, 9, 21))).toBe('Mercredi 21 octobre');
     });
 
-    it('accorde le compte des accomplis et omet ce qui vaut zéro', () => {
+    it('met en avant le premier prochain pas, à cocher, avec son objectif et son étape', () => {
       store.objectivesLoaded.set(true);
-      store.accomplishedObjectives.set([ACCOMPLISHED, { ...ACCOMPLISHED, id: 'permis' }]);
+      store.objectiveCards.set([card({ nextTask: null }), card({ id: 'licence', title: 'Valider ma première année', nextTask: { id: 't9', title: 'Relire le chapitre 3', done: false } })]);
       render();
-      expect(text('header .detail')).toBe('2 accomplis');
+
+      const box = element.querySelector('.hero input[type=checkbox]') as HTMLInputElement;
+      expect(box.id).toBe('focus-t9');
+      expect(text(`label[for="${box.id}"]`)).toBe('Relire le chapitre 3');
+      expect(text('.next-text .small')).toBe('Valider ma première année · Endurance');
+      expect(element.querySelector('.next a')?.getAttribute('href')).toBe('/objectifs/licence');
+
+      box.click();
+      expect(store.updateTaskDone).toHaveBeenCalledWith({ taskId: 't9', done: true });
     });
 
-    it('porte un seul sceau, « Nouvel objectif », qui mène au nouvel objectif', () => {
+    it('coché depuis le panneau, le focus passe au nouveau prochain pas du panneau', async () => {
       store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
-      store.accomplishedObjectives.set([ACCOMPLISHED]);
+      store.updateTaskDone.mockImplementation(() =>
+        store.objectiveCards.set([card({ nextTask: { id: 't2', title: 'Courir 8 km', done: false } })]),
+      );
       render();
 
-      const seals = element.querySelectorAll('.e-btn--sceau');
-      expect(seals).toHaveLength(1);
-      expect(seals[0].textContent?.trim()).toBe('Nouvel objectif');
-      expect(seals[0].getAttribute('href')).toBe('/objectifs/nouveau');
+      const checked = element.querySelector('#focus-t1') as HTMLInputElement;
+      checked.focus();
+      checked.click();
+      render();
+      await fixture.whenStable();
+      expect(document.activeElement).toBe(element.querySelector('#focus-t2'));
+    });
+
+    it('trace un anneau par objectif qui a des pas, nommé par le total', () => {
+      store.objectivesLoaded.set(true);
+      store.objectiveCards.set([
+        card(),
+        card({ id: 'b', title: 'Lire 12 livres', taskCount: { done: 3, total: 4 } }),
+        card({ id: 'c', title: 'Sans pas', taskCount: { done: 0, total: 0 }, nextTask: null }),
+      ]);
+      render();
+
+      const rings = element.querySelector('ax-rings') as HTMLElement;
+      expect(rings.getAttribute('aria-label')).toBe('12 pas faits sur 24');
+      expect(rings.querySelectorAll('circle.arc')).toHaveLength(2);
+      expect(texts('.legend .legend-name')).toEqual(['Courir un semi-marathon en mai', 'Lire 12 livres']);
+    });
+
+    it('mène au nouvel objectif par « Nouvel objectif »', () => {
+      store.objectivesLoaded.set(true);
+      store.objectiveCards.set([card()]);
+      render();
+      const link = [...element.querySelectorAll('a')].find((a) => a.textContent?.trim() === 'Nouvel objectif');
+      expect(link?.getAttribute('href')).toBe('/objectifs/nouveau');
     });
   });
 
   describe('cartes des objectifs en marche', () => {
-    it('montre l’horizon, le nom lié à la carte, le pourquoi entre « » et la progression par étapes', () => {
+    it('montre l’horizon, le nom lié à la carte, le pourquoi et la progression par étapes', () => {
       store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       render();
 
-      const article = element.querySelector('article.e-carte') as HTMLElement;
+      const article = element.querySelector('article.obj') as HTMLElement;
       expect(article).toBeTruthy();
-      // Un seul filet entre deux cartes : la trame sait que ses enfants dessinent déjà le leur.
       expect(article.parentElement?.classList).toContain('cards');
-      expect(article.parentElement?.classList).toContain('ds-panels');
-      expect(article.classList.contains('e-carte--marquee')).toBe(false);
-      const title = article.querySelector('h2.objectif') as HTMLElement;
+      const title = article.querySelector('h3') as HTMLElement;
       expect(title.textContent?.trim()).toBe('Courir un semi-marathon en mai');
       expect(article.getAttribute('aria-labelledby')).toBe(title.id);
       expect(article.textContent).toContain("Jusqu'en mai");
-      expect(text('article .voix')).toBe('« Pour me prouver que je peux tenir quelque chose sur six mois. »');
-      expect(text('article .e-pas__legende')).toBe('2 étapes faites · Endurance en cours');
+      expect(text('article .obj-why')).toBe('Pour me prouver que je peux tenir quelque chose sur six mois.');
+      expect(text('article .obj-legend .small')).toBe('Étape 3 · Endurance');
+      expect(article.querySelector('ax-steps')?.getAttribute('aria-label')).toBe('2 étapes faites, 1 en cours, 3 à venir');
+      expect(article.querySelector('.tile')?.className).toMatch(/l-(ciel|fjord|soleil|aube)/);
     });
 
-    it('offre le prochain pas avec sa case, et « Ouvrir » vers l’arête', () => {
+    it('offre le prochain pas avec sa case, et « Ouvrir » vers l’objectif', () => {
       store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       render();
 
-      const box = element.querySelector('input[type=checkbox]') as HTMLInputElement;
-      expect(box.classList.contains('e-case')).toBe(true);
+      const box = element.querySelector('article input[type=checkbox]') as HTMLInputElement;
+      expect(box.classList.contains('check')).toBe(true);
       expect(text(`label[for="${box.id}"]`)).toBe('Sortie de 30 minutes en endurance');
       expect(text(`#${box.getAttribute('aria-describedby')}`)).toBe('Prochain pas');
       const open = [...element.querySelectorAll('article a')].find((a) => a.textContent?.trim() === 'Ouvrir');
       expect(open?.getAttribute('href')).toBe('/objectifs/semi');
-      // « Ouvrir » dit quel objectif il ouvre.
       expect(text(`#${open?.getAttribute('aria-describedby')}`)).toBe('Courir un semi-marathon en mai');
     });
 
@@ -186,7 +230,7 @@ describe('Objectives', () => {
       store.objectiveCards.set([card()]);
       render();
 
-      (element.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+      (element.querySelector('#prochain-pas-t1') as HTMLInputElement).click();
       expect(store.updateTaskDone).toHaveBeenCalledWith({ taskId: 't1', done: true });
     });
 
@@ -198,10 +242,10 @@ describe('Objectives', () => {
       );
       render();
 
-      (element.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+      (element.querySelector('#prochain-pas-t1') as HTMLInputElement).click();
       render();
 
-      const box = element.querySelector('input[type=checkbox]') as HTMLInputElement;
+      const box = element.querySelector('article input[type=checkbox]') as HTMLInputElement;
       expect(box.id).toBe('prochain-pas-t2');
       expect(box.checked).toBe(false);
       expect(text(`label[for="${box.id}"]`)).toBe('Courir 8 km');
@@ -221,7 +265,6 @@ describe('Objectives', () => {
       render();
       await fixture.whenStable();
 
-      // La case cochée a disparu : le focus n'est pas tombé sur la page.
       expect(checked.isConnected).toBe(false);
       expect(document.activeElement).toBe(element.querySelector('#prochain-pas-t2'));
     });
@@ -239,7 +282,6 @@ describe('Objectives', () => {
       await fixture.whenStable();
 
       expect(document.activeElement).toBe(element.querySelector('#ouvrir-semi'));
-      expect(document.activeElement?.textContent?.trim()).toBe('Ouvrir');
     });
 
     it('le dernier pas coché range la carte dans « Accomplis » : le focus va au résumé de la liste', async () => {
@@ -268,13 +310,13 @@ describe('Objectives', () => {
       );
       render();
 
-      const seal = element.querySelector('.e-btn--sceau') as HTMLElement;
+      const elsewhere = [...element.querySelectorAll<HTMLElement>('a')].find((a) => a.textContent?.trim() === 'Nouvel objectif') as HTMLElement;
       (element.querySelector('#prochain-pas-t1') as HTMLInputElement).click();
-      seal.focus();
+      elsewhere.focus();
       render();
       await fixture.whenStable();
 
-      expect(document.activeElement).toBe(seal);
+      expect(document.activeElement).toBe(elsewhere);
     });
 
     it('sans étape, la progression se lit par pas', () => {
@@ -283,7 +325,7 @@ describe('Objectives', () => {
         card({ stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 1, total: 3 } }),
       ]);
       render();
-      expect(text('article .e-pas__legende')).toBe('1 pas fait · 2 à venir');
+      expect(text('article .obj-legend .small')).toBe('1 pas fait · 2 à venir');
     });
 
     it('au-delà de 12 étapes, la légende se lit seule, sans barre', () => {
@@ -292,8 +334,8 @@ describe('Objectives', () => {
         card({ stageCount: 14, stageProgress: { done: 3, inProgress: true, upcoming: 10, inProgressName: 'Endurance' } }),
       ]);
       render();
-      expect(element.querySelector('e-pas')).toBeNull();
-      expect(text('article > p.detail')).toBe('3 étapes faites · Endurance en cours');
+      expect(element.querySelector('article ax-steps')).toBeNull();
+      expect(text('article .obj-progress p')).toBe('3 étapes faites · Endurance en cours');
     });
 
     it('sans étape ni pas, invite à poser la première étape', () => {
@@ -308,10 +350,8 @@ describe('Objectives', () => {
       ]);
       render();
 
-      expect(element.querySelector('e-pas')).toBeNull();
-      expect(element.querySelector('article')?.textContent).toContain(
-        "Aucune étape pour l'instant. Pose la première quand tu veux.",
-      );
+      expect(element.querySelector('article ax-steps')).toBeNull();
+      expect(element.querySelector('article')?.textContent).toContain("Aucune étape pour l'instant. Pose la première quand tu veux.");
       expect(element.querySelector('input[type=checkbox]')).toBeNull();
     });
 
@@ -327,46 +367,56 @@ describe('Objectives', () => {
     });
   });
 
-  describe('état vide et chargement', () => {
-    it('tant que les objectifs ne sont pas chargés (chargement en cours, ou qui n’a pas abouti), rien ne dit « vide »', () => {
+  describe('premier lancement et chargement', () => {
+    it('tant que les objectifs ne sont pas chargés, rien ne dit « vide »', () => {
       render();
-      expect(element.querySelector('aside.e-note')).toBeNull();
+      expect(element.querySelector('.welcome')).toBeNull();
       expect(element.querySelector('article')).toBeNull();
-      expect(element.querySelector('header .detail')).toBeNull();
-      expect(text('h1')).toBe('Mes objectifs');
+      expect(element.querySelector('.hero-line')).toBeNull();
     });
 
     it('une fois chargé, sans objectif en marche, Akari demande ce que tu veux construire', () => {
       store.objectivesLoaded.set(true);
       render();
 
-      const note = element.querySelector('aside.e-note') as HTMLElement;
-      expect(note).toBeTruthy();
-      expect(note.querySelector('.e-note__qui')?.textContent).toContain('Akari');
-      expect(note.textContent).toContain("Qu'est-ce que tu veux construire ?");
-      const start = note.querySelector('a') as HTMLAnchorElement;
-      expect(start.getAttribute('href')).toBe('/objectifs/nouveau');
-      expect(start.classList.contains('e-btn--trait')).toBe(true);
-      expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(1);
+      const welcome = element.querySelector('.welcome') as HTMLElement;
+      expect(welcome).toBeTruthy();
+      expect(welcome.querySelector('.chip')?.textContent).toContain('Akari');
+      expect(text('.welcome h1')).toBe("Qu'est-ce que tu veux construire ?");
+      expect(element.querySelector('.hero')).toBeNull();
+      expect(texts('.trio h3')).toEqual(['Un objectif', 'Des étapes', 'Des pas']);
     });
 
-    it('né après le chargement, l’écran le sait tout de suite', () => {
-      // La personne revient à l'accueil : les objectifs sont chargés depuis longtemps, quoi qu'aient dit les
-      // écritures depuis (requestStatus est partagé ; objectivesLoaded, lui, ne bouge pas avec elles).
+    it('le premier objectif s’écrit tout de suite et ouvre le nouvel objectif avec ce titre', () => {
       store.objectivesLoaded.set(true);
       render();
-      expect(element.querySelector('aside.e-note')?.textContent).toContain("Qu'est-ce que tu veux construire ?");
+
+      const input = element.querySelector('#premier-objectif') as HTMLInputElement;
+      input.value = '  Apprendre le piano  ';
+      (element.querySelector('.composer') as HTMLFormElement).dispatchEvent(new Event('submit'));
+      expect(navigate).toHaveBeenCalledWith(['/objectifs/nouveau'], { queryParams: { titre: 'Apprendre le piano' } });
+
+      const idea = [...element.querySelectorAll<HTMLButtonElement>('.idea')].find((b) => b.textContent?.trim() === 'Courir un 10 km');
+      idea?.click();
+      expect(navigate).toHaveBeenCalledWith(['/objectifs/nouveau'], { queryParams: { titre: 'Courir un 10 km' } });
+    });
+
+    it('sans titre, ouvre le nouvel objectif vide', () => {
+      store.objectivesLoaded.set(true);
+      render();
+      (element.querySelector('.composer') as HTMLFormElement).dispatchEvent(new Event('submit'));
+      expect(navigate).toHaveBeenCalledWith(['/objectifs/nouveau'], {});
     });
 
     it('tant que la coque affiche un signalement, Akari ne pose pas sa question : une note à la fois', () => {
       store.objectivesLoaded.set(true);
       annonces.aUnSignalement.set(true);
       render();
-      expect(element.querySelector('aside.e-note')).toBeNull();
+      expect(element.querySelector('.welcome')).toBeNull();
 
-      annonces.aUnSignalement.set(false); // « Compris »
+      annonces.aUnSignalement.set(false);
       render();
-      expect(element.querySelector('aside.e-note')).toBeTruthy();
+      expect(element.querySelector('.welcome')).toBeTruthy();
     });
 
     it('pendant le premier chargement, l’écran le dit dans une ligne d’état', () => {
@@ -383,22 +433,20 @@ describe('Objectives', () => {
       store.error.set("Je n'ai pas pu charger tes objectifs. Vérifie ta connexion, puis recharge la page.");
       annonces.aUnSignalement.set(true);
       render();
-      // La note de la coque explique : ni « Chargement… », ni une seconde phrase.
       expect(element.querySelector('[role="status"]')).toBeNull();
-      expect(element.querySelector('p.corps')).toBeNull();
-      expect(text('h1')).toBe('Mes objectifs');
+      expect(element.textContent).not.toContain('Tes objectifs ne sont pas chargés');
 
-      annonces.aUnSignalement.set(false); // « Compris »
+      annonces.aUnSignalement.set(false);
       render();
-      expect(text('p.corps')).toBe('Tes objectifs ne sont pas chargés. Vérifie ta connexion, puis recharge la page.');
-      expect(element.querySelector('aside.e-note')).toBeNull();
+      expect(element.textContent).toContain('Tes objectifs ne sont pas chargés. Vérifie ta connexion, puis recharge la page.');
+      expect(element.querySelector('.welcome')).toBeNull();
     });
 
     it('des objectifs arrivés avant la fin du chargement s’affichent quand même', () => {
       store.objectiveCards.set([card()]);
       render();
       expect(element.querySelectorAll('article')).toHaveLength(1);
-      expect(element.querySelector('aside.e-note')).toBeNull();
+      expect(element.querySelector('.welcome')).toBeNull();
     });
   });
 
@@ -409,35 +457,41 @@ describe('Objectives', () => {
       store.accomplishedObjectives.set([ACCOMPLISHED]);
     });
 
-    it('est replié sous la grille, avec le compte', () => {
+    it('est replié sous les cartes, avec le compte', () => {
       render();
       const details = element.querySelector('details') as HTMLDetailsElement;
       expect(details.open).toBe(false);
-      expect(details.compareDocumentPosition(element.querySelector('.ds-panels') as Node) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+      expect(details.compareDocumentPosition(element.querySelector('.cards') as Node) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
       expect(texts('summary span')).toEqual(['Accomplis', '1']);
     });
 
-    it('chaque ligne porte la petite empreinte, « Accompli » et un lien vers l’objectif', () => {
+    it('chaque ligne porte l’empreinte, « Accompli » et un lien vers l’objectif', () => {
       render();
       const row = element.querySelector('details li') as HTMLElement;
-      expect(row.querySelector('e-empreinte')).toBeTruthy();
+      expect(row.querySelector('.seal')).toBeTruthy();
       expect(row.textContent).toContain("M'installer dans mon studio");
       expect(row.textContent).toContain('Accompli');
       expect(row.querySelector('a')?.getAttribute('href')).toBe('/objectifs/studio');
-      expect(element.textContent).not.toMatch(/laiss[ée] filer/i);
     });
 
     it('se déplie et change de chevron', () => {
       render();
-      const chevron = () => fixture.debugElement.query(By.css('summary')).query(By.directive(EIcone)).componentInstance as EIcone;
-      expect(chevron().nom()).toBe('chevron-droite');
+      const chevron = () => fixture.debugElement.query(By.css('summary')).query(By.directive(AxIcon)).componentInstance as AxIcon;
+      expect(chevron().name()).toBe('chevron-droite');
 
       const details = element.querySelector('details') as HTMLDetailsElement;
       details.open = true;
       details.dispatchEvent(new Event('toggle'));
       render();
 
-      expect(chevron().nom()).toBe('chevron-bas');
+      expect(chevron().name()).toBe('chevron-bas');
+    });
+
+    it('reste visible sous le premier lancement quand tout est accompli', () => {
+      store.objectiveCards.set([]);
+      render();
+      expect(element.querySelector('.welcome')).toBeTruthy();
+      expect(element.querySelector('details')).toBeTruthy();
     });
 
     it('n’apparaît pas sans objectif accompli', () => {
@@ -448,20 +502,21 @@ describe('Objectives', () => {
   });
 
   describe('voix', () => {
-    it('tous les textes de l’écran parlent comme Empreinte', () => {
+    it('tous les textes de l’écran parlent comme Apex', () => {
       const seen: string[] = [];
       const collect = () => {
         render();
         seen.push(element.textContent ?? '');
         for (const node of element.querySelectorAll('[aria-label]')) seen.push(node.getAttribute('aria-label') ?? '');
+        for (const node of element.querySelectorAll('[placeholder]')) seen.push(node.getAttribute('placeholder') ?? '');
       };
 
-      collect(); // premier chargement
+      collect();
       store.error.set('chargement non abouti');
-      collect(); // chargement qui n'a pas abouti, note lue
+      collect();
       store.error.set(null);
       store.objectivesLoaded.set(true);
-      collect(); // vide
+      collect();
       store.objectiveCards.set([
         card(),
         card({ id: 'b', stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 2, total: 5 } }),
@@ -471,7 +526,7 @@ describe('Objectives', () => {
         card({ id: 'temp-id-9', nextTask: null }),
       ]);
       store.accomplishedObjectives.set([ACCOMPLISHED]);
-      collect(); // plein
+      collect();
 
       for (const value of seen) {
         expect(motsAEviter(value)).toEqual([]);

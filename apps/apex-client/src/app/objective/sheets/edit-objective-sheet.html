@@ -1,20 +1,20 @@
-<e-feuille titre="Modifier l'objectif">
+<ax-sheet title="Modifier l'objectif">
   <form class="ds-stack" id="feuille-objectif" [formRoot]="fields">
-    <e-champ libelle="Ce que tu veux construire">
-      <input eSaisie autocomplete="off" [formField]="fields.title" />
-    </e-champ>
-    <e-champ libelle="En quelques mots" facultatif>
-      <textarea eSaisie tailleAuto [lignesMin]="2" [lignesMax]="6" [formField]="fields.description"></textarea>
-    </e-champ>
-    <e-champ libelle="Pourquoi ça compte pour toi" facultatif>
-      <textarea eSaisie tailleAuto [lignesMin]="2" [lignesMax]="6" [formField]="fields.why"></textarea>
-    </e-champ>
-    <e-champ libelle="Pour quand" [facultatif]="dueDateOptional" aide="Une date, même approximative. L'horizon se lit au mois.">
-      <input eSaisie type="date" [formField]="fields.dueDate" />
-    </e-champ>
+    <ax-field label="Ce que tu veux construire">
+      <input axControl autocomplete="off" [formField]="fields.title" />
+    </ax-field>
+    <ax-field label="En quelques mots" optional>
+      <textarea axControl cdkTextareaAutosize [cdkAutosizeMinRows]="2" [cdkAutosizeMaxRows]="6" [formField]="fields.description"></textarea>
+    </ax-field>
+    <ax-field label="Pourquoi ça compte pour toi" optional>
+      <textarea axControl cdkTextareaAutosize [cdkAutosizeMinRows]="2" [cdkAutosizeMaxRows]="6" [formField]="fields.why"></textarea>
+    </ax-field>
+    <ax-field label="Pour quand" [optional]="dueDateOptional" hint="Une date, même approximative. L'horizon se lit au mois.">
+      <input axControl type="date" [formField]="fields.dueDate" />
+    </ax-field>
   </form>
-  <div eFeuilleActions>
-    <button eBouton="trait" type="submit" form="feuille-objectif">Enregistrer</button>
-    <button eBouton="nu" type="button" (click)="ref.close()">Annuler</button>
+  <div axSheetActions>
+    <button class="btn btn--ghost" type="button" (click)="ref.close()">Annuler</button>
+    <button class="btn btn--accent" type="submit" form="feuille-objectif">Enregistrer</button>
   </div>
-</e-feuille>
+</ax-sheet>

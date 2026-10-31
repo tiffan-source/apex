@@ -1,8 +1,8 @@
-import { motsAEviter } from '@empreinte-studio/angular/core';
-import { TITRES_QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
+import { motsAEviter } from '../../ui';
+import { TITRES_QUADRANTS, type Quadrant } from '../../ui';
 
 /*
- * Les phrases que les stores disent à la personne, dans la voix d'Empreinte : tutoiement,
+ * Les phrases que les stores disent à la personne, dans la voix d'Apex : tutoiement,
  * phrases courtes, jamais « erreur », « échec », « succès », « supprimer » ni point d'exclamation.
  * Les réussites sont annoncées aux lecteurs d'écran (AnnoncesStore.annoncer) ; ce qui n'a pas
  * marché est signalé dans la page (AnnoncesStore.signaler), avec ce qu'il faut faire ensuite.
@@ -59,9 +59,8 @@ export function failureReport(action: FailedAction, errorCode?: string): string 
 }
 
 /*
- * Le contrôle de la voix, pour les tests de l'application. motsAEviter() d'Empreinte ne suffit pas seul :
- * ses motifs commencent par \b, qui ne reconnaît pas une lettre accentuée en début de mot. « échec »,
- * « échoué », « raté », « manqué » ou « supprimé » lui échappent. Ces motifs-ci s'appuient sur les lettres Unicode.
+ * Le contrôle de la voix, pour les tests de l'application : motsAEviter() du kit (ui/voice.ts), plus les mots
+ * qu'il ne surveille pas (« erreur », « succès », les emoji). Les motifs s'appuient sur les lettres Unicode.
  */
 const OUTSIDE_THE_VOICE: readonly { word: string; pattern: RegExp }[] = [
   { word: 'échec', pattern: /(?<!\p{L})(échec|échou)/iu },
@@ -77,7 +76,7 @@ const OUTSIDE_THE_VOICE: readonly { word: string; pattern: RegExp }[] = [
   { word: 'emoji', pattern: /\p{Extended_Pictographic}/u },
 ];
 
-/** Les mots hors de la voix d'Empreinte dans un texte (vide : le texte parle comme Empreinte). */
+/** Les mots hors de la voix d'Apex dans un texte (vide : le texte parle juste). */
 export function voiceIssues(text: string): string[] {
   const words = new Set(motsAEviter(text).map(({ mot }) => mot));
   for (const { word, pattern } of OUTSIDE_THE_VOICE) if (pattern.test(text)) words.add(word);

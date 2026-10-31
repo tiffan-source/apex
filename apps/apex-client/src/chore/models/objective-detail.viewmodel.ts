@@ -1,6 +1,6 @@
-import type { EtatPas } from '@empreinte-studio/angular/core';
-import type { EtapeArete, EtatEtape } from '@empreinte-studio/angular/arete';
-import type { Quadrant } from '@empreinte-studio/angular/matrice';
+import type { EtatPas } from '../../ui';
+import type { EtapeArete, EtatEtape } from '../../ui';
+import type { Quadrant } from '../../ui';
 import type { TaskCountViewModel } from './objective-card.viewmodel';
 
 /*
@@ -23,7 +23,7 @@ export type StageTaskViewModel = {
   quadrant: Quadrant;
 };
 
-/** Ce qu'une étape compte, prêt pour e-pas : faits, un en cours, à venir (sans celui en cours). */
+/** Ce qu'une étape compte, prêt pour ax-steps : faits, un en cours, à venir (sans celui en cours). */
 export type StageTaskProgressViewModel = {
   done: number;
   inProgress: boolean;
@@ -45,11 +45,11 @@ export type StageViewModel = {
   /** Ses pas, y compris ceux de ses sous-objectifs plus profonds, dans l'ordre de chargement. */
   tasks: StageTaskViewModel[];
   progress: StageTaskProgressViewModel;
-  /** « 4 pas faits · 3 à venir » (legendeProgression d'Empreinte), ou « Aucun pas pour l'instant ». */
+  /** « 4 pas faits · 3 à venir » (legendeProgression, ui/voice.ts), ou « Aucun pas pour l'instant ». */
   detail: string;
 };
 
-/** Une étape prête pour <e-arete>, avec son id pour retrouver l'étape choisie. */
+/** Une étape prête pour <ax-path>, avec son id pour retrouver l'étape choisie. */
 export type AreteStageViewModel = EtapeArete & {
   readonly id: string;
 };
@@ -69,7 +69,7 @@ export type ObjectiveDetailViewModel = {
   stages: StageViewModel[];
   /** Les pas posés directement sur l'objectif, à ranger dans une étape. */
   tasksWithoutStage: StageTaskViewModel[];
-  /** Les étapes pour <e-arete [etapes]>, dans le même ordre que stages ; une étape sans nom y est « Étape sans nom ». */
+  /** Les étapes pour <ax-path [steps]>, dans le même ordre que stages ; une étape sans nom y est « Étape sans nom ». */
   aretes: AreteStageViewModel[];
   /** L'étape ouverte par défaut : celle en cours, sinon la dernière, sinon null (aucune étape). */
   defaultStageId: string | null;

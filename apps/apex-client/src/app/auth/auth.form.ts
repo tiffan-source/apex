@@ -3,7 +3,7 @@ import { email, hidden, minLength, required, validate, type SchemaFn } from '@an
 
 /*
  * Le formulaire de connexion et de création de compte (Signal Forms), et les phrases qu'il dit à la
- * personne, dans la voix d'Empreinte : tutoiement, phrases courtes, en encre, avec la solution.
+ * personne, dans la voix d'Apex : tutoiement, phrases courtes, en encre, avec la solution.
  * Jamais « erreur », « échec » ni « invalide » ; jamais le message technique du serveur.
  */
 

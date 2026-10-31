@@ -9,7 +9,7 @@ import {
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
-import { provideEmpreinte } from '@empreinte-studio/angular/core';
+import { Theme } from '../ui/theme';
 import { ChoreProviders } from '../chore/providers/chore.providers';
 import { A11yProviders } from '../chore/providers/a11y.provider';
 import { ObjectiveProviders } from '../chore/providers/objective.providers';
@@ -35,10 +35,12 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     { provide: LOCALE_ID, useValue: 'fr' },
-    // Empreinte : thème Jour au premier lancement, puis le choix retenu (clé « empreinte:theme »,
-    // lue aussi par le script d'index.html pour éviter un éclair de Jour en Nuit).
-    provideEmpreinte({ theme: 'jour' }),
-    // La zone des annonces aux lecteurs d'écran, masquée par Empreinte (voir a11y.provider.ts).
+    // Le thème : Jour au premier lancement, puis le choix retenu (clé « apex:theme », lue aussi par le script
+    // d'index.html pour éviter un éclair de Jour en Nuit).
+    provideAppInitializer(() => {
+      inject(Theme);
+    }),
+    // La zone des annonces aux lecteurs d'écran, masquée par .sr-only (voir a11y.provider.ts).
     ...A11yProviders,
     // Une nouvelle page s'ouvre en haut (sinon elle garderait le défilement de la précédente, sur mobile au
     // milieu de son contenu) ; Précédent et Suivant retrouvent la position quittée. La coque déplace le focus.

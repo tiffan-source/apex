@@ -36,7 +36,7 @@ export const routes: Routes = [
       },
       {
         path: 'objectifs/:id',
-        title: "L'arête · Apex",
+        title: "L'objectif · Apex",
         loadComponent: () => import('./objective/objective-page').then((m) => m.ObjectivePage),
       },
       {

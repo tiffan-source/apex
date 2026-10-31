@@ -15,16 +15,20 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import type { ComponentType } from '@angular/cdk/portal';
-import { compter } from '@empreinte-studio/angular/core';
-import { EArete, type EtapeArete } from '@empreinte-studio/angular/arete';
-import { EBouton } from '@empreinte-studio/angular/bouton';
-import { Feuilles } from '@empreinte-studio/angular/feuille';
-import { EIcone } from '@empreinte-studio/angular/icone';
-import { TITRES_QUADRANTS } from '@empreinte-studio/angular/matrice';
-import { EFilAriane } from '@empreinte-studio/angular/navigation';
-import { ENote, ENoteActions } from '@empreinte-studio/angular/note';
-import { EPas } from '@empreinte-studio/angular/pas';
-import { EListe, ETache, ETacheActions } from '@empreinte-studio/angular/tache';
+import { NgTemplateOutlet } from '@angular/common';
+import {
+  AxIcon,
+  AxPath,
+  AxRings,
+  AxSteps,
+  Feuilles,
+  TITRES_QUADRANTS,
+  compter,
+  legendeProgression,
+  lumiereDe,
+  type Anneau,
+  type EtapeArete,
+} from '../../ui';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { stageIdFromArete } from '../../chore/mapper/objective-view.mapper';
@@ -46,26 +50,14 @@ type OpenStageSource = {
 };
 
 /**
- * L'écran d'un objectif : l'arête (route /objectifs/:id, maquette « Arete »).
- * À gauche l'arête de ses étapes, dont la tête est le sceau de l'écran ; à droite l'étape choisie
- * et ses pas. Les modifications passent par des feuilles, ouvertes avec l'injecteur de l'écran pour
+ * L'écran d'un objectif (route /objectifs/:id, maquette « Arete ») : son en-tête et l'anneau de ses pas,
+ * le chemin de ses étapes jusqu'au sommet, puis l'étape choisie et ses pas, à côté d'Akari et d'un
+ * résumé. Les modifications passent par des feuilles, ouvertes avec l'injecteur de l'écran pour
  * atteindre ObjectiveStore (fourni par la coque) ; toutes les actions du store sont optimistes.
  */
 @Component({
   selector: 'app-objective-page',
-  imports: [
-    RouterLink,
-    EArete,
-    EBouton,
-    EFilAriane,
-    EIcone,
-    EListe,
-    ENote,
-    ENoteActions,
-    EPas,
-    ETache,
-    ETacheActions,
-  ],
+  imports: [RouterLink, NgTemplateOutlet, AxIcon, AxPath, AxRings, AxSteps],
   templateUrl: './objective-page.html',
   styleUrl: './objective-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,7 +76,6 @@ export class ObjectivePage {
   protected readonly stageStateLabels = STAGE_STATE_LABELS;
   /** La coque affiche un signalement (une note d'Akari) : l'écran n'en pose pas une seconde. */
   protected readonly hasReport = this.annonces.aUnSignalement;
-  protected readonly quadrantTitles = TITRES_QUADRANTS;
   protected readonly stageName = stageName;
 
   /** Les titres où poser le focus quand le bouton qui a ouvert une feuille a disparu. */
@@ -110,11 +101,54 @@ export class ObjectivePage {
   /** Le titre de l'objectif dans le fil d'Ariane. */
   protected readonly crumb = computed(() => shortTitle(this.detail()?.objective.title ?? '', CRUMB_TITLE_MAX));
 
-  /** « 6 étapes », pour le titre de l'arête. */
+  /** « 3 étapes », sous le titre du chemin. */
   protected readonly stageCount = computed(() => compter(this.detail()?.stages.length ?? 0, 'étape'));
 
+  /** La couleur de l'objectif, la même que dans la navigation. */
+  protected readonly lumiere = computed(() => lumiereDe(this.id()));
+
+  /** L'anneau des pas faits sur le total ; aucun anneau sans pas. */
+  protected readonly ring = computed(() => {
+    const count = this.detail()?.taskCount;
+    if (!count || count.total === 0) return null;
+    const faits = count.done > 1 ? 'faits' : 'fait';
+    return {
+      rings: [{ done: count.done, total: count.total }] satisfies Anneau[],
+      done: count.done,
+      total: count.total,
+      caption: `pas ${faits}`,
+      label: `${compter(count.done, 'pas', 'pas')} ${faits} sur ${count.total}`,
+    };
+  });
+
+  /** « En bref » : l'horizon, les étapes et les pas, en légendes qui commencent par ce qui est fait. */
+  protected readonly facts = computed(() => {
+    const detail = this.detail();
+    if (!detail) return [];
+    const states = detail.stages.map((stage) => stage.state);
+    const count = detail.taskCount;
+    return [
+      { term: 'Horizon', value: detail.objective.horizon },
+      {
+        term: 'Étapes',
+        value: legendeProgression(
+          {
+            faits: states.filter((state) => state === 'faite').length,
+            enCours: states.includes('en-cours'),
+            aVenir: states.filter((state) => state === 'a-venir').length,
+          },
+          { unite: 'etape', accompli: 'chemin parcouru' },
+        ),
+      },
+      {
+        term: 'Pas',
+        value: legendeProgression({ faits: count.done, aVenir: count.total - count.done }, { accompli: 'tout est fait' }),
+      },
+    ].filter((fact) => fact.value);
+  });
+
   /**
-   * L'id de l'étape ouverte à droite de l'arête : d'abord celle en cours. Elle reste ouverte tant qu'elle
+   * L'id de l'étape ouverte sous le chemin : d'abord celle en cours. Elle reste ouverte tant qu'elle
    * existe, même quand elle s'achève et qu'une autre passe en cours : cocher son dernier pas ne fait ni
    * sauter le panneau vers l'étape suivante, ni perdre le focus de la case. Elle revient à l'étape en
    * cours sur un autre objectif, et quand son id temporaire est remplacé à l'enregistrement.
@@ -134,10 +168,16 @@ export class ObjectivePage {
     },
   });
 
-  /** L'étape ouverte à droite de l'arête. */
+  /** L'étape ouverte sous le chemin. */
   protected readonly stage = computed(() => {
     const id = this.openStageId();
     return this.detail()?.stages.find((stage) => stage.id === id);
+  });
+
+  /** La même étape sur le chemin : ax-path la reconnaît à son objet. */
+  protected readonly selectedArete = computed(() => {
+    const id = this.openStageId();
+    return this.detail()?.aretes.find((arete) => arete.id === id) ?? null;
   });
 
   /** La demande à Akari prépare l'étape ouverte ; jamais un id temporaire dans une URL. */
@@ -153,25 +193,18 @@ export class ObjectivePage {
       : 'Ces pas ne sont dans aucune étape. Ajoute une étape, puis range-les avec « Modifier ».',
   );
 
-  /** Une arête a été choisie : son étape s'ouvre à droite, et les lecteurs d'écran l'entendent. */
+  /** Une étape a été choisie sur le chemin : elle s'ouvre dessous, et les lecteurs d'écran l'entendent. */
   protected chooseStage(etape: EtapeArete): void {
-    const stages = this.detail()?.stages ?? [];
-    const id = stageIdFromArete(etape) ?? this.foldedDoneStageId(stages);
-    const stage = stages.find((item) => item.id === id);
+    const id = stageIdFromArete(etape);
+    const stage = this.detail()?.stages.find((item) => item.id === id);
     if (!stage) return;
     this.openStageId.set(stage.id);
     this.annonces.annoncer(`Étape ${stage.index} · ${STAGE_STATE_LABELS[stage.state]} : ${stageName(stage.title)}`);
   }
 
-  /**
-   * Au-delà de 8 étapes, Empreinte replie les étapes faites dans une arête « Faites » sans id. Chaque choix
-   * de cette arête ouvre l'étape faite d'avant, en partant de la plus récente : toutes restent atteignables.
-   */
-  private foldedDoneStageId(stages: readonly StageViewModel[]): string | null {
-    const done = stages.filter((stage) => stage.state === 'faite');
-    if (done.length === 0) return null;
-    const open = done.findIndex((stage) => stage.id === this.openStageId());
-    return done[open > 0 ? open - 1 : done.length - 1].id;
+  /** Le quadrant d'un pas à faire : « Maintenant », « À planifier »… */
+  protected quadrantTitle(task: StageTaskViewModel): string {
+    return TITRES_QUADRANTS[task.quadrant];
   }
 
   /** Cocher ou décocher un pas : le store le change tout de suite, et revient en arrière s'il n'est pas enregistré. */

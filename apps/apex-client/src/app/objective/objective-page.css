@@ -1,32 +1,92 @@
-/*
- * L'arête d'un objectif et ses étapes.
- */
+/* L'écran d'un objectif : l'en-tête et son anneau, le chemin, l'étape choisie à côté d'Akari et du résumé. */
+.objective { display: flex; flex-direction: column; gap: 32px; }
 
-/* Panneau à bord perdu (l'étape choisie, les pas sans étape) : les listes de
-   pas (ul[eListe] nue) vont d'un bord à l'autre, leurs pas gardant la marge
-   du panneau ; les autres enfants directs (titre, rangée d'actions…) gardent
-   cette marge. --ds-panel-inset est posée par .ds-panel (styles/layout.css)
-   et se resserre sur mobile. */
-.panel-flush {
-  padding-inline: 0;
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 44px; }
+.crumbs { margin: 0; padding: 0; list-style: none; }
+.back { padding-left: 8px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: center; }
+.head-text { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.kicker { display: flex; align-items: center; gap: 14px; }
+.head-tile { width: 52px; height: 52px; border-radius: 16px; }
+.title { font-size: 60px; line-height: 62px; overflow-wrap: anywhere; outline: none; }
+.why { font-size: 30px; line-height: 36px; overflow-wrap: anywhere; }
+.description { max-width: 640px; overflow-wrap: anywhere; }
+.ring-count { font-size: 38px; line-height: 40px; font-weight: 600; }
+.ring-total { font-size: 22px; }
+
+.path-card { display: flex; flex-direction: column; gap: 28px; padding: 32px 36px 36px; }
+.path-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* La place des anneaux de focus et du halo de l'étape en cours, que le défilement couperait. */
+.path-scroll { margin: -12px; padding: 12px; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+.stage-card, .loose { display: flex; flex-direction: column; gap: 16px; padding: 28px 24px 20px; }
+.stage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 0 12px; }
+.stage-title { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.heading { overflow-wrap: anywhere; outline: none; }
+.wrap { overflow-wrap: anywhere; }
+.stage-progress { display: flex; flex-direction: column; gap: 8px; padding: 0 12px; }
+.inset { display: flex; flex-direction: column; gap: 6px; padding: 0 12px; }
+
+.tasks { margin: 0; padding: 0; list-style: none; }
+.task {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+.task:hover { background: var(--creux); }
+.task + .task { box-shadow: inset 0 1px 0 var(--bord); }
+.task-title { font-weight: 500; cursor: pointer; }
+.task:has(.check:checked) .task-title { color: var(--encre-douce); text-decoration: line-through; text-decoration-color: var(--trame-forte); }
+
+.add-row {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--creux);
+  color: var(--encre-douce);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.add-row:hover { color: var(--encre); background: var(--trame); }
+
+.akari { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 24px; }
+.akari-name { display: flex; align-items: center; gap: 10px; }
+.akari h2 { overflow-wrap: anywhere; }
+
+.facts-card { padding: 20px 24px; }
+.facts { margin: 6px 0 0; }
+.facts div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; }
+.facts div + div { box-shadow: inset 0 1px 0 var(--bord); }
+.facts dd { margin: 0; text-align: right; }
+
+.invite { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 640px; padding: 24px; }
+.invite-plain, .state { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+
+@media (max-width: 1100px) {
+  .cols { grid-template-columns: 1fr; }
 }
 
-.panel-flush > * {
-  margin-inline: var(--ds-panel-inset);
-}
-
-.panel-flush > .e-liste {
-  margin-inline: 0;
-}
-
-.panel-flush .e-tache {
-  padding-inline: var(--ds-panel-inset);
-}
-
-/* L'arête d'Empreinte prend 100 % de la largeur : sur mobile, elle
-   rétrécirait jusqu'à rendre ses noms illisibles (à 375px, une arête de
-   6 étapes tombait à environ 40 %, ses noms à 6px environ). Elle garde ici la
-   largeur de la maquette Arête, et son conteneur .ds-scroll-x défile. */
-.arete > e-arete {
-  min-width: 640px;
+@media (max-width: 760px) {
+  .head { grid-template-columns: 1fr; gap: 24px; }
+  .title { font-size: 40px; line-height: 44px; }
+  .why { font-size: 24px; line-height: 30px; }
+  .path-card { padding: 24px 20px; }
+  .stage-card, .loose { padding: 22px 12px 14px; }
+  .stage-head { flex-direction: column; gap: 10px; }
+  .task { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .task .quadrant { display: none; }
 }

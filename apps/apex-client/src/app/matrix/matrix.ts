@@ -10,19 +10,21 @@ import {
 } from '@angular/core';
 import { CDK_DRAG_CONFIG, type DragDropConfig } from '@angular/cdk/drag-drop';
 import { RouterLink } from '@angular/router';
-import { EBouton } from '@empreinte-studio/angular/bouton';
-import { ECase } from '@empreinte-studio/angular/case';
-import { compter } from '@empreinte-studio/angular/core';
-import { EFiltres, type OptionFiltre } from '@empreinte-studio/angular/filtres';
 import {
-  EMatrice,
-  EMatriceElement,
+  AxFilters,
+  AxMatrix,
+  AxMatrixItem,
+  AxMenu,
   QUADRANTS,
   TITRES_QUADRANTS,
+  compter,
+  lumiereDe,
   type DeplacementMatrice,
+  type EntreeMenu,
+  type Lumiere,
+  type OptionFiltre,
   type Quadrant,
-} from '@empreinte-studio/angular/matrice';
-import { EMenu, type EntreeMenu } from '@empreinte-studio/angular/menu';
+} from '../../ui';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import type { MatrixTaskViewModel } from '../../chore/models/matrix.viewmodel';
@@ -30,13 +32,13 @@ import { FILTER_TITLE_MAX, distinctShortTitles } from '../../chore/mapper/title.
 import { toDateInputValue } from '../../chore/mapper/date-input.mapper';
 import { formatToday, injectToday } from '../../chore/clock/today';
 
-/** Le nom du filtre qui garde tous les objectifs (e-filtres, et l'annonce d'un choix). */
+/** Le nom du filtre qui garde tous les objectifs (ax-filters, et l'annonce d'un choix). */
 export const ALL_OBJECTIVES = 'Tous les objectifs';
 
 /**
  * Au toucher, un pas ne se saisit qu'après un appui d'un moment (en millisecondes) : sans ce délai, le doigt
  * qui glisse sur la liste pour faire défiler la page déplacerait le pas (le CDK démarre le glisser au premier
- * mouvement et bloque le défilement). À la souris, rien ne change. e-matrice n'expose pas ce réglage : il passe
+ * mouvement et bloque le défilement). À la souris, rien ne change. ax-matrix n'expose pas ce réglage : il passe
  * par la configuration du glisser-déposer du CDK, que ses pas lisent.
  */
 export const MATRIX_DRAG_CONFIG: DragDropConfig = { dragStartDelay: { touch: 300, mouse: 0 } };
@@ -51,12 +53,12 @@ function moveTargetsFrom(quadrant: Quadrant): readonly EntreeMenu<Quadrant>[] {
 
 /**
  * La matrice d'Eisenhower (route /matrice) : tous les pas, faits compris, rangés dans les quatre
- * quadrants d'Empreinte. On coche un pas sur place, on le déplace en le glissant ou, au clavier,
+ * quadrants d'ax-matrix (« Maintenant » est le panneau d'encre). On coche un pas sur place, on le déplace en le glissant ou, au clavier,
  * par le menu « Déplacer vers… ». Le filtre par objectif ne vit que dans la page.
  */
 @Component({
   selector: 'app-matrix',
-  imports: [RouterLink, EBouton, ECase, EFiltres, EMatrice, EMatriceElement, EMenu],
+  imports: [RouterLink, AxFilters, AxMatrix, AxMatrixItem, AxMenu],
   providers: [{ provide: CDK_DRAG_CONFIG, useValue: MATRIX_DRAG_CONFIG }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './matrix.html',
@@ -79,8 +81,9 @@ export class Matrix {
   protected readonly filter = signal<string | null>(null);
 
   /**
-   * Un filtre par objectif racine, au titre court. Ce titre est le seul nom du bouton (e-filtres n'a pas de nom
-   * accessible par option) : deux objectifs au début identique gardent des noms différents.
+   * Un filtre par objectif racine, au titre court, avec la lumière de l'objectif. Ce titre est le seul nom du
+   * bouton (ax-filters n'a pas de nom accessible par option) : deux objectifs au début identique gardent des
+   * noms différents.
    */
   protected readonly filterOptions = computed<OptionFiltre<string>[]>(() => {
     const options = this.store.objectiveOptions();
@@ -88,7 +91,7 @@ export class Matrix {
       options.map((option) => option.libelle),
       FILTER_TITLE_MAX,
     );
-    return options.map(({ valeur }, index) => ({ valeur, libelle: labels[index] }));
+    return options.map(({ valeur }, index) => ({ valeur, libelle: labels[index], lumiere: lumiereDe(valeur) }));
   });
 
   /** Un seul objectif (ou aucun) : filtrer ne changerait rien, la rangée n'est pas montrée. */
@@ -136,11 +139,13 @@ export class Matrix {
     () => !this.loaded() && !!this.store.error() && !this.annonces.aUnSignalement(),
   );
 
-  /** La clé d'un pas pour e-matrice : son id (le store recrée les objets à chaque mise à jour). */
+  /** La clé d'un pas pour ax-matrix : son id (le store recrée les objets à chaque mise à jour). */
   protected readonly trackById = (task: MatrixTaskViewModel) => task.id;
 
   /** Ce que compte chaque quadrant (« 4 pas ») ; un tuple, pas un tableau littéral du gabarit. */
   protected readonly taskUnit = ['pas', 'pas'] as const;
+  /** La phrase au pied de « À laisser filer ». */
+  protected readonly notes = { 'laisser-filer': "Ce qui n'aide ni le sommet ni aujourd'hui. Tu peux le laisser filer." } as const;
 
   /** Pour chaque quadrant, les trois autres, proposés par « Déplacer vers… ». */
   protected readonly moveTargets: Readonly<Record<Quadrant, readonly EntreeMenu<Quadrant>[]>> = {
@@ -153,6 +158,11 @@ export class Matrix {
   /** L'id de la case d'un pas (le label la vise, et le focus y revient après un déplacement au clavier). */
   protected checkboxId(task: MatrixTaskViewModel): string {
     return `matrix-task-${task.id}`;
+  }
+
+  /** La lumière de l'objectif racine d'un pas : la même couleur que son filtre et que sur l'écran Objectifs. */
+  protected lumiereOf(task: MatrixTaskViewModel): Lumiere {
+    return lumiereDe(task.rootObjectiveId);
   }
 
   /** « Licence · étape Statistiques » : l'objectif, puis l'étape s'il y en a une (maquette « Matrice »). */

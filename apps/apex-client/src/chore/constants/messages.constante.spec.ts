@@ -1,5 +1,5 @@
-import { motsAEviter } from '@empreinte-studio/angular/core';
-import { QUADRANTS } from '@empreinte-studio/angular/matrice';
+import { motsAEviter } from '../../ui';
+import { QUADRANTS } from '../../ui';
 import {
   FAILURE_REPORTS,
   SUCCESS_ANNOUNCEMENTS,
@@ -65,9 +65,8 @@ describe('les niveaux d’importance et d’urgence', () => {
 });
 
 describe('voiceIssues', () => {
-  it('voit ce que motsAEviter() laisse passer (mots qui commencent par une lettre accentuée)', () => {
-    // Empreinte : \b ne reconnaît pas « é » en début de mot
-    expect(motsAEviter('Un échec.')).toEqual([]);
+  it('voit les mots qui commencent par une lettre accentuée', () => {
+    expect(motsAEviter('Un échec.').map(({ mot }) => mot)).toEqual(['échec']);
     expect(voiceIssues('Un échec.')).toEqual(['échec']);
     expect(voiceIssues('La connexion a échoué.')).toEqual(['échec']);
     expect(voiceIssues('C’est raté.')).toEqual(['raté']);
@@ -82,7 +81,7 @@ describe('voiceIssues', () => {
     expect(voiceIssues('Bravo 🎉')).toEqual(['emoji']);
   });
 
-  it('laisse passer la voix d’Empreinte', () => {
+  it('laisse passer la voix d’Apex', () => {
     expect(voiceIssues('4 pas faits · 3 à venir')).toEqual([]);
     expect(voiceIssues('Un pas de plus.')).toEqual([]);
     expect(voiceIssues('Ce pas passe dans « À laisser filer ».')).toEqual([]);

@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormField, FormRoot, form } from '@angular/forms/signals';
-import { EBouton, EChamp, ECorne, EFil, EIcone, EReplique, ESaisie, ESurface, ETailleAuto } from '@empreinte-studio/angular';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { AxControl, AxField, AxIcon } from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { SessionStore } from '../../../chore/stores/session.store';
 import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
@@ -24,25 +25,27 @@ export const NEW_OBJECTIVE_TEXTS = {
   untitled: "Ton objectif s'écrit ici.",
   /** L'horizon du brouillon sans date. */
   noHorizon: "Sans horizon pour l'instant",
-  /** Le statut pendant l'enregistrement (Empreinte n'a pas d'indicateur de chargement). */
+  /** Le statut pendant l'enregistrement. */
   saving: "J'enregistre ton objectif…",
   /** Le nom de la personne dans la conversation, quand on ne le connaît pas. */
   personFallback: 'Toi',
 } as const;
 
 /**
- * Nouvel objectif (/objectifs/nouveau), la phase « brouillon » d'Akari (cahier de migration, § 5).
+ * Nouvel objectif (/objectifs/nouveau), la phase « brouillon » d'Akari.
  *
- * À gauche, Akari pose ses questions et la personne répond dans des champs (le fil d'Empreinte,
- * ol[eFil]) ; à droite, le brouillon se met à jour en direct. Rien n'est enregistré avant « Je m'y
- * engage » (le seul sceau de l'écran), qui crée l'objectif puis ouvre Akari sur lui
+ * À gauche, une carte où Akari pose ses questions, chacune suivie du champ où la personne répond ; à
+ * droite, le brouillon (un panneau d'encre qui reste à l'écran) se met à jour en direct. Le titre peut
+ * arriver déjà écrit de l'accueil (?titre=…). Rien n'est enregistré avant « Je m'y engage » (le seul
+ * bouton d'accent de l'écran), qui crée l'objectif puis ouvre Akari sur lui
  * (/objectifs/<id définitif>/akari). Si l'enregistrement n'aboutit pas, AnnoncesStore le dit dans la
  * coque et le brouillon garde ce qui a été écrit.
  */
 @Component({
   selector: 'app-new-objective',
-  imports: [RouterLink, FormField, FormRoot, EBouton, EChamp, ECorne, EFil, EIcone, EReplique, ESaisie, ESurface, ETailleAuto],
+  imports: [RouterLink, FormField, FormRoot, CdkTextareaAutosize, AxControl, AxField, AxIcon],
   templateUrl: './new-objective.html',
+  styleUrl: './new-objective.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewObjective {
@@ -51,6 +54,9 @@ export class NewObjective {
   private readonly router = inject(Router);
 
   protected readonly texts = NEW_OBJECTIVE_TEXTS;
+
+  /** Le titre écrit sur l'accueil (/objectifs/nouveau?titre=…), lié par le routeur (withComponentInputBinding). */
+  readonly titre = input<string | undefined>(undefined);
 
   /** Le brouillon, tel que la personne l'écrit. */
   protected readonly draftModel = signal<NewObjectiveDraft>({ ...EMPTY_DRAFT });
@@ -82,7 +88,7 @@ export class NewObjective {
    */
   private readonly engagement = signal<{ temporaryId: string } | null>(null);
 
-  /** Vrai pendant l'enregistrement : le sceau ne répond plus, le statut le dit. */
+  /** Vrai pendant l'enregistrement : le bouton ne répond plus, le statut le dit. */
   protected readonly saving = computed(() => this.engagement() !== null);
 
   /** « Je m'y engage » n'est possible qu'avec un titre (des espaces seuls ne comptent pas). */
@@ -106,6 +112,13 @@ export class NewObjective {
   });
 
   constructor() {
+    // Le titre venu de l'accueil remplit le brouillon ; ce que la personne écrit ensuite n'est pas touché.
+    effect(() => {
+      const titre = this.titre()?.trim();
+      if (!titre) return;
+      untracked(() => this.draftModel.update((draft) => ({ ...draft, title: titre })));
+    });
+
     // Après « Je m'y engage » : l'id définitif ouvre Akari ; une création qui n'aboutit pas rend la main.
     effect(() => {
       const engagement = this.engagement();

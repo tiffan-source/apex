@@ -20,7 +20,13 @@
             "input": "apps/apex-client/public"
           }
         ],
-        "styles": ["apps/apex-client/src/styles.css", "apps/apex-client/src/styles/layout.css"],
+        "styles": [
+          "node_modules/@angular/cdk/overlay-prebuilt.css",
+          "node_modules/@angular/cdk/a11y-prebuilt.css",
+          "node_modules/@angular/cdk/text-field-prebuilt.css",
+          "apps/apex-client/src/styles.css",
+          "apps/apex-client/src/styles/layout.css"
+        ],
         "outputMode": "static"
       },
       "configurations": {

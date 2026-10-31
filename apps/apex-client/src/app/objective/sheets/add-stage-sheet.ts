@@ -1,9 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { FormField, FormRoot, form } from '@angular/forms/signals';
-import { EBouton } from '@empreinte-studio/angular/bouton';
-import { EChamp, ESaisie } from '@empreinte-studio/angular/champ';
-import { EFeuille, EFeuilleActions } from '@empreinte-studio/angular/feuille';
+import { AxSheet, AxSheetActions, AxField, AxControl } from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { requireText } from './sheet-validation';
 
@@ -16,12 +14,12 @@ export type AddStageSheetData = {
 export const STAGE_TITLE_REQUIRED = "Donne un nom à cette étape pour l'ajouter.";
 
 /**
- * La feuille « Ajouter une étape » : un nom, et l'étape rejoint l'arête. L'ajout est optimiste :
+ * La feuille « Ajouter une étape » : un nom, et l'étape rejoint le chemin. L'ajout est optimiste :
  * la feuille se ferme tout de suite, le store annonce la réussite ou signale le souci.
  */
 @Component({
   selector: 'app-add-stage-sheet',
-  imports: [FormField, FormRoot, EFeuille, EFeuilleActions, EChamp, ESaisie, EBouton],
+  imports: [FormField, FormRoot, AxSheet, AxSheetActions, AxField, AxControl],
   templateUrl: './add-stage-sheet.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

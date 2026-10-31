@@ -1,0 +1,51 @@
+<div class="grid" role="group" [attr.aria-label]="label()" cdkDropListGroup>
+  <span class="corner" aria-hidden="true"></span>
+  <p class="axis axis-x label" aria-hidden="true">{{ axes().urgent }}</p>
+  <p class="axis axis-x label" aria-hidden="true">{{ axes().pasUrgent }}</p>
+  <p class="axis axis-y label row-1" aria-hidden="true">{{ axes().important }}</p>
+  <p class="axis axis-y label row-2" aria-hidden="true">{{ axes().secondaire }}</p>
+
+  @for (quadrant of order; track quadrant) {
+    @let nuit = quadrant === current();
+    <section
+      class="quadrant"
+      [class]="'quadrant q-' + quadrant"
+      [class.nuit]="nuit"
+      [class.stage]="nuit"
+      [attr.aria-labelledby]="ids[quadrant]"
+      [attr.aria-current]="nuit ? 'true' : null"
+    >
+      @if (nuit) {
+        <span class="glow" aria-hidden="true"></span>
+      }
+      <header class="head">
+        <h3 class="t2" [id]="ids[quadrant]">{{ titles()[quadrant] }}</h3>
+        <p class="count small mono">{{ counts()[quadrant] }}</p>
+      </header>
+      <ul
+        class="list"
+        cdkDropList
+        [cdkDropListData]="quadrant"
+        [cdkDropListDisabled]="!draggable()"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (element of quadrants()[quadrant]; track track()(element)) {
+          <li class="element" [class.element--nuit]="nuit" cdkDrag [cdkDragData]="element" [cdkDragDisabled]="!draggable()">
+            @if (item(); as i) {
+              <ng-container
+                [ngTemplateOutlet]="i.template"
+                [ngTemplateOutletContext]="{ $implicit: element, quadrant: quadrant, nuit: nuit }"
+              />
+            } @else {
+              {{ element }}
+            }
+            <div class="placeholder" *cdkDragPlaceholder></div>
+          </li>
+        }
+      </ul>
+      @if (notes()[quadrant]; as note) {
+        <p class="note small">{{ note }}</p>
+      }
+    </section>
+  }
+</div>

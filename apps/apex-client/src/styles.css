@@ -1,9 +1,419 @@
-@import '@empreinte-studio/tokens/empreinte.css';
-
 /*
- * Empreinte d'abord : polices, tokens Jour et Nuit, typographie, base de la
- * page. Les utilitaires de mise en page partagés d'Apex (styles/layout.css)
- * sont chargés juste après, par le tableau "styles" de
- * apps/apex-client/project.json. Ce qui n'appartient qu'à un écran est dans
- * la feuille de son composant (styleUrl).
+ * Le système visuel d'Apex. Les couleurs (Jour et Nuit, les quatre lumières) viennent de l'ancienne identité
+ * d'Empreinte ; tout le reste est à Apex : Geist et Instrument Serif, cartes arrondies, ombres douces,
+ * boutons en pilule. Les utilitaires de mise en page (.ds-*, styles/layout.css) sont chargés juste après,
+ * par le tableau "styles" de apps/apex-client/project.json. Ce qui n'appartient qu'à un écran est dans la
+ * feuille de son composant (styleUrl).
  */
+
+/* ---------- Tokens ---------- */
+:root,
+[data-theme='jour'] {
+  color-scheme: light;
+  --fond: #f5f4f0;
+  --panneau: #ffffff;
+  --creux: #ecebe5;
+  --trame: #dedbd2;
+  --trame-forte: #7a7f8a;
+  --encre: #141b2d;
+  --encre-douce: #555d70;
+  --sceau: #cc3a1d;
+  --sur-sceau: #ffffff;
+  --ciel-voile: #ddebfa;
+  --ciel-vif: #1d64b8;
+  --aube-voile: #fbe4ec;
+  --aube-vif: #b23565;
+  --soleil-voile: #fbefcb;
+  --soleil-vif: #835600;
+  --fjord-voile: #d9f0e8;
+  --fjord-vif: #146b54;
+  --nocturne: #141b2d;
+  --sur-nocturne: #f5f4f0;
+  --nocturne-douce: #a1a9bb;
+  --nocturne-trait: rgba(245, 244, 240, 0.12);
+  --bord: rgba(20, 27, 45, 0.08);
+  --ombre-1: 0 1px 2px rgba(20, 27, 45, 0.05);
+  --ombre-2: 0 1px 2px rgba(20, 27, 45, 0.04), 0 12px 32px -12px rgba(20, 27, 45, 0.14);
+  --ombre-3: 0 2px 4px rgba(20, 27, 45, 0.06), 0 32px 64px -24px rgba(20, 27, 45, 0.38);
+  --ombre-sceau: 0 1px 2px rgba(204, 58, 29, 0.3), 0 10px 24px -8px rgba(204, 58, 29, 0.55);
+  --voile-fond: rgba(20, 27, 45, 0.38);
+}
+
+[data-theme='nuit'] {
+  color-scheme: dark;
+  --fond: #0c111b;
+  --panneau: #151b28;
+  --creux: #1e2534;
+  --trame: #283044;
+  --trame-forte: #6e7890;
+  --encre: #eceff5;
+  --encre-douce: #a1a9bb;
+  --sceau: #ff6a4a;
+  --sur-sceau: #170c09;
+  --ciel-voile: #13253c;
+  --ciel-vif: #7db8ff;
+  --aube-voile: #3a1a28;
+  --aube-vif: #ff9bc0;
+  --soleil-voile: #33280c;
+  --soleil-vif: #f2c45a;
+  --fjord-voile: #0f2e27;
+  --fjord-vif: #6fd6b0;
+  --nocturne: #1b2334;
+  --sur-nocturne: #eceff5;
+  --nocturne-douce: #a1a9bb;
+  --nocturne-trait: rgba(236, 239, 245, 0.1);
+  --bord: rgba(236, 239, 245, 0.07);
+  --ombre-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ombre-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
+  --ombre-3: 0 32px 64px -24px rgba(0, 0, 0, 0.8);
+  --ombre-sceau: 0 10px 28px -8px rgba(255, 106, 74, 0.5);
+  --voile-fond: rgba(0, 0, 0, 0.6);
+}
+
+:root {
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --pas-1: 4px;
+  --pas-2: 8px;
+  --pas-3: 12px;
+  --pas-4: 16px;
+  --pas-6: 24px;
+  --pas-8: 32px;
+  --pas-12: 48px;
+  --pas-16: 64px;
+  --trait-fin: 1px;
+  --trait-net: 2px;
+  --courbe: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---------- Base ---------- */
+html {
+  background: var(--fond);
+}
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--encre);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 22px;
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:where(h1, h2, h3, h4, p, figure, blockquote) {
+  margin: 0;
+}
+
+:where(button, input, textarea, select) {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sceau);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--sceau) 22%, transparent);
+}
+
+/* Masqué à l'écran, lu par les lecteurs d'écran. */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Typographie ---------- */
+.display { font-size: 68px; line-height: 70px; font-weight: 600; letter-spacing: -0.045em; }
+.t1 { font-size: 40px; line-height: 44px; font-weight: 600; letter-spacing: -0.035em; }
+.t2 { font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.025em; }
+.t3 { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -0.012em; }
+.body { font-size: 15px; line-height: 22px; }
+.small { font-size: 13px; line-height: 18px; }
+.label { font-family: var(--mono); font-size: 11px; line-height: 14px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+.serif { font-family: var(--serif); font-weight: 400; font-style: italic; letter-spacing: -0.01em; }
+.strong { font-weight: 600; }
+.soft { color: var(--encre-douce); }
+.accent { color: var(--sceau); }
+
+@media (max-width: 760px) {
+  .display { font-size: 44px; line-height: 48px; }
+  .t1 { font-size: 32px; line-height: 36px; }
+}
+
+/* ---------- Surfaces ---------- */
+.card {
+  background: var(--panneau);
+  border-radius: var(--r-lg);
+  box-shadow: var(--ombre-2), inset 0 0 0 1px var(--bord);
+}
+
+.card--nuit {
+  background: var(--nocturne);
+  color: var(--sur-nocturne);
+  box-shadow: var(--ombre-3), inset 0 0 0 1px var(--nocturne-trait);
+}
+
+.card--nuit .soft { color: var(--nocturne-douce); }
+
+.well {
+  background: var(--creux);
+  border-radius: var(--r-md);
+}
+
+.rule {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--bord);
+}
+
+/* La profondeur d'un panneau d'encre : la lueur du sceau et le grain. */
+.stage { position: relative; overflow: hidden; isolation: isolate; }
+.glow {
+  position: absolute;
+  z-index: -1;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: var(--sceau);
+  opacity: 0.3;
+  filter: blur(110px);
+  pointer-events: none;
+}
+.grain {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px var(--nocturne-trait), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+/* ---------- Boutons ---------- */
+.btn {
+  appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--encre);
+  font: 600 14px/20px var(--sans);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 160ms var(--courbe), box-shadow 160ms, background-color 160ms, color 160ms;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled,
+.btn[aria-disabled='true'] { opacity: 0.5; cursor: default; transform: none; }
+.btn--accent { background: var(--sceau); color: var(--sur-sceau); box-shadow: var(--ombre-sceau), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.btn--accent:not(:disabled):hover { transform: translateY(-1px); }
+.btn--ink { background: var(--encre); color: var(--fond); }
+.btn--line { background: var(--panneau); box-shadow: inset 0 0 0 1px var(--trame), var(--ombre-1); }
+.btn--line:not(:disabled):hover { box-shadow: inset 0 0 0 1px var(--trame-forte), var(--ombre-1); }
+.btn--ghost { padding: 0 12px; color: var(--encre-douce); }
+.btn--ghost:not(:disabled):hover { background: var(--creux); color: var(--encre); }
+.btn--on-nuit { background: rgba(255, 255, 255, 0.08); color: var(--sur-nocturne); box-shadow: inset 0 0 0 1px var(--nocturne-trait); }
+.btn--on-nuit:not(:disabled):hover { background: rgba(255, 255, 255, 0.14); }
+.btn--sm { min-height: 36px; padding: 0 14px; font-size: 13px; }
+.btn--round { width: 44px; padding: 0; }
+.btn--sm.btn--round { width: 36px; }
+.btn--block { width: 100%; }
+
+/* ---------- Puces, pastilles ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--creux);
+  color: var(--encre-douce);
+  font: 500 12px/16px var(--sans);
+  white-space: nowrap;
+}
+.chip--sceau { background: color-mix(in srgb, var(--sceau) 12%, transparent); color: var(--sceau); }
+.chip--nuit { background: rgba(255, 255, 255, 0.08); color: var(--sur-nocturne); }
+.dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--trame-forte); }
+.diamond { flex: none; width: 8px; height: 8px; border-radius: 2px; background: var(--sceau); transform: rotate(45deg); }
+
+.tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+}
+.l-ciel { --lumiere: var(--ciel-vif); background: var(--ciel-voile); color: var(--ciel-vif); }
+.l-aube { --lumiere: var(--aube-vif); background: var(--aube-voile); color: var(--aube-vif); }
+.l-soleil { --lumiere: var(--soleil-vif); background: var(--soleil-voile); color: var(--soleil-vif); }
+.l-fjord { --lumiere: var(--fjord-vif); background: var(--fjord-voile); color: var(--fjord-vif); }
+
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--encre);
+  color: var(--fond);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* La barre d'étapes : une pilule par étape. */
+.steps { display: flex; gap: 4px; }
+.steps > span { flex: 1 1 0; height: 6px; border-radius: 999px; background: var(--creux); }
+.steps > .done { background: var(--encre); }
+.steps > .now { background: var(--sceau); }
+
+/* ---------- Case ronde ---------- */
+.check {
+  appearance: none;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border-radius: 50%;
+  background: var(--panneau);
+  box-shadow: inset 0 0 0 1.5px var(--trame-forte);
+  cursor: pointer;
+  transition: background-color 160ms, box-shadow 160ms;
+}
+.check:hover { box-shadow: inset 0 0 0 1.5px var(--sceau); }
+.check:checked { background: var(--sceau); box-shadow: none; }
+.check:checked::after {
+  content: '';
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid var(--sur-sceau);
+  border-bottom: 2px solid var(--sur-sceau);
+  transform: translateY(-1px) rotate(-45deg);
+}
+.check--nuit { background: transparent; box-shadow: inset 0 0 0 1.5px var(--nocturne-douce); }
+
+/* ---------- Champs ---------- */
+.input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--panneau);
+  box-shadow: inset 0 0 0 1px var(--trame), var(--ombre-1);
+  color: var(--encre);
+  font: 400 15px/22px var(--sans);
+  transition: box-shadow 160ms;
+}
+.input::placeholder { color: var(--trame-forte); }
+.input:hover { box-shadow: inset 0 0 0 1px var(--trame-forte), var(--ombre-1); }
+.input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--sceau), 0 0 0 4px color-mix(in srgb, var(--sceau) 14%, transparent);
+}
+.input[aria-invalid='true'] { box-shadow: inset 0 0 0 1.5px var(--encre); }
+textarea.input { resize: vertical; }
+select.input {
+  appearance: none;
+  padding-right: 40px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--encre-douce) 50%), linear-gradient(135deg, var(--encre-douce) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+input[type='date'].input { min-height: 48px; }
+
+/* La prose d'une réplique d'Akari (le Markdown rendu par [innerHTML], hors encapsulation). */
+.ax-conversation .prose { font-size: 16px; line-height: 25px; overflow-wrap: anywhere; }
+.ax-conversation .prose :where(p, ul, ol, pre, blockquote, h1, h2, h3, h4) { margin: 0 0 12px; }
+.ax-conversation .prose :where(:last-child) { margin-bottom: 0; }
+.ax-conversation .prose :where(ul, ol) { padding-left: 20px; }
+.ax-conversation .prose :where(li + li) { margin-top: 4px; }
+.ax-conversation .prose :where(h1, h2, h3, h4) { font-size: 16px; line-height: 24px; font-weight: 600; }
+.ax-conversation .prose :where(strong) { font-weight: 600; }
+.ax-conversation .prose :where(em) { font-family: var(--serif); font-size: 1.1em; }
+.ax-conversation .prose :where(a) { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.ax-conversation .prose :where(code) { padding: 1px 6px; border-radius: 6px; background: var(--creux); font-family: var(--mono); font-size: 13px; }
+.ax-conversation .prose :where(pre) { overflow-x: auto; padding: 12px 14px; border-radius: 12px; background: var(--creux); }
+.ax-conversation .prose :where(pre code) { padding: 0; background: none; }
+.ax-conversation .prose :where(table) { display: block; overflow-x: auto; border-collapse: collapse; }
+.ax-conversation .prose :where(th, td) { padding: 6px 10px; border-bottom: 1px solid var(--bord); text-align: left; }
+
+/* ---------- Mouvement ---------- */
+.rise { animation: rise 700ms var(--courbe) both; animation-delay: var(--d, 0ms); }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.live { position: relative; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--fjord-vif); }
+.live::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1.5px solid var(--fjord-vif);
+  border-radius: 50%;
+  opacity: 0;
+  animation: pulse 2.4s ease-out infinite;
+}
+@keyframes pulse {
+  0% { opacity: 0.7; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise, .live::after { animation: none !important; }
+  .btn, .check, .input { transition: none; }
+}
+
+/* ---------- Superpositions du CDK (feuilles, menus) ----------
+   La mécanique (popover, fond, position) vient des feuilles prébâties du CDK, chargées avant celle-ci
+   (apps/apex-client/project.json). Ici, seulement l'apparence d'Apex. */
+.ax-sheet-backdrop { background: var(--voile-fond); backdrop-filter: blur(4px); }
+.ax-sheet-panel { justify-content: center; align-items: center; }
+.ax-sheet-panel .cdk-dialog-container { display: block; outline: none; }
+.ax-sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+.ax-sheet-actions:empty { display: none; }
+.cdk-drag-preview { box-sizing: border-box; border-radius: var(--r-md); box-shadow: var(--ombre-3); }
+.cdk-drag-placeholder { opacity: 0.35; }
+.cdk-drag-animating, .cdk-drop-list-dragging .cdk-drag { transition: transform 240ms var(--courbe); }

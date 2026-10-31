@@ -1,0 +1,85 @@
+<ol class="thread" #thread tabindex="0" [id]="threadId" [attr.aria-label]="label()" (scroll)="onScroll()">
+  @for (reply of replies(); track reply.id; let i = $index) {
+    @if (reply.auteur === 'assistant') {
+      <li class="reply reply--akari" [class.pending]="reply.enAttente">
+        <span class="avatar-akari" aria-hidden="true"></span>
+        <div class="reply-body">
+          <p class="who label">{{ name(reply) }}</p>
+          <div class="prose" [id]="'reponse-' + reply.id">
+            @if (content(); as c) {
+              <ng-container [ngTemplateOutlet]="c.template" [ngTemplateOutletContext]="{ $implicit: reply }" />
+            } @else {
+              <p class="plain">{{ reply.texte }}</p>
+            }
+          </div>
+          @if (reply.actions?.length) {
+            <div class="reply-actions" [attr.aria-describedby]="'reponse-' + reply.id">
+              @for (action of reply.actions; track action.id; let first = $first) {
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [class.btn--accent]="first"
+                  [class.btn--ghost]="!first"
+                  (click)="choose(reply, action)"
+                >
+                  {{ action.libelle }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </li>
+    } @else {
+      <li class="reply reply--me" [class.pending]="reply.enAttente">
+        <p class="sr-only">{{ name(reply) }}</p>
+        <div class="bubble prose">
+          @if (content(); as c) {
+            <ng-container [ngTemplateOutlet]="c.template" [ngTemplateOutletContext]="{ $implicit: reply }" />
+          } @else {
+            <p class="plain">{{ reply.texte }}</p>
+          }
+        </div>
+      </li>
+    }
+  }
+  <ng-content />
+</ol>
+
+<p class="status" role="status" aria-live="polite" [id]="statusId">
+  @if (status()) {
+    <span class="typing" aria-hidden="true"><span></span><span></span><span></span></span>
+    {{ status() }}
+  }
+</p>
+
+@if (away()) {
+  <button class="btn btn--line btn--sm back" type="button" (click)="allerALaFin()">
+    <ax-icon name="chevron-bas" [size]="16" />Dernières répliques
+  </button>
+}
+
+<form class="composer" (submit)="$event.preventDefault(); submit()">
+  <label class="sr-only" [for]="threadId + '-saisie'">{{ inputLabel() }}</label>
+  <textarea
+    #textarea
+    [id]="threadId + '-saisie'"
+    rows="1"
+    cdkTextareaAutosize
+    [cdkAutosizeMinRows]="1"
+    [cdkAutosizeMaxRows]="6"
+    [placeholder]="placeholder()"
+    [value]="draft()"
+    (input)="draft.set($any($event.target).value)"
+    (keydown)="onKeydown($event)"
+  ></textarea>
+  <div class="composer-foot">
+    <div class="suggestions">
+      @for (suggestion of suggestions(); track suggestion) {
+        <button class="suggestion" type="button" (click)="suggest(suggestion)">{{ suggestion }}</button>
+      }
+    </div>
+    <button class="btn btn--accent btn--round" type="submit" aria-label="Envoyer" [attr.aria-disabled]="canSend() ? null : 'true'">
+      <ax-icon name="envoyer" [size]="18" />
+    </button>
+  </div>
+</form>

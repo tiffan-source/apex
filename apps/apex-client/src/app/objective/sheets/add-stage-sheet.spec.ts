@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { motsAEviter } from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
 import { AddStageSheet, STAGE_TITLE_REQUIRED, type AddStageSheetData } from './add-stage-sheet';
@@ -29,7 +29,7 @@ describe('AddStageSheet', () => {
   });
 
   const type = (value: string) => {
-    const input = element.querySelector<HTMLInputElement>('input[eSaisie]') as HTMLInputElement;
+    const input = element.querySelector<HTMLInputElement>('input[axControl]') as HTMLInputElement;
     input.value = value;
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -41,14 +41,16 @@ describe('AddStageSheet', () => {
     fixture.detectChanges();
   };
 
-  it('a un titre, un champ, et un bouton principal en trait relié au formulaire', () => {
-    expect(element.querySelector('.e-feuille__titre')?.textContent?.trim()).toBe('Ajouter une étape');
-    expect(element.querySelector('.e-champ__libelle')?.textContent).toContain("Le nom de l'étape");
+  it('a un titre, un champ, et un bouton principal vermillon relié au formulaire', () => {
+    expect(element.querySelector('ax-sheet h2')?.textContent?.trim()).toBe('Ajouter une étape');
+    expect(element.querySelector('ax-field label')?.textContent).toContain("Le nom de l'étape");
     const submitButton = element.querySelector<HTMLButtonElement>('button[type="submit"]');
     expect(submitButton?.textContent?.trim()).toBe('Ajouter');
     expect(submitButton?.getAttribute('form')).toBe(element.querySelector('form')?.id);
-    expect(submitButton?.classList).toContain('e-btn--trait');
-    expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
+    expect(submitButton?.classList).toContain('btn--accent');
+    // Le libellé nomme le champ
+    const input = element.querySelector('input[axControl]');
+    expect(element.querySelector(`label[for="${input?.id}"]`)).not.toBeNull();
   });
 
   it("ajoute l'étape au store et se ferme tout de suite", async () => {
@@ -64,7 +66,7 @@ describe('AddStageSheet', () => {
     expect(store.addSubObjective).not.toHaveBeenCalled();
     expect(ref.close).not.toHaveBeenCalled();
     expect(element.textContent).toContain(STAGE_TITLE_REQUIRED);
-    expect(element.querySelector('input[eSaisie]')?.getAttribute('aria-invalid')).toBe('true');
+    expect(element.querySelector('input[axControl]')?.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('« Annuler » ferme sans rien ajouter', () => {
@@ -73,7 +75,7 @@ describe('AddStageSheet', () => {
     expect(store.addSubObjective).not.toHaveBeenCalled();
   });
 
-  it("parle dans la voix d'Empreinte", () => {
+  it("parle dans la voix d'Apex", () => {
     for (const value of [element.textContent ?? '', STAGE_TITLE_REQUIRED]) {
       expect(motsAEviter(value)).toEqual([]);
       expect(voiceIssues(value)).toEqual([]);

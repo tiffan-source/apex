@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import type { WritableSignal } from '@angular/core';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { motsAEviter } from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
 import type { StageTaskViewModel } from '../../../chore/models/objective-detail.viewmodel';
@@ -49,9 +49,10 @@ describe('EditTaskSheet', () => {
   }
 
   const model = () => (fixture.componentInstance as unknown as { model: WritableSignal<Model> }).model;
-  const selections = () => [...element.querySelectorAll('.e-selection__valeur')].map((value) => value.textContent?.trim());
+  const selections = () =>
+    [...element.querySelectorAll<HTMLSelectElement>('ax-select select')].map((select) => select.selectedOptions[0]?.textContent?.trim());
   const type = (value: string) => {
-    const input = element.querySelector<HTMLInputElement>('input[eSaisie]') as HTMLInputElement;
+    const input = element.querySelector<HTMLInputElement>('input[axControl]') as HTMLInputElement;
     input.value = value;
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -67,8 +68,8 @@ describe('EditTaskSheet', () => {
     beforeEach(() => render({ objectiveId: 'obj-1', stageId: 'stage-2', task: task('deep-1') }));
 
     it('préremplit son intitulé, son étape, son importance et son urgence', () => {
-      expect(element.querySelector('.e-feuille__titre')?.textContent?.trim()).toBe('Modifier le pas');
-      expect(element.querySelector<HTMLInputElement>('input[eSaisie]')?.value).toBe('Courir 5 km');
+      expect(element.querySelector('ax-sheet h2')?.textContent?.trim()).toBe('Modifier le pas');
+      expect(element.querySelector<HTMLInputElement>('input[axControl]')?.value).toBe('Courir 5 km');
       expect(selections()).toEqual(['Endurance', 'Très important', 'Pas urgent']);
       expect(store.stageOptions).toHaveBeenCalledWith('obj-1');
     });
@@ -122,7 +123,7 @@ describe('EditTaskSheet', () => {
     beforeEach(() => render({ objectiveId: 'obj-1', stageId: null, task: task('obj-1') }));
 
     it('invite à le ranger dans une étape', () => {
-      expect(element.textContent).toContain("Range ce pas dans une étape de ton arête.");
+      expect(element.textContent).toContain("Range ce pas dans une étape de ton chemin.");
       expect(selections()[0]).toBe('Choisis une étape');
     });
 
@@ -161,9 +162,8 @@ describe('EditTaskSheet', () => {
     expect(selections()).toEqual(['Très important', 'Pas urgent']);
   });
 
-  it("n'a pas de sceau et parle dans la voix d'Empreinte", async () => {
+  it("parle dans la voix d'Apex", async () => {
     await render({ objectiveId: 'obj-1', stageId: null, task: task('obj-1') });
-    expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
     for (const value of [element.textContent ?? '', TASK_TITLE_TO_SAVE_REQUIRED, 'Ajoute une étape à ton objectif pour y ranger ce pas.']) {
       expect(motsAEviter(value)).toEqual([]);
       expect(voiceIssues(value)).toEqual([]);

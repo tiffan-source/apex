@@ -10,7 +10,7 @@ import {
 import { filterMatrixByObjective, toMatrix } from "../../mapper/matrix.mapper";
 
 /**
- * Les vues des écrans Empreinte, dérivées de l'état (cahier de migration, § 4) :
+ * Les vues des écrans, dérivées de l'état (cahier de migration, § 4) :
  * cartes d'objectifs, vue détaillée pour l'arête, matrice, options des champs.
  */
 export function withObjectiveViews() {
@@ -23,9 +23,9 @@ export function withObjectiveViews() {
         objectiveCards: computed(() => cards().filter((card) => !card.accomplished)),
         /** Les objectifs accomplis (au moins un pas, tous faits), pour la liste repliée « Accomplis ». */
         accomplishedObjectives: computed(() => cards().filter((card) => card.accomplished)),
-        /** Tous les pas par quadrant, pour <e-matrice [quadrants]> (filtrer avec filterMatrixByObjective). */
+        /** Tous les pas par quadrant, pour <ax-matrix [quadrants]> (filtrer avec filterMatrixByObjective). */
         matrix: computed(() => toMatrix(objectives(), tasks())),
-        /** Les objectifs racines en { valeur, libelle }, pour e-filtres (matrice) ou e-selection. */
+        /** Les objectifs racines en { valeur, libelle }, pour ax-filters (matrice) ou ax-select. */
         objectiveOptions: computed(() => rootObjectiveOptions(objectives())),
       };
     }),
@@ -34,7 +34,7 @@ export function withObjectiveViews() {
       matrixFor: (rootObjectiveId: string | null) => filterMatrixByObjective(matrix(), rootObjectiveId),
       /** La vue détaillée d'un objectif pour l'arête ; undefined tant qu'il n'est pas chargé. Réactive dans un computed. */
       objectiveDetail: (objectiveId: string) => toObjectiveDetail(objectiveId, objectives(), tasks()),
-      /** Les étapes d'un objectif en { valeur, libelle }, pour e-selection. Réactive dans un computed. */
+      /** Les étapes d'un objectif en { valeur, libelle }, pour ax-select. Réactive dans un computed. */
       stageOptions: (objectiveId: string) => stageOptions(objectiveId, objectives()),
     }))
   );

@@ -1,7 +1,7 @@
 <!-- Lien d'évitement : hors de l'écran tant qu'il n'a pas le focus. Pas de href="#contenu" écrit en dur :
      avec <base href="/">, il renverrait vers l'accueil. Le routeur garde l'adresse de la page. -->
 <a
-  class="skip-link"
+  class="skip-link btn btn--ink btn--sm"
   [routerLink]="[]"
   fragment="contenu"
   queryParamsHandling="preserve"
@@ -9,52 +9,81 @@
   >Aller au contenu</a
 >
 
-<div class="shell" [class.fits-window]="fitsWindow()">
-  <nav class="nav" aria-label="Navigation principale">
-    <a eMarque class="brand" routerLink="/">Apex</a>
+<div class="app" [class.fits-window]="fitsWindow()">
+  <nav class="rail" aria-label="Navigation principale">
+    <a class="logo" routerLink="/">
+      <span class="logo-mark" aria-hidden="true"><ax-icon name="objectifs" [size]="16" /></span>
+      Apex
+    </a>
 
-    <!-- Le libellé est dans une balise d'Apex : sous 760px, shell.css ne le montre plus (il reste lu). -->
     <ul class="links">
       <li>
-        <a eLienNav class="link" icone="objectifs" routerLink="/" [attr.aria-current]="objectivesCurrent()"
-          ><span class="link-label">Objectifs</span></a
-        >
+        <a class="link" routerLink="/" [attr.aria-current]="objectivesCurrent()">
+          <ax-icon name="objectifs" [size]="18" /><span class="link-label">Objectifs</span>
+          @if (running().length) {
+            <span class="count">{{ running().length }}</span>
+          }
+        </a>
       </li>
       <li>
-        <a eLienNav class="link" icone="matrice" routerLink="/matrice" routerLinkActive ariaCurrentWhenActive="page"
-          ><span class="link-label">Matrice</span></a
-        >
+        <a class="link" routerLink="/matrice" routerLinkActive ariaCurrentWhenActive="page">
+          <ax-icon name="matrice" [size]="18" /><span class="link-label">Matrice</span>
+        </a>
       </li>
     </ul>
 
+    @if (running().length) {
+      <div class="group">
+        <p class="label group-title" id="nav-en-marche">En marche</p>
+        <ul class="links" aria-labelledby="nav-en-marche">
+          @for (objective of running(); track objective.id) {
+            <li>
+              <a
+                class="link link--objective"
+                [routerLink]="['/objectifs', objective.id]"
+                routerLinkActive
+                ariaCurrentWhenActive="location"
+              >
+                <span class="dot" [class]="'l-' + objective.lumiere" aria-hidden="true"></span>
+                <span class="link-label">{{ objective.title }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
     <div class="nav-bottom">
-      <div class="ds-row ds-rule-top person">
+      <div class="person">
         @if (initial()) {
-          <span class="initial voix" aria-hidden="true">{{ initial() }}</span>
+          <span class="avatar" aria-hidden="true">{{ initial() }}</span>
         }
-        <!-- Une grille à une piste minmax(0, 1fr) ne réclame aucune largeur : sans elle, une adresse longue
-             élargirait toute la navigation (232px dans les maquettes) au lieu d'être coupée. -->
-        <div class="ds-grid ds-grow">
-          <span class="detail ds-truncate">{{ identity() }}</span>
+        <!-- Une grille à une piste minmax(0, 1fr) ne réclame aucune largeur : une adresse longue est coupée au
+             lieu d'élargir la navigation. -->
+        <div class="who">
+          <span class="small strong truncate">{{ identity() }}</span>
+          <span class="small theme-name">{{ themeName() }}</span>
         </div>
-        <e-menu libelle="Réglages" icone="reglages" [entrees]="settings()" (choix)="chooseTheme($event)" />
+        <ax-menu label="Réglages" icon="reglages" variant="on-nuit" [small]="true" [items]="settings()" (choose)="chooseTheme($event)" />
       </div>
     </div>
 
-    <!-- Sous 760px, le bas de la navigation disparaît : les réglages restent accessibles ici. -->
-    <div class="ds-show-mobile ds-push-right">
-      <e-menu libelle="Réglages" icone="reglages" [entrees]="settings()" (choix)="chooseTheme($event)" />
+    <!-- Sous 900px, le bas de la navigation disparaît : les réglages restent accessibles ici. -->
+    <div class="mobile-settings">
+      <ax-menu label="Réglages" icon="reglages" variant="on-nuit" [small]="true" [items]="settings()" (choose)="chooseTheme($event)" />
     </div>
   </nav>
 
   <main class="page" id="contenu" tabindex="-1" #contenu>
     <div class="content">
       @if (annonces.signalement(); as texte) {
-        <aside eNote>
-          <p>{{ texte }}</p>
-          <div eNoteActions>
-            <button eBouton="trait" petit type="button" (click)="understood()">Compris</button>
+        <aside class="note card" aria-label="Message d'Akari">
+          <span class="note-mark" aria-hidden="true"></span>
+          <div class="note-body">
+            <p class="label soft note-who">Akari</p>
+            <p class="body">{{ texte }}</p>
           </div>
+          <button class="btn btn--line btn--sm" type="button" (click)="understood()">Compris</button>
         </aside>
       }
 

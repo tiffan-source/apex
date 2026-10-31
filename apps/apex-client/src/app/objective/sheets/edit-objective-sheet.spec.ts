@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { motsAEviter } from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
 import {
@@ -44,7 +44,7 @@ describe('EditObjectiveSheet', () => {
     element = fixture.nativeElement as HTMLElement;
   });
 
-  const controls = () => [...element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[eSaisie]')];
+  const controls = () => [...element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[axControl]')];
   const fill = (index: number, value: string) => {
     const control = controls()[index];
     control.value = value;
@@ -58,14 +58,14 @@ describe('EditObjectiveSheet', () => {
   };
 
   it("préremplit le titre, la description, le pourquoi et l'horizon", () => {
-    expect(element.querySelector('.e-feuille__titre')?.textContent?.trim()).toBe("Modifier l'objectif");
+    expect(element.querySelector('ax-sheet h2')?.textContent?.trim()).toBe("Modifier l'objectif");
     expect(controls().map((control) => control.value)).toEqual([
       'Courir un semi-marathon en mai',
       'Trois sorties par semaine.',
       'Pour me prouver que je peux tenir.',
       '2027-05-15',
     ]);
-    const labels = [...element.querySelectorAll('.e-champ__libelle')].map((label) => label.textContent);
+    const labels = [...element.querySelectorAll('ax-field label')].map((label) => label.textContent);
     expect(labels[0]).toContain('Ce que tu veux construire');
     expect(labels[2]).toContain('Pourquoi ça compte pour toi');
     expect(labels[3]).toContain('Pour quand');
@@ -104,7 +104,7 @@ describe('EditObjectiveSheet', () => {
   });
 
   it("ne laisse pas retirer l'horizon, que le store ne sait pas encore effacer, et dit quoi faire", async () => {
-    expect(element.querySelectorAll('.e-champ__libelle')[3].textContent).not.toContain('facultatif');
+    expect(element.querySelectorAll('ax-field label')[3].textContent).not.toContain('facultatif');
     fill(3, '');
     await submit();
     expect(store.editObjective).not.toHaveBeenCalled();
@@ -132,8 +132,7 @@ describe('EditObjectiveSheet', () => {
     expect(store.editObjective).not.toHaveBeenCalled();
   });
 
-  it("n'a pas de sceau et parle dans la voix d'Empreinte", () => {
-    expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
+  it("parle dans la voix d'Apex", () => {
     for (const value of [element.textContent ?? '', OBJECTIVE_TITLE_REQUIRED, OBJECTIVE_HORIZON_KEPT]) {
       expect(motsAEviter(value)).toEqual([]);
       expect(voiceIssues(value)).toEqual([]);

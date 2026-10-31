@@ -1,9 +1,32 @@
-/*
- * La matrice.
- */
+/* La matrice : l'en-tête (repère, titre, filtres), puis les quatre quadrants d'ax-matrix. */
+.page { display: flex; flex-direction: column; gap: 32px; }
 
-/* Un pas dans un quadrant : de l'air de pas-1 dessus et dessous
-   (e-matrice n'espace ses éléments que de pas-1). */
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.intro { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.title { overflow-wrap: anywhere; }
+.line { font-size: 32px; line-height: 38px; }
+
+.empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; max-width: 60ch; }
+
+/* Un pas : la case, le titre et le menu sur une ligne ; l'objectif et l'étape dessous. */
 .task {
-  padding-block: var(--pas-1);
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 10px 8px 10px 14px;
+}
+
+.name { font-weight: 500; overflow-wrap: anywhere; cursor: pointer; }
+.meta { grid-column: 2; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.meta .dot { background: var(--lumiere); }
+.detail { overflow-wrap: anywhere; }
+
+/* Sur le panneau d'encre (« Maintenant ») : le texte clair, l'encre douce de la nuit. */
+.task--nuit .name { color: var(--sur-nocturne); }
+.task--nuit .soft { color: var(--nocturne-douce); }
+
+@media (max-width: 760px) {
+  .page { gap: 24px; }
+  .line { font-size: 24px; line-height: 30px; }
 }

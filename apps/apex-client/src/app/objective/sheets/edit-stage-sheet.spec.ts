@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { motsAEviter } from '@empreinte-studio/angular/core';
+import { motsAEviter } from '../../../ui';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
 import {
@@ -44,7 +44,7 @@ describe('EditStageSheet', () => {
 
   beforeEach(() => render(DATA));
 
-  const controls = () => [...element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[eSaisie]')];
+  const controls = () => [...element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[axControl]')];
   const fill = (index: number, value: string) => {
     const control = controls()[index];
     control.value = value;
@@ -58,7 +58,7 @@ describe('EditStageSheet', () => {
   };
 
   it("préremplit le nom de l'étape, sa description et son échéance", () => {
-    expect(element.querySelector('.e-feuille__titre')?.textContent?.trim()).toBe("Modifier l'étape");
+    expect(element.querySelector('ax-sheet h2')?.textContent?.trim()).toBe("Modifier l'étape");
     expect(controls().map((control) => control.value)).toEqual(['Endurance', '', '']);
     expect(controls()[2].getAttribute('type')).toBe('date');
   });
@@ -105,7 +105,7 @@ describe('EditStageSheet', () => {
     });
 
     it("ne laisse pas retirer l'échéance, que le store ne sait pas encore effacer, et dit quoi faire", async () => {
-      expect(element.querySelectorAll('.e-champ__libelle')[2].textContent).not.toContain('facultatif');
+      expect(element.querySelectorAll('ax-field label')[2].textContent).not.toContain('facultatif');
       fill(2, '');
       await submit();
       expect(store.editObjective).not.toHaveBeenCalled();
@@ -128,8 +128,7 @@ describe('EditStageSheet', () => {
     expect(store.editObjective).not.toHaveBeenCalled();
   });
 
-  it("n'a pas de sceau et parle dans la voix d'Empreinte", () => {
-    expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
+  it("parle dans la voix d'Apex", () => {
     for (const value of [element.textContent ?? '', STAGE_TITLE_TO_SAVE_REQUIRED, STAGE_DUE_DATE_KEPT]) {
       expect(motsAEviter(value)).toEqual([]);
       expect(voiceIssues(value)).toEqual([]);

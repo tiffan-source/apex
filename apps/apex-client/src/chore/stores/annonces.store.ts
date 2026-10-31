@@ -3,7 +3,7 @@ import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 
 /*
- * Ce qui remplace les toasts (cahier de migration, § 7). Rien ne surgit dans Empreinte :
+ * Ce qui remplace les toasts (cahier de migration, § 7). Rien ne surgit dans Apex :
  *  - annoncer(texte) : une réussite, dite aux lecteurs d'écran par le LiveAnnouncer du CDK
  *    (politesse « polite »), sans rien afficher ;
  *  - signaler(texte) : quelque chose n'a pas marché. Le texte reste dans l'état jusqu'à

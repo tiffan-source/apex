@@ -1,0 +1,41 @@
+<ol class="path" [attr.aria-label]="summary()" [style.--reached]="reached()" [style.--count]="steps().length">
+  @for (step of steps(); track $index; let i = $index) {
+    <li
+      class="step"
+      [class]="'step step--' + step.etat"
+      [class.selected]="selected() === step"
+      [class.lit]="i < reached()"
+      [attr.aria-current]="step.etat === 'en-cours' ? 'step' : null"
+    >
+      @if (interactive()) {
+        <button
+          class="hit"
+          type="button"
+          [attr.aria-pressed]="selected() === step"
+          [attr.aria-label]="step.nom + ', ' + stateLabel(step) + (step.detail ? ', ' + step.detail : '')"
+          (click)="choose.emit(step)"
+        ></button>
+      }
+      <span class="node" aria-hidden="true">
+        @if (step.etat === 'faite') {
+          <ax-icon name="coche" [size]="16" />
+        } @else {
+          {{ i + 1 }}
+        }
+      </span>
+      <span class="text" [attr.aria-hidden]="interactive() ? 'true' : null">
+        <span class="name">{{ step.nom }}</span>
+        <span class="state">{{ step.detail || stateLabel(step) }}</span>
+      </span>
+    </li>
+  }
+  <li class="step step--summit">
+    <span class="node" aria-hidden="true"><ax-icon name="sommet" [size]="18" /></span>
+    <span class="text">
+      <span class="name">{{ summit() }}</span>
+      @if (summitDetail()) {
+        <span class="state">{{ summitDetail() }}</span>
+      }
+    </span>
+  </li>
+</ol>

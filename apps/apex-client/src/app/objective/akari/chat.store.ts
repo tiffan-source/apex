@@ -43,7 +43,7 @@ const isAwaitingPermissionValue = (value: WorkflowStateValue | undefined): boole
   (value as Record<string, unknown>)["ExecutingAllTool"] === "WaitingForUserPermission";
 
 
-/** Ce que fait Akari pendant un tour, dit dans la ligne d'état (voix d'Empreinte, sans jargon). */
+/** Ce que fait Akari pendant un tour, dit dans la ligne d'état (voix d'Apex, sans jargon). */
 export const AKARI_STATUS = {
   RegisteringUserMessageInConversation: "Akari note ton message…",
   SendingPromptToAI: "Akari réfléchit…",

@@ -1,27 +1,184 @@
 /*
- * La connexion, hors de la coque.
+ * La connexion, hors de la coque : le panneau d'encre à gauche, le formulaire à droite. Sous 900px, une
+ * seule colonne et un panneau resserré, pour que le formulaire arrive vite.
  */
 
-/* Les enfants directs perdent leurs marges par défaut : l'espacement vient de
-   l'écart du conteneur. Spécificité nulle : une marge propre à un composant
-   d'Empreinte l'emporte. */
-:where(.screen > *, .form > *) {
-  margin: 0;
-}
-
-/* Un écran plein, le formulaire centré ; 100dvh compte la barre d'adresse
-   d'un mobile. */
 .screen {
   box-sizing: border-box;
   display: grid;
-  place-items: center;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 16px;
+  min-height: 100vh;
   min-height: 100dvh;
-  padding: var(--pas-6) var(--pas-4);
+  padding: 16px;
 }
 
-/* Le formulaire : un bloc étroit de 440px, pleine largeur sur mobile. */
-.form {
+/* Le panneau d'encre. */
+.story {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 40px 48px 48px;
+  border-radius: var(--r-xl);
+}
+
+.story .glow { right: -180px; top: -220px; }
+
+.rings {
+  position: absolute;
+  z-index: -1;
+  right: -160px;
+  top: -120px;
+  width: 620px;
+  opacity: 0.07;
+  fill: none;
+  stroke: var(--sur-nocturne);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.logo-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--sceau);
+  color: var(--sur-sceau);
+  box-shadow: var(--ombre-sceau);
+}
+
+.pitch { display: flex; flex-direction: column; gap: 28px; }
+.tagline { max-width: 620px; font-size: 76px; line-height: 78px; overflow-wrap: anywhere; }
+.tagline .serif { font-size: 1.2em; letter-spacing: -0.02em; }
+.lead { max-width: 460px; font-size: 17px; line-height: 26px; }
+
+/* L'aperçu décoratif d'un prochain pas. */
+.preview {
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   width: 100%;
   max-width: 440px;
+  padding: 20px;
+  border-radius: 20px;
+}
+
+.preview-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.preview-task { display: flex; align-items: center; gap: 12px; }
+
+.preview-check {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sceau);
+  color: var(--sur-sceau);
+}
+
+.preview-steps > span { height: 5px; background: rgba(255, 255, 255, 0.12); }
+.preview-steps > .done { background: var(--sur-nocturne); }
+.preview-steps > .now { background: var(--sceau); }
+
+/* Le formulaire, centré dans sa colonne. */
+.side {
+  display: grid;
+  place-items: center;
+  padding: 48px 32px;
+}
+
+.form {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.head { display: flex; flex-direction: column; gap: 8px; }
+.head h1 { overflow-wrap: anywhere; }
+.fields { display: flex; flex-direction: column; gap: 16px; }
+.submit { display: flex; flex-direction: column; gap: 8px; }
+.send { min-height: 50px; }
+
+/* La note d'Akari : ce qui n'a pas marché, et la solution. Jamais en rouge. */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+}
+
+.note-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--nocturne);
+}
+
+.note-mark::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--sceau);
+  transform: rotate(45deg);
+}
+
+.note-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* La bascule entre les deux modes : un lien écrit, mais un bouton. */
+.switch {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+  text-align: center;
+}
+
+.switch-btn {
+  appearance: none;
+  margin: 0;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--encre);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switch-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+.switch-btn[aria-disabled='true'] { opacity: 0.5; cursor: default; text-decoration: none; }
+
+@media (max-width: 900px) {
+  .screen { grid-template-columns: minmax(0, 1fr); }
+  .story { gap: 28px; padding: 28px 24px 32px; }
+  .tagline { font-size: 48px; line-height: 52px; }
+  .preview { display: none; }
+  .side { padding: 24px 8px 40px; }
+}
+
+@media (max-width: 760px) {
+  .tagline { font-size: 38px; line-height: 42px; }
+  .lead { font-size: 15px; line-height: 22px; }
 }

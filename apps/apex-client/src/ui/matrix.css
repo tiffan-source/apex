@@ -1,0 +1,83 @@
+/* La matrice : deux axes, quatre panneaux ; « Maintenant » est le panneau d'encre. */
+:host { display: block; }
+
+.grid {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 16px 20px;
+}
+
+.corner { grid-column: 1; grid-row: 1; }
+.axis { margin: 0; color: var(--encre-douce); }
+.axis-x { grid-row: 1; padding-left: 4px; }
+.axis-y { grid-column: 1; writing-mode: vertical-rl; transform: rotate(180deg); align-self: center; text-align: center; }
+.row-1 { grid-row: 2; }
+.row-2 { grid-row: 3; }
+.q-maintenant { grid-column: 2; grid-row: 2; }
+.q-planifier { grid-column: 3; grid-row: 2; }
+.q-confier { grid-column: 2; grid-row: 3; }
+.q-laisser-filer { grid-column: 3; grid-row: 3; }
+
+.quadrant {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 280px;
+  padding: 24px;
+  border-radius: var(--r-xl);
+  background: var(--panneau);
+  box-shadow: var(--ombre-2), inset 0 0 0 1px var(--bord);
+}
+
+.q-laisser-filer:not(.nuit) { background: var(--creux); box-shadow: none; }
+.q-laisser-filer:not(.nuit) .t2 { color: var(--encre-douce); }
+
+.quadrant.nuit { background: var(--nocturne); color: var(--sur-nocturne); box-shadow: var(--ombre-3), inset 0 0 0 1px var(--nocturne-trait); }
+.quadrant.nuit .glow { right: -240px; top: -260px; opacity: 0.36; }
+.quadrant.nuit .count { color: var(--nocturne-douce); }
+
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.head h3 { margin: 0; }
+.count { margin: 0; color: var(--encre-douce); }
+
+.list {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 48px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.element {
+  box-sizing: border-box;
+  border-radius: var(--r-md);
+  background: var(--panneau);
+  box-shadow: var(--ombre-1), inset 0 0 0 1px var(--bord);
+  cursor: grab;
+}
+
+.element--nuit { background: rgba(255, 255, 255, 0.06); color: var(--sur-nocturne); box-shadow: inset 0 0 0 1px var(--nocturne-trait); }
+.element:active { cursor: grabbing; }
+.q-laisser-filer:not(.nuit) .element { opacity: 0.8; }
+
+.note { margin: 0; color: var(--encre-douce); }
+.nuit .note { color: var(--nocturne-douce); }
+
+.placeholder {
+  min-height: 52px;
+  border-radius: var(--r-md);
+  border: 1.5px dashed var(--trame-forte);
+  opacity: 0.6;
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .axis, .corner { display: none; }
+  .quadrant { grid-column: 1 !important; grid-row: auto !important; min-height: 0; }
+}

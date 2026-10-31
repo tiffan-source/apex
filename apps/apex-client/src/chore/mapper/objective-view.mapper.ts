@@ -1,6 +1,6 @@
-import { legendeProgression, type EtatPas } from '@empreinte-studio/angular/core';
-import type { EtapeArete, EtatEtape } from '@empreinte-studio/angular/arete';
-import type { OptionSelection } from '@empreinte-studio/angular/selection';
+import { legendeProgression, type EtatPas } from '../../ui';
+import type { EtapeArete, EtatEtape } from '../../ui';
+import type { OptionSelection } from '../../ui';
 import type { ObjectiveViewModel, TaskViewModel } from '../models/objective.viewmodel';
 import type {
   NextTaskViewModel,
@@ -143,7 +143,7 @@ export function progressFromStates(states: readonly EtatPas[]): StageTaskProgres
   };
 }
 
-/** « 4 pas faits · 3 à venir » (legendeProgression d'Empreinte), ou le texte d'une étape vide. */
+/** « 4 pas faits · 3 à venir » (legendeProgression, ui/voice.ts), ou le texte d'une étape vide. */
 export function stageDetail(progress: StageTaskProgressViewModel): string {
   const legend = legendeProgression({
     faits: progress.done,
@@ -299,18 +299,18 @@ export function toObjectiveDetail(
   };
 }
 
-/** Les étapes d'un objectif pour e-selection : { valeur: id, libelle: titre }. */
+/** Les étapes d'un objectif pour ax-select : { valeur: id, libelle: titre }. */
 export function stageOptions(objectiveId: string, objectives: readonly ObjectiveViewModel[]): OptionSelection<string>[] {
   return stagesOf(objectiveId, objectives).map((stage) => ({ valeur: stage.id, libelle: stage.title }));
 }
 
-/** Les objectifs racines pour e-filtres ou e-selection : { valeur: id, libelle: titre }. */
+/** Les objectifs racines pour ax-filters ou ax-select : { valeur: id, libelle: titre }. */
 export function rootObjectiveOptions(objectives: readonly ObjectiveViewModel[]): OptionSelection<string>[] {
   return rootObjectives(objectives).map((objective) => ({ valeur: objective.id, libelle: objective.title }));
 }
 
 /**
- * L'id de l'étape choisie sur <e-arete (choisir)>. Null pour l'arête « Faites » qu'Empreinte forme
+ * L'id de l'étape choisie sur <ax-path (choose)>. Null pour l'arête « Faites » qu'Empreinte forme
  * au-delà de 8 étapes en repliant les étapes faites (elle ne correspond à aucune étape).
  */
 export function stageIdFromArete(etape: EtapeArete): string | null {

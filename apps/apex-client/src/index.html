@@ -7,11 +7,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+    />
     <script>
       // Applique le thème retenu avant le premier affichage, pour éviter un éclair de Jour en Nuit.
-      // Même clé que le service Theme d'Empreinte (CONFIG_PAR_DEFAUT.cleTheme : « empreinte:theme »).
+      // Même clé que le service Theme d'Apex (ui/theme.ts : « apex:theme », sinon l'ancienne « empreinte:theme »).
       try {
-        var t = localStorage.getItem('empreinte:theme');
+        var t = localStorage.getItem('apex:theme') || localStorage.getItem('empreinte:theme');
         if (t === 'nuit' || t === 'jour') document.documentElement.setAttribute('data-theme', t);
         else if (t === 'systeme' && matchMedia('(prefers-color-scheme: dark)').matches)
           document.documentElement.setAttribute('data-theme', 'nuit');

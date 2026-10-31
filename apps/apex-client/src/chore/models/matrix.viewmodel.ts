@@ -1,4 +1,4 @@
-import type { Quadrant } from '@empreinte-studio/angular/matrice';
+import type { Quadrant } from '../../ui';
 import type { TaskViewModel } from './objective.viewmodel';
 
 /** Un pas dans la matrice d'Eisenhower, avec de quoi écrire sa ligne de détail et filtrer par objectif. */
@@ -12,5 +12,5 @@ export type MatrixTaskViewModel = TaskViewModel & {
   stageTitle: string | null;
 };
 
-/** Les pas de chaque quadrant, prêts pour <e-matrice [quadrants]>. */
+/** Les pas de chaque quadrant, prêts pour <ax-matrix [quadrants]>. */
 export type MatrixViewModel = Record<Quadrant, MatrixTaskViewModel[]>;

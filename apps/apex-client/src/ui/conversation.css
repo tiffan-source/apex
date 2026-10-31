@@ -1,0 +1,158 @@
+/* La conversation : le fil qui défile, la ligne d'état, la zone de réponse au pied. */
+:host {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  --retrait: var(--ax-conversation-inset, 32px);
+}
+
+.thread {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0;
+  padding: 28px var(--retrait) 12px;
+  list-style: none;
+  scroll-behavior: auto;
+}
+
+.thread:focus-visible { outline-offset: -3px; border-radius: var(--r-lg); }
+
+.reply--akari {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 14px;
+  max-width: 680px;
+  animation: deplier 360ms var(--courbe) both;
+}
+
+.avatar-akari {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--nocturne);
+  box-shadow: var(--ombre-2);
+}
+
+.avatar-akari::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--sceau);
+  transform: rotate(45deg);
+}
+
+.reply-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 4px; }
+.who { margin: 0; color: var(--encre-douce); }
+.reply-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+
+.reply--me {
+  align-self: flex-end;
+  max-width: min(560px, 85%);
+  animation: deplier 260ms var(--courbe) both;
+}
+
+.bubble {
+  padding: 12px 18px;
+  border-radius: 22px 22px 6px 22px;
+  background: var(--encre);
+  color: var(--fond);
+}
+
+.pending { opacity: 0.6; }
+
+/* La prose du Markdown rendu est dans styles.css : le HTML inséré par [innerHTML] échappe à l'encapsulation. */
+.plain { white-space: pre-line; }
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--retrait);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--encre-douce);
+}
+
+.status:not(:empty) { padding-block: 4px 12px; }
+
+.typing { display: inline-flex; gap: 4px; }
+.typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--encre-douce); animation: clignote 1.2s ease-in-out infinite; }
+.typing span:nth-child(2) { animation-delay: 0.15s; }
+.typing span:nth-child(3) { animation-delay: 0.3s; }
+
+.back { position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%); z-index: 1; }
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 16px 16px;
+  padding: 14px 14px 12px 18px;
+  border-radius: var(--r-lg);
+  background: var(--panneau);
+  box-shadow: var(--ombre-2), inset 0 0 0 1px var(--trame);
+  transition: box-shadow 160ms;
+}
+
+.composer:focus-within { box-shadow: var(--ombre-2), inset 0 0 0 1.5px var(--sceau); }
+
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  resize: none;
+  color: var(--encre);
+  font: 400 16px/24px var(--sans);
+}
+
+textarea:focus { outline: none; }
+textarea::placeholder { color: var(--trame-forte); }
+
+.composer-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.suggestion {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--creux);
+  color: var(--encre);
+  font: 500 12px/16px var(--sans);
+  cursor: pointer;
+}
+
+.suggestion:hover { background: var(--trame); }
+
+@keyframes deplier {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes clignote {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reply--akari, .reply--me, .typing span { animation: none; }
+}
+
+@media (max-width: 760px) {
+  :host { --retrait: 16px; }
+  .composer { margin: 0 8px 8px; }
+  .reply--me { max-width: 92%; }
+}

@@ -1,0 +1,89 @@
+/* Le chemin : des ronds reliés par un trait, encre jusqu'à l'étape en cours, pointillé ensuite. */
+:host { display: block; }
+
+.path {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(120px, 1fr);
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step { position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* Le trait vers l'étape suivante, du centre d'un rond au centre du suivant. */
+.step:not(.step--summit)::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 19px;
+  left: 20px;
+  width: calc(100% + 12px);
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--trame-forte) 0 6px, transparent 6px 12px);
+}
+
+.step.lit::after { background: var(--encre); }
+
+.node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--panneau);
+  color: var(--encre-douce);
+  box-shadow: inset 0 0 0 1.5px var(--trame);
+  font: 600 14px/1 var(--sans);
+  transition: transform 200ms var(--courbe), box-shadow 200ms;
+}
+
+.step--faite .node { background: var(--encre); color: var(--fond); box-shadow: none; }
+.step--en-cours .node {
+  background: var(--sceau);
+  color: var(--sur-sceau);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--sceau) 16%, transparent), var(--ombre-sceau);
+}
+.step--summit .node { border-radius: 12px; color: var(--encre); box-shadow: inset 0 0 0 1.5px var(--encre); }
+
+.text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.name { font-size: 15px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.state { font-size: 13px; line-height: 18px; color: var(--encre-douce); }
+.step--en-cours .state { color: var(--sceau); font-weight: 500; }
+
+/* Une étape cliquable : toute la colonne est la cible. */
+.hit {
+  position: absolute;
+  inset: -8px;
+  z-index: 2;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  cursor: pointer;
+}
+.hit:hover ~ .node { transform: scale(1.06); }
+.selected .node { outline: 2px solid var(--encre); outline-offset: 3px; }
+.selected .name { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+
+/* Vertical : la liste des étapes, le trait descend à gauche. */
+:host(.vertical) .path { grid-auto-flow: row; grid-auto-columns: auto; gap: 0; }
+:host(.vertical) .step { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 14px; padding-bottom: 22px; }
+:host(.vertical) .step--summit { padding-bottom: 0; }
+:host(.vertical) .node { width: 28px; height: 28px; font-size: 12px; }
+:host(.vertical) .step--summit .node { border-radius: 9px; }
+:host(.vertical) .step--en-cours .node { box-shadow: 0 0 0 5px color-mix(in srgb, var(--sceau) 16%, transparent); }
+:host(.vertical) .step:not(.step--summit)::after {
+  top: 30px;
+  bottom: 2px;
+  left: 13px;
+  width: 2px;
+  height: auto;
+  background: var(--trame);
+}
+:host(.vertical) .step.lit::after { background: var(--encre); }
+
+@media (prefers-reduced-motion: reduce) { .node { transition: none; } }
