@@ -6,6 +6,7 @@ import { Feuilles } from '@empreinte-studio/angular/feuille';
 import { motsAEviter } from '@empreinte-studio/angular/core';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
+import { WriteQueue } from '../../chore/stores/utils/write-queue';
 import { rootObjectiveOptions, toObjectiveDetail } from '../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../chore/constants/messages.constante';
 import type { ObjectiveViewModel, TaskViewModel } from '../../chore/models/objective.viewmodel';
@@ -23,6 +24,7 @@ const objective = (id: string, title: string, parentId: string | null, extra: Pa
   description: '',
   dueDate: '',
   parentId,
+  done: false,
   ...extra,
 });
 
@@ -41,7 +43,7 @@ const OBJECTIVES: ObjectiveViewModel[] = [
     description: 'Trois sorties par semaine.',
     dueDate: new Date(2027, 4, 15).toISOString(),
   }),
-  objective('stage-1', 'Programme', 'obj-1'),
+  objective('stage-1', 'Programme', 'obj-1', { done: true }),
   objective('stage-2', 'Endurance', 'obj-1', { description: 'Tenir 30 minutes sans marcher.' }),
   objective('stage-3', 'Équipement', 'obj-1'),
   objective('obj-2', 'Apprendre le japonais', null),
@@ -78,6 +80,8 @@ describe('ObjectivePage', () => {
   let store: ReturnType<typeof createStore>;
   let feuilles: { ouvrir: ReturnType<typeof vi.fn> };
   let annonces: { annoncer: ReturnType<typeof vi.fn>; aUnSignalement: ReturnType<typeof signal<boolean>> };
+  /** Les ids définitifs que la file d'écritures connaît. */
+  let realIds: Map<string, string>;
   /** La fermeture de la dernière feuille ouverte (ref.closed). */
   let closed: Subject<unknown>;
 
@@ -95,6 +99,11 @@ describe('ObjectivePage', () => {
       (el) => (el.getAttribute('aria-label') ?? el.textContent ?? '').replace(/\s+/g, ' ').trim() === name,
     );
   const openedWith = () => feuilles.ouvrir.mock.calls.at(-1) as [unknown, { donnees: unknown; cdk: { injector: unknown } }];
+  /** Choisir une arête : la personne ouvre elle-même une étape. */
+  const chooseStage = (index: number) => {
+    element.querySelectorAll<SVGGElement>('e-arete .etape')[index].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+  };
 
   beforeEach(() => {
     store = createStore();
@@ -105,6 +114,7 @@ describe('ObjectivePage', () => {
       }),
     };
     annonces = { annoncer: vi.fn(), aUnSignalement: signal(false) };
+    realIds = new Map();
     TestBed.configureTestingModule({
       imports: [ObjectivePage],
       providers: [
@@ -112,6 +122,7 @@ describe('ObjectivePage', () => {
         { provide: ObjectiveStore, useValue: store },
         { provide: AnnoncesStore, useValue: annonces },
         { provide: Feuilles, useValue: feuilles },
+        { provide: WriteQueue, useValue: { resolve: (id: string) => realIds.get(id) ?? id } },
       ],
     });
   });
@@ -133,13 +144,27 @@ describe('ObjectivePage', () => {
     it("dessine l'arête de ses étapes, avec sa légende", () => {
       expect(text('#titre-arete')).toBe("L'arête · 3 étapes");
       const legend = [...element.querySelectorAll('ul[aria-label="Légende de l\'arête"] li')].map((li) => li.textContent?.trim());
-      expect(legend).toEqual(['Faite', 'En cours', 'À venir']);
+      expect(legend).toEqual(['Faite', 'À faire']);
       expect(element.querySelectorAll('e-arete .etape')).toHaveLength(3);
     });
 
-    it("ouvre l'étape en cours par défaut, avec ses pas", () => {
+    it("n'ouvre aucune étape de lui-même : aucune ne vient avant une autre", () => {
+      expect(element.querySelector('#titre-etape')).toBeNull();
+      expect(element.textContent).toContain("Choisis une étape sur l'arête pour voir ses pas.");
+      expect(buttonNamed('Ajouter un pas')).toBeUndefined();
+    });
+
+    it('écrit chaque étape sans numéro, faite ou à faire', () => {
+      const states = [...element.querySelectorAll('e-arete .etape .etat')].map((state) => state.textContent?.trim());
+      expect(states).toEqual(['Faite', 'À faire', 'À faire']);
+      chooseStage(1);
+      expect(text('p.repere')).toBe('Étape · à faire');
+      expect(element.textContent).not.toMatch(/Étape \d/);
+    });
+
+    it("l'étape choisie montre ses pas", () => {
+      chooseStage(1);
       expect(text('#titre-etape')).toBe('Endurance');
-      expect(element.textContent).toContain('Étape 2 · en cours');
       expect(element.textContent).toContain('Tenir 30 minutes sans marcher.');
       const titles = [...element.querySelectorAll('ul[aria-labelledby="titre-etape"] li .e-tache__titre')].map((label) =>
         label.textContent?.trim(),
@@ -151,6 +176,7 @@ describe('ObjectivePage', () => {
     });
 
     it("nomme une étape sans titre, pour qu'on puisse la corriger", () => {
+      chooseStage(1);
       store.objectives.update((list) => list.map((item) => (item.id === 'stage-2' ? { ...item, title: '' } : item)));
       fixture.detectChanges();
       expect(text('#titre-etape')).toBe('Étape sans nom');
@@ -158,6 +184,7 @@ describe('ObjectivePage', () => {
     });
 
     it('coche un pas par la mise à jour optimiste du store', () => {
+      chooseStage(1);
       const items = element.querySelectorAll<HTMLLIElement>('ul[aria-labelledby="titre-etape"] li');
       const checkbox = items[1].querySelector<HTMLInputElement>('input[type="checkbox"]');
       checkbox?.click();
@@ -165,15 +192,14 @@ describe('ObjectivePage', () => {
     });
 
     it("choisir une arête ouvre son étape, et le dit aux lecteurs d'écran", () => {
-      const firstArete = element.querySelector<SVGGElement>('e-arete .etape');
-      firstArete?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      fixture.detectChanges();
+      chooseStage(0);
       expect(text('#titre-etape')).toBe('Programme');
-      expect(element.textContent).toContain('Étape 1 · faite');
-      expect(annonces.annoncer).toHaveBeenCalledWith('Étape 1 · faite : Programme');
+      expect(element.textContent).toContain('Étape · faite');
+      expect(annonces.annoncer).toHaveBeenCalledWith('Programme · faite');
     });
 
     it("garde l'étape ouverte quand son dernier pas est coché, avec le focus sur la case", async () => {
+      chooseStage(1);
       const boxes = () =>
         [...element.querySelectorAll<HTMLInputElement>('ul[aria-labelledby="titre-etape"] input[type="checkbox"]')];
       boxes()[1].click(); // « Courir 5 km »
@@ -183,20 +209,37 @@ describe('ObjectivePage', () => {
       last.click();
       fixture.detectChanges();
       await fixture.whenStable();
-      // « Équipement » passe en cours sur l'arête, mais le panneau reste sur l'étape qu'on vient d'achever
+      // L'écran ne décide rien : l'étape reste « à faire » tant que l'API ne la dit pas faite.
       expect(text('#titre-etape')).toBe('Endurance');
-      expect(element.textContent).toContain('Étape 2 · faite');
+      expect(text('p.repere')).toBe('Étape · à faire');
+
+      store.objectives.update((list) => list.map((item) => (item.id === 'stage-2' ? { ...item, done: true } : item)));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(text('#titre-etape')).toBe('Endurance');
+      expect(text('p.repere')).toBe('Étape · faite');
       expect(last.isConnected).toBe(true);
       expect(document.activeElement).toBe(last);
     });
 
-    it("reprend l'étape en cours sur un autre objectif", async () => {
-      element.querySelector<SVGGElement>('e-arete .etape')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    it("garde l'étape ouverte quand son id temporaire devient définitif", () => {
+      store.objectives.update((list) => [...list, objective('temp-id-1', 'Mental', 'obj-1')]);
       fixture.detectChanges();
+      chooseStage(3);
+      expect(text('#titre-etape')).toBe('Mental');
+
+      realIds.set('temp-id-1', 'stage-4');
+      store.objectives.update((list) => list.map((item) => (item.id === 'temp-id-1' ? { ...item, id: 'stage-4' } : item)));
+      fixture.detectChanges();
+      expect(text('#titre-etape')).toBe('Mental');
+    });
+
+    it("n'ouvre plus rien sur un autre objectif", async () => {
+      chooseStage(0);
       store.objectives.update((list) => [...list, objective('stage-j1', 'Hiragana', 'obj-2')]);
       fixture.componentRef.setInput('id', 'obj-2');
       fixture.detectChanges();
-      expect(text('#titre-etape')).toBe('Hiragana');
+      expect(element.querySelector('#titre-etape')).toBeNull();
     });
 
     it("nomme une étape sans titre sur l'arête", () => {
@@ -207,6 +250,7 @@ describe('ObjectivePage', () => {
     });
 
     it('rend le focus au titre de l’étape quand le bouton qui a ouvert la feuille a disparu', async () => {
+      chooseStage(1);
       const edit = buttonNamed('Modifier « Courir 5 km »') as HTMLElement;
       edit.click();
       // La feuille range le pas dans une autre étape : son bouton « Modifier » quitte la liste
@@ -220,6 +264,7 @@ describe('ObjectivePage', () => {
     });
 
     it('laisse le focus où le CDK l’a rendu quand le bouton est toujours là', async () => {
+      chooseStage(1);
       const edit = buttonNamed("Modifier l'étape") as HTMLElement;
       edit.click();
       edit.focus();
@@ -230,6 +275,7 @@ describe('ObjectivePage', () => {
     });
 
     it("« Ajouter un pas » ouvre la feuille sur l'étape choisie, avec l'injecteur de l'écran", () => {
+      chooseStage(1);
       buttonNamed('Ajouter un pas')?.click();
       const [component, options] = openedWith();
       expect(component).toBe(AddTaskSheet);
@@ -238,6 +284,7 @@ describe('ObjectivePage', () => {
     });
 
     it('« Modifier » sur un pas ouvre sa feuille', () => {
+      chooseStage(1);
       buttonNamed('Modifier « Courir 5 km »')?.click();
       const [component, options] = openedWith();
       expect(component).toBe(EditTaskSheet);
@@ -249,6 +296,7 @@ describe('ObjectivePage', () => {
     });
 
     it("« Modifier l'étape » ouvre la feuille de l'étape choisie", () => {
+      chooseStage(1);
       buttonNamed("Modifier l'étape")?.click();
       const [component, options] = openedWith();
       expect(component).toBe(EditStageSheet);
@@ -270,6 +318,7 @@ describe('ObjectivePage', () => {
     });
 
     it("propose des pas avec Akari pour l'étape ouverte", () => {
+      chooseStage(1);
       expect(buttonNamed('Proposer des pas avec Akari')?.getAttribute('href')).toBe('/objectifs/obj-1/akari?etape=stage-2');
     });
 
@@ -283,6 +332,7 @@ describe('ObjectivePage', () => {
     });
 
     it('coupe un intitulé sans espace (une adresse) au lieu d’élargir la page', () => {
+      chooseStage(1);
       expect(element.querySelector('ul[aria-labelledby="titre-etape"]')?.classList).toContain('ds-break');
       expect(element.querySelector('ul[aria-labelledby="titre-sans-etape"]')?.classList).toContain('ds-break');
     });
@@ -295,14 +345,16 @@ describe('ObjectivePage', () => {
 
   describe('plus de 8 étapes', () => {
     beforeEach(() => {
-      const stages = Array.from({ length: 10 }, (_, index) => objective(`s${index + 1}`, `Étape ${index + 1}`, 'obj-1'));
+      // Trois étapes faites, sept à faire
+      const stages = Array.from({ length: 10 }, (_, index) =>
+        objective(`s${index + 1}`, `Étape ${index + 1}`, 'obj-1', { done: index < 3 }),
+      );
       store.objectives.set([OBJECTIVES[0], ...stages]);
-      // Les trois premières sont faites ; la quatrième est en cours
       store.tasks.set(stages.map((stage, index) => task(`p${index + 1}`, `Pas ${index + 1}`, stage.id, index < 3)));
       return render('obj-1');
     });
 
-    it("l'arête « Faites » ouvre tour à tour chaque étape faite, de la plus récente à la plus ancienne", () => {
+    it("l'arête « Faites » ouvre chaque étape faite, à tour de rôle", () => {
       const folded = () => element.querySelector<SVGGElement>('e-arete .etape') as SVGGElement;
       expect(folded().querySelector('.nom')?.textContent?.trim()).toBe('Faites');
       const opened: string[] = [];
@@ -318,16 +370,16 @@ describe('ObjectivePage', () => {
   describe('un objectif sans étape', () => {
     beforeEach(() => render('obj-2'));
 
-    it("Akari invite à poser la première étape, ou à lui en demander", () => {
+    it("Akari invite à poser des étapes, ou à lui en demander", () => {
       const note = element.querySelector('aside.e-note');
       expect(note?.textContent).toContain(
-        "Une arête commence par une étape. Ajoute la première, ou demande-moi de t'en proposer.",
+        "Une arête se construit avec des étapes. Ajoute-en une, ou demande-moi de t'en proposer.",
       );
       expect(element.querySelector('e-arete')).toBeNull();
       expect(buttonNamed('Proposer des étapes')?.getAttribute('href')).toBe('/objectifs/obj-2/akari');
     });
 
-    it("pose le focus sur la première étape ajoutée, puisque la note d'Akari disparaît", async () => {
+    it("rend le focus au titre de l'objectif quand la note d'Akari disparaît : aucune étape ne s'ouvre seule", async () => {
       const add = buttonNamed('Ajouter une étape') as HTMLElement;
       add.click();
       add.focus();
@@ -336,16 +388,16 @@ describe('ObjectivePage', () => {
       fixture.detectChanges();
       await fixture.whenStable();
       expect(element.querySelector('aside.e-note')).toBeNull();
-      expect(document.activeElement).toBe(element.querySelector('#titre-etape'));
-      expect(text('#titre-etape')).toBe('Hiragana');
+      expect(element.querySelector('#titre-etape')).toBeNull();
+      expect(document.activeElement).toBe(element.querySelector('h1'));
     });
 
     it('quand la coque affiche un signalement, garde une seule note : la sienne, et les mêmes actions', () => {
-      // Par exemple : la première étape, ajoutée depuis la note, n'a pas été enregistrée.
+      // Par exemple : une étape, ajoutée depuis la note, n'a pas été enregistrée.
       annonces.aUnSignalement.set(true);
       fixture.detectChanges();
       expect(element.querySelector('aside.e-note')).toBeNull();
-      expect(text('p.corps')).toBe('Une arête commence par une étape.');
+      expect(text('p.corps')).toBe('Une arête se construit avec des étapes.');
       expect(buttonNamed('Ajouter une étape')).toBeDefined();
       expect(buttonNamed('Proposer des étapes')?.getAttribute('href')).toBe('/objectifs/obj-2/akari');
 

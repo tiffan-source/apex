@@ -56,16 +56,15 @@
         </div>
 
         @if (stageRows().length) {
-          <ol class="ds-divided" aria-label="Les étapes">
+          <ul class="ds-divided" aria-label="Les étapes">
             @for (stage of stageRows(); track stage.id) {
               <li class="stage">
-                <span class="objectif">{{ stage.index }}</span>
                 <span class="corps ds-break">{{ stage.title }}</span>
                 <span class="detail ds-muted ds-nowrap">{{ stage.taskCount }}</span>
                 <span class="detail ds-muted">{{ stage.state }}</span>
               </li>
             }
-          </ol>
+          </ul>
         } @else {
           <p class="corps ds-muted">Aucune étape pour l'instant. Akari peut t'en proposer.</p>
         }

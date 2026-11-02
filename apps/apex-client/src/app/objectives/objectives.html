@@ -16,13 +16,12 @@
     <div class="ds-panels ds-cols-2 cards">
       @for (card of cards(); track card.id) {
         <article eCarte [attr.aria-labelledby]="'objectif-' + card.id">
-          <!-- Grandit pour pousser la progression et le prochain pas en bas de la carte. -->
+          <!-- Grandit pour pousser la progression en bas de la carte. -->
           <div class="ds-stack ds-grow">
             @if (card.horizon) {
               <p class="detail ds-muted">{{ card.horizon }}</p>
             }
-            <!-- tabindex="-1" : le focus y revient quand la case cochée disparaît (dernier recours). -->
-            <h2 class="objectif ds-break" [id]="'objectif-' + card.id" tabindex="-1">{{ card.title }}</h2>
+            <h2 class="objectif ds-break" [id]="'objectif-' + card.id">{{ card.title }}</h2>
             @if (card.why) {
               <p class="voix ds-muted ds-break">«&nbsp;{{ card.why }}&nbsp;»</p>
             }
@@ -30,43 +29,18 @@
 
           @let progress = card.progress;
           @if (progress.kind === 'cases') {
-            <!-- ds-break : la légende reprend le nom de l'étape en cours, qui peut être un mot très long. -->
-            <e-pas
-              class="ds-break"
-              [faits]="progress.done"
-              [enCours]="progress.inProgress"
-              [aVenir]="progress.upcoming"
-              [unite]="progress.unit"
-              [nomEnCours]="progress.currentName"
-              [legende]="progress.legend"
-            />
+            <e-pas [faits]="progress.done" [aFaire]="progress.toDo" [unite]="progress.unit" [legende]="progress.legend" />
           } @else if (progress.kind === 'legend') {
             <p class="detail ds-muted ds-break">{{ progress.text }}</p>
           } @else {
-            <p class="detail ds-muted">Aucune étape pour l'instant. Pose la première quand tu veux.</p>
+            <p class="detail ds-muted">Aucune étape pour l'instant. Ajoutes-en quand tu veux.</p>
           }
 
-          <div class="ds-row ds-wrap ds-between ds-rule-top" [class.ds-justify-end]="card.nextTasks.length === 0">
-            @for (next of card.nextTasks; track next.id) {
-              <div class="ds-check ds-grow">
-                <input
-                  #box
-                  type="checkbox"
-                  eCase
-                  [id]="'prochain-pas-' + next.id"
-                  [attr.aria-describedby]="'prochain-pas-detail-' + next.id"
-                  [checked]="next.done"
-                  (change)="toggleTask(card.id, next.id, box.checked)"
-                />
-                <label class="corps ds-break" [for]="'prochain-pas-' + next.id">{{ next.title }}</label>
-                <span class="detail ds-muted" [id]="'prochain-pas-detail-' + next.id">Prochain pas</span>
-              </div>
-            }
+          <div class="ds-row ds-wrap ds-justify-end ds-rule-top">
             @if (card.openable) {
               <a
                 eBouton="trait"
                 petit
-                [id]="'ouvrir-' + card.id"
                 [routerLink]="['/objectifs', card.id]"
                 [attr.aria-describedby]="'objectif-' + card.id"
                 >Ouvrir</a

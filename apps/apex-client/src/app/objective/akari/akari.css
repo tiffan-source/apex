@@ -21,17 +21,16 @@
   background: var(--panneau);
 }
 
-/* Une étape de la liste : son numéro dans une colonne étroite (28px), le nom,
-   le compte de pas à droite ; l'état passe sous le nom. */
+/* Une étape de la liste : le nom, le compte de pas à droite ; l'état passe sous le nom. */
 .stage {
   display: grid;
-  grid-template-columns: var(--ds-space-7) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--ds-space-0-5) var(--pas-3);
   align-items: baseline;
 }
 
-.stage > :nth-child(n + 4) {
-  grid-column: 2 / -1;
+.stage > :nth-child(n + 3) {
+  grid-column: 1 / -1;
 }
 
 /* Au-dessus de 1100px (la conversation et l'arête côte à côte), l'écran tient

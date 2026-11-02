@@ -21,7 +21,7 @@ Ce document est le cahier de la migration du client Apex de PrimeNG vers le desi
 
 ## 3. Le périmètre V1
 
-Apex V1 fait une seule chose : mener un objectif jusqu'au sommet, pas après pas. Quatre écrans, deux entrées de menu. Akari n'est plus un lieu mais un geste.
+Apex V1 fait une seule chose : mener un objectif jusqu'au sommet. Quatre écrans, deux entrées de menu. Akari n'est plus un lieu mais un geste.
 
 | Écran | Route | Remplace | Maquette |
 | --- | --- | --- | --- |
@@ -45,16 +45,14 @@ Cinq mots : **objectif, étape, pas, arête, laisser filer**. L'interface s'arr�
 | Interface | Modèle | Règle |
 | --- | --- | --- |
 | Objectif | objectif racine (`parentId === null`) | |
-| Étape | sous-objectif **direct** d'un objectif | Dans l'ordre de chargement, qui n'est stable qu'une fois le chargement trié (§ 11, Back-end). Les sous-objectifs plus profonds ne sont pas montrés : leurs pas comptent dans leur étape de premier niveau. |
-| Pas | tâche | Un pas posé directement sur l'objectif (sans étape) apparaît dans un groupe « Pas sans étape », avec l'invitation à le ranger dans une étape. Tout nouveau pas appartient à une étape. |
+| Étape | sous-objectif **direct** d'un objectif | Les étapes sont indépendantes : aucun ordre entre elles, aucun numéro, aucune n'en attend une autre. Le tri du chargement garde seulement l'affichage stable (§ 11, Back-end). Les sous-objectifs plus profonds ne sont pas montrés : leurs pas comptent dans leur étape de premier niveau. |
+| Pas | tâche | Les pas sont indépendants, comme les étapes. Un pas posé directement sur l'objectif (sans étape) apparaît dans un groupe « Pas sans étape », avec l'invitation à le ranger dans une étape. Tout nouveau pas appartient à une étape. |
 | Horizon | `dueDate` | « Jusqu'en mai », ou « Jusqu'en mai 2027 » si l'année n'est pas l'année en cours. |
 | Pourquoi | `why` | Écrit en `voix`, entre « ». |
 
-**État d'une étape** : *faite* si elle a au moins un pas et que tous ses pas sont faits ; *en cours* pour la première étape non faite (une seule par objectif) ; *à venir* pour les suivantes.
+**État d'une étape** : *faite* ou *à faire*, rien d'autre. C'est l'API qui le dit (`done` dans `GET /v1/objectives`) : le client l'affiche sans le calculer, et relit les objectifs après une écriture qui peut le changer (cocher, ajouter ou déplacer un pas). Il n'y a ni étape « en cours » ni « prochain pas » : aucune étape, aucun pas ne passe avant un autre, et l'écran n'ouvre aucune étape de lui-même.
 
-**Prochain pas d'un objectif** : le premier pas non fait de l'étape en cours, sinon le premier pas non fait de l'objectif.
-
-**Objectif accompli** : au moins un pas, et tous faits. Les objectifs accomplis passent dans une liste repliée « Accomplis ».
+**Objectif accompli** : l'API le dit fait (`done`). Les objectifs accomplis passent dans une liste repliée « Accomplis ».
 
 **Quadrants** (la règle `ApexLibsMetier.getEisenhowerCategory` reste la source) :
 
@@ -115,7 +113,8 @@ Ce que la migration laisse ouvert. Rien de ceci n'est compensé ni simulé côt�
 Le client n'a plus ni domaine ni infrastructure : il appelle l'API d'Apex Brain (dépôt `tiffan-source/apex-brain`, `docs/api.md`), qui a repris les points ouverts ici.
 
 - **`findObjectiveWithASpecificTaskId`** : corrigé dans le serveur (les pas relus gardent `done`, leur description et leur échéance) ; modifier ou déplacer un pas ne remet plus ses voisins à « non faits ».
-- **L'ordre du chargement** : `GET /v1/objectives` rend un ordre stable (création, puis id).
+- **Le tri du chargement** : `GET /v1/objectives` trie par création, puis par id, pour que l'affichage ne saute pas. Ce n'est pas un ordre : étapes et pas sont indépendants.
+- **Fait ou non fait** : `GET /v1/objectives` rend `done` pour chaque objectif et chaque étape (au moins un pas, et tous faits) : la règle a quitté le client.
 - **Les codes d'erreur** : chaque refus de l'API porte un code stable ; `SessionStore` garde ce code et `translateAuthError` choisit sa phrase d'après lui, sans plus lire les messages anglais de Supabase.
 - **Le workflow d'Akari** tourne dans le serveur : une panne ramène le tour au repos avec `lastError` (plus de « Akari réfléchit… » sans fin), sans inspecteur Stately.
 - **Les longueurs** : l'API borne un nom à 200 caractères, une description ou un pourquoi à 5 000 (`TEXT_MAX_LENGTH`, `api.models.ts`), un message à Akari à 4 000. Les formulaires s'arrêtent avant (`limitText`, `sheet-validation.ts` ; `[formField]` pose `maxlength`), et e-champ dit « C'est un peu long : … caractères au plus. » pour un texte écrit avant cette limite. La zone de réponse d'Akari ne borne pas encore son message : l'API le refuse, et la note le dit.
@@ -128,7 +127,7 @@ Le client n'a plus ni domaine ni infrastructure : il appelle l'API d'Apex Brain 
 - **Akari** : réglé en 0.3.0. Les répliques sont des `li[eReplique]` (dans `e-conversation` ou un `ol[eFil]`), plus des `aside[eNote]` : plus de régions « complementary » en double, et la seule note de l'écran est celle de la coque.
 - **Navigation** : `ELienNav` ne pose la corne que pour `aria-current="page"` (pas pour `"true"`, la section courante) ; `e-menu` ne marque pas l'entrée choisie (ni `menuitemradio` ni `aria-checked` : Apex écrit « · choisi ») ; pas de composant d'initiale (Apex : `.initial`, `shell.css`).
 - **`e-matrice`** : sous 640px, les axes restent au-dessus d'une grille passée sur une colonne et deviennent faux ; le compte d'un quadrant n'est pas personnalisable et ses titres sont figés en `h3` ; au toucher, le glisser bloque le défilement (Apex règle un délai par `CDK_DRAG_CONFIG` ; à porter dans le composant).
-- **`e-arete`** : pas de variante brouillon (la tête est toujours un sceau), pas de légende (Apex compose avec des cases d'`e-pas`, dont la case « En cours » porte une corne, `clip-path` à `--corne-s`, que la borne en cours de l'arête n'a pas : dans la légende, cette corne est décorative et sans `aria-current`, contraire au § 10 ; aucune primitive d'Empreinte ne dessine la borne sans corne), noms tronqués (18 / 22 / 2 × 15 caractères), pas d'identifiant dans `choisir` pour l'arête repliée « Faites », l'étape choisie n'est pas marquée, bornes carrées au lieu d'empreintes.
+- **`e-arete`** : pas de variante brouillon (la tête est toujours un sceau), pas de légende (Apex compose avec des cases d'`e-pas`), noms tronqués (18 / 22 / 2 × 15 caractères), pas d'identifiant dans `choisir` pour l'arête repliée « Faites », l'étape choisie n'est pas marquée, bornes carrées au lieu d'empreintes.
 - **`e-filtres`** : pas de nom accessible par option (`OptionFiltre` n'a que `valeur`, `libelle`, `lumiere`) ; le libellé, coupé pour tenir sur un téléphone, est le seul nom du bouton. Apex garde des libellés différents (`distinctShortTitles`, « Préparer le… 2027 ») ; un `libelleComplet` (ou `aria-label`) par option rendrait le titre entier aux lecteurs d'écran.
 - **Contenu** : la prose du Markdown rendu est réglée en 0.3.0, dans les répliques (`.ds-prose` a quitté Apex) ; pas de repli générique `details` (Apex : `details.accomplished`, `objectives.css`).
 

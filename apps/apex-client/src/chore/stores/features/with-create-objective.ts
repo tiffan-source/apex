@@ -56,7 +56,8 @@ export function withCreateObjective() {
               description: description || "",
               why: why || "",
               dueDate: dueDate?.toISOString() || "",
-              parentId: null
+              parentId: null,
+              done: false,
             };
             patchState(store, { objectives: [...store.objectives(), newObjective] });
           }),

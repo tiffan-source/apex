@@ -19,9 +19,9 @@ export function withObjectiveViews() {
     withComputed(({ objectives, tasks }) => {
       const cards = computed(() => toObjectiveCards(objectives(), tasks()));
       return {
-        /** Les objectifs en marche (non accomplis), dans l'ordre de chargement. */
+        /** Les objectifs en marche (non accomplis). */
         objectiveCards: computed(() => cards().filter((card) => !card.accomplished)),
-        /** Les objectifs accomplis (au moins un pas, tous faits), pour la liste repliée « Accomplis ». */
+        /** Les objectifs que l'API dit faits, pour la liste repliée « Accomplis ». */
         accomplishedObjectives: computed(() => cards().filter((card) => card.accomplished)),
         /** Tous les pas par quadrant, pour <e-matrice [quadrants]> (filtrer avec filterMatrixByObjective). */
         matrix: computed(() => toMatrix(objectives(), tasks())),

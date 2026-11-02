@@ -5,6 +5,8 @@ export type ObjectiveViewModel = {
   description: string;
   dueDate: string;
   parentId: string | null;
+  /** Fait ou non fait, tel que l'API le dit. */
+  done: boolean;
 };
 
 export type TaskViewModel = {

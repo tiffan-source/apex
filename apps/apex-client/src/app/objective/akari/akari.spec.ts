@@ -9,7 +9,7 @@ import type { ObjectiveViewModel, TaskViewModel } from '../../../chore/models/ob
 import { rootObjectiveOptions, toObjectiveDetail } from '../../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
 import { Akari, objectiveInvitation, permissionPrompt, stageInvitation } from './akari';
-import { STAGE_STATE_TITLES, UNTITLED_STAGE } from '../stage-labels';
+import { UNTITLED_STAGE, stageStateTitle } from '../stage-labels';
 import { AKARI_REPLIED, AKARI_REPORTS, AKARI_STATUS, ChatStore } from './chat.store';
 import type { MessageViewModel, PermissionRequestViewModel } from './chat.models';
 
@@ -21,9 +21,9 @@ import type { MessageViewModel, PermissionRequestViewModel } from './chat.models
  */
 
 const OBJECTIVES: ObjectiveViewModel[] = [
-  { id: 'semi', title: 'Semi-marathon', why: 'Courir pour moi', description: '', dueDate: '', parentId: null },
-  { id: 'endurance', title: 'Endurance', why: '', description: '', dueDate: '', parentId: 'semi' },
-  { id: 'vitesse', title: 'Vitesse', why: '', description: '', dueDate: '', parentId: 'semi' },
+  { id: 'semi', title: 'Semi-marathon', why: 'Courir pour moi', description: '', dueDate: '', parentId: null, done: false },
+  { id: 'endurance', title: 'Endurance', why: '', description: '', dueDate: '', parentId: 'semi', done: false },
+  { id: 'vitesse', title: 'Vitesse', why: '', description: '', dueDate: '', parentId: 'semi', done: true },
 ];
 
 const TASKS: TaskViewModel[] = [
@@ -176,7 +176,7 @@ describe('Akari : l’ouverture de la conversation', () => {
     expect(chat.initWorkflow).toHaveBeenCalledWith('semi');
 
     // Akari ajoute une étape : les objectifs sont rechargés, la conversation reste ouverte.
-    objectives.objectives.set([...OBJECTIVES, { id: 'portfolio', title: 'Portfolio', why: '', description: '', dueDate: '', parentId: 'semi' }]);
+    objectives.objectives.set([...OBJECTIVES, { id: 'portfolio', title: 'Portfolio', why: '', description: '', dueDate: '', parentId: 'semi', done: false }]);
     await refresh(fixture);
     expect(chat.loadChatHistory).toHaveBeenCalledTimes(1);
     expect(chat.initWorkflow).toHaveBeenCalledTimes(1);
@@ -570,10 +570,10 @@ describe('Akari : l’arête à droite', () => {
     expect(panel.querySelector('.ds-hide-mobile > e-arete')).not.toBeNull();
     expect(panel.querySelector('e-arete')?.hasAttribute('interactive')).toBe(false);
 
-    const rows = Array.from(panel.querySelectorAll('ol.ds-divided > li.stage'));
+    const rows = Array.from(panel.querySelectorAll('ul.ds-divided > li.stage'));
     expect(rows.map((row) => Array.from(row.children).map(text))).toEqual([
-      ['1', 'Endurance', '2 pas', 'En cours'],
-      ['2', 'Vitesse', '1 pas', 'À venir'],
+      ['Endurance', '2 pas', 'À faire'],
+      ['Vitesse', '1 pas', 'Faite'],
     ]);
     expect(text(panel)).toContain('1 pas sans étape');
 
@@ -595,9 +595,9 @@ describe('Akari : l’arête à droite', () => {
 
   it('se remplit quand Akari ajoute une étape', async () => {
     const { fixture, objectives, root } = await setup();
-    objectives.objectives.set([...OBJECTIVES, { id: 'portfolio', title: 'Récupération', why: '', description: '', dueDate: '', parentId: 'semi' }]);
+    objectives.objectives.set([...OBJECTIVES, { id: 'portfolio', title: 'Récupération', why: '', description: '', dueDate: '', parentId: 'semi', done: false }]);
     await refresh(fixture);
-    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Vitesse', 'Récupération']);
+    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[0]))).toEqual(['Endurance', 'Vitesse', 'Récupération']);
   });
 
   it('nomme une étape enregistrée sans nom, comme l’arête', async () => {
@@ -605,7 +605,7 @@ describe('Akari : l’arête à droite', () => {
       etape: 'vitesse',
       configure: (_, store) => store.objectives.set(OBJECTIVES.map((o) => (o.id === 'vitesse' ? { ...o, title: '' } : o))),
     });
-    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Étape sans nom']);
+    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[0]))).toEqual(['Endurance', 'Étape sans nom']);
     // Sur l'arête aussi, et un titre fait d'espaces compte comme vide.
     expect(Array.from(root.querySelectorAll('e-arete .etape .nom')).map(text)).toEqual(['Endurance', 'Étape sans nom']);
     expect(text(root)).toContain("Je peux te proposer des pas pour l'étape « Étape sans nom ».");
@@ -615,7 +615,7 @@ describe('Akari : l’arête à droite', () => {
     const { root } = await setup({
       configure: (_, store) => store.objectives.set(OBJECTIVES.map((o) => (o.id === 'vitesse' ? { ...o, title: '   ' } : o))),
     });
-    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[1]))).toEqual(['Endurance', 'Étape sans nom']);
+    expect(Array.from(root.querySelectorAll('li.stage')).map((row) => text(row.children[0]))).toEqual(['Endurance', 'Étape sans nom']);
     expect(Array.from(root.querySelectorAll('e-arete .etape .nom')).map(text)).toEqual(['Endurance', 'Étape sans nom']);
   });
 
@@ -727,7 +727,8 @@ describe('Akari : la voix', () => {
     permissionPrompt({ kind: 'task', title: 'Courir 10 km', objectiveId: 'endurance' }, () => 'Endurance'),
     permissionPrompt({ kind: 'task', title: '', objectiveId: null }),
     permissionPrompt({ kind: 'other' }),
-    ...Object.values(STAGE_STATE_TITLES),
+    stageStateTitle(true),
+    stageStateTitle(false),
     UNTITLED_STAGE,
     ...Object.values(AKARI_STATUS),
     ...Object.values(AKARI_REPORTS),

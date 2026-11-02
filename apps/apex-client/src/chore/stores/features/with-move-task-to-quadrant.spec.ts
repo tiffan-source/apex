@@ -13,7 +13,7 @@ import { withCreateObjective } from './with-create-objective';
 import { FAILURE_REPORTS, SUCCESS_ANNOUNCEMENTS } from '../../constants/messages.constante';
 
 const initialState: ObjectiveState = {
-  objectives: [{ id: 'semi', title: 'Semi-marathon', why: '', description: '', dueDate: '', parentId: null }],
+  objectives: [{ id: 'semi', title: 'Semi-marathon', why: '', description: '', dueDate: '', parentId: null, done: false }],
   tasks: [
     { id: 't1', title: 'Courir 8 km', importance: 4, urgency: 1, done: false, objectiveId: 'semi' },
     { id: 't2', title: 'Comparer des montres', importance: 1, urgency: 1, done: true, objectiveId: 'semi' },

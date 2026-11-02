@@ -286,8 +286,7 @@
 
 /* Case et intitulé : la case (input[eCase]) dans une colonne de 20px,
    l'intitulé à côté ; les enfants suivants (détail, action) passent sous
-   l'intitulé. Pour une case hors d'une liste ul[eListe] (élément de matrice,
-   prochain pas d'une carte). */
+   l'intitulé. Pour une case hors d'une liste ul[eListe] (élément de matrice). */
 .ds-check {
   display: grid;
   grid-template-columns: var(--ds-check-lead) minmax(0, 1fr);

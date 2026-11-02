@@ -26,6 +26,7 @@ const objective = (id: string, title: string, parentId: string | null = null): O
   description: '',
   dueDate: '',
   parentId,
+  done: false,
 });
 
 const task = (

@@ -18,7 +18,6 @@ const task = (objectiveId: string): StageTaskViewModel => ({
   id: 't3',
   title: 'Courir 5 km',
   done: true,
-  state: 'fait',
   importance: 4,
   urgency: 2,
   objectiveId,

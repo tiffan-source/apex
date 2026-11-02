@@ -105,7 +105,7 @@ describe('voiceIssues', () => {
   });
 
   it('laisse passer la voix d’Empreinte', () => {
-    expect(voiceIssues('4 pas faits · 3 à venir')).toEqual([]);
+    expect(voiceIssues('4 pas faits · 3 à faire')).toEqual([]);
     expect(voiceIssues('Un pas de plus.')).toEqual([]);
     expect(voiceIssues('Ce pas passe dans « À laisser filer ».')).toEqual([]);
     expect(voiceIssues('Je ne retrouve plus ce pas. Recharge la page, puis réessaie.')).toEqual([]);

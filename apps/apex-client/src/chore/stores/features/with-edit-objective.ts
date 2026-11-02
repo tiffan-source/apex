@@ -60,7 +60,8 @@ export function withEditObjective() {
                 description: data.description ?? data.oldObj.description,
                 why: data.why ?? data.oldObj.why,
                 dueDate: data.dueDate?.toISOString() ?? data.oldObj.dueDate,
-                parentId: data.oldObj.parentId
+                parentId: data.oldObj.parentId,
+                done: data.oldObj.done,
               } satisfies ObjectiveViewModel,
             })),
             tap(({ id, optimistic })=>{

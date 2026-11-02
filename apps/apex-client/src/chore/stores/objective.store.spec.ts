@@ -33,8 +33,8 @@ const STATUS_OF: Record<string, number> = {
 
 const LOADED: ObjectivesResponse = {
   objectives: [
-    { id: 'semi', title: 'Semi-marathon', description: '', why: '', dueDate: null, parentObjective: null },
-    { id: 'endurance', title: 'Endurance', description: '', why: '', dueDate: null, parentObjective: 'semi' },
+    { id: 'semi', title: 'Semi-marathon', description: '', why: '', dueDate: null, parentObjective: null, done: false },
+    { id: 'endurance', title: 'Endurance', description: '', why: '', dueDate: null, parentObjective: 'semi', done: false },
   ],
   tasks: [
     { id: 't1', title: 'Courir 8 km', importance: 4, urgency: 1, done: false, objectiveId: 'endurance' },
@@ -93,7 +93,28 @@ async function setup(
   const annonces = TestBed.inject(AnnoncesStore);
   TestBed.tick();
   await settle();
+  // Après le premier chargement, la base rend ce qui est enregistré : ici, ce que l'écran montre.
+  api.list.mockImplementation(async () => savedState(store));
   return { store, annonces, announce, api, session };
+}
+
+/** Ce que GET /v1/objectives rendrait : l'état du store, sans ce qui n'est pas encore enregistré. */
+function savedState(store: InstanceType<typeof ObjectiveStore>): ObjectivesResponse {
+  return {
+    objectives: store
+      .objectives()
+      .filter((item) => !isTemporaryId(item.id))
+      .map(({ id, title, description, why, dueDate, parentId, done }) => ({
+        id,
+        title,
+        description,
+        why,
+        dueDate: dueDate || null,
+        parentObjective: parentId,
+        done,
+      })),
+    tasks: store.tasks().filter((item) => !isTemporaryId(item.id)),
+  };
 }
 
 /** Les ids temporaires qui restent dans l'état. */
@@ -506,7 +527,7 @@ describe('ObjectiveStore', () => {
       s.api.list.mockImplementationOnce(async () => ({
         objectives: [
           ...LOADED.objectives,
-          ...(saved ? [{ id: 'guitare', title: 'Guitare', description: '', why: '', dueDate: null, parentObjective: null }] : []),
+          ...(saved ? [{ id: 'guitare', title: 'Guitare', description: '', why: '', dueDate: null, parentObjective: null, done: false }] : []),
         ],
         tasks: LOADED.tasks,
       }));
@@ -546,8 +567,8 @@ describe('ObjectiveStore', () => {
       expect(s.api.setTaskDone).toHaveBeenCalledWith('t1', true);
       expect(t1DoneInDb).toBe(true);
       expect(task('t1')?.done).toBe(true);
-      // Le premier chargement, le rechargement, puis une seule relecture.
-      expect(s.api.list).toHaveBeenCalledTimes(3);
+      // Le premier chargement, le rechargement, sa relecture, puis la lecture qui suit la coche.
+      expect(s.api.list).toHaveBeenCalledTimes(4);
       expect(s.store.isPending()).toBe(false);
       expect(s.store.error()).toBeNull();
     });
@@ -570,6 +591,64 @@ describe('ObjectiveStore', () => {
 
       expect(t.store.tasks().map((item) => item.id)).toEqual(['t1', 't2']);
       expect(t.annonces.signalement()).toBe(FAILURE_REPORTS.addTask);
+    });
+  });
+
+  describe('fait ou non fait : c’est l’API qui le dit', () => {
+    const stageDone = () => s.store.objectiveDetail('semi')?.stages[0].done;
+    /** La base après l'écriture : l'étape et l'objectif sont faits. */
+    const allDone = (): ObjectivesResponse => ({
+      objectives: LOADED.objectives.map((item) => ({ ...item, done: true })),
+      tasks: LOADED.tasks.map((item) => ({ ...item, done: true })),
+    });
+
+    it('un pas coché change tout de suite, et l’étape quand l’API la dit faite', async () => {
+      s.api.setTaskDone.mockResolvedValue({ id: 't1', title: 'Courir 8 km', done: true });
+      s.api.list.mockImplementation(async () => allDone());
+
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      expect(task('t1')?.done).toBe(true);
+      expect(stageDone()).toBe(false);
+
+      await settle();
+      expect(stageDone()).toBe(true);
+      expect(s.store.objectiveCards()).toEqual([]);
+      expect(s.store.accomplishedObjectives().map((card) => card.id)).toEqual(['semi']);
+    });
+
+    it('l’état ne se déduit jamais des pas : tous cochés, l’étape reste à faire si l’API le dit', async () => {
+      s.api.setTaskDone.mockResolvedValue({ id: 't1', title: 'Courir 8 km', done: true });
+
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      await settle();
+
+      expect(s.store.tasks().every((item) => item.done)).toBe(true);
+      expect(stageDone()).toBe(false);
+    });
+
+    it('relit après un pas ajouté, et après un pas modifié', async () => {
+      s.api.addTask.mockResolvedValue({ id: 'p1', title: 'Fractionné', importance: 3, urgency: 2 });
+      s.api.editTask.mockResolvedValue({ id: 't1', title: 'Courir 9 km', objectiveId: 'endurance', importance: 4, urgency: 1 });
+      const reads = s.api.list.mock.calls.length;
+
+      s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Fractionné', importance: 3, urgency: 2 } });
+      await settle();
+      expect(s.api.list.mock.calls.length).toBe(reads + 1);
+
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 9 km', objectiveId: 'endurance', importance: 4, urgency: 1 } });
+      await settle();
+      expect(s.api.list.mock.calls.length).toBe(reads + 2);
+    });
+
+    it('ne relit rien quand l’écriture est refusée', async () => {
+      s.api.setTaskDone.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
+      const reads = s.api.list.mock.calls.length;
+
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      await settle();
+
+      expect(s.api.list.mock.calls.length).toBe(reads);
+      expect(task('t1')?.done).toBe(false);
     });
   });
 

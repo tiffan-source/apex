@@ -13,7 +13,7 @@ import { SUCCESS_ANNOUNCEMENTS, failureReport } from "../../constants/messages.c
 
 export function withUpdateTaskDone() {
   return signalStoreFeature(
-    { state: type<ObjectiveState>() },
+    { state: type<ObjectiveState>(), methods: type<{ loadObjectives: () => unknown }>() },
     withMethods((
       store,
       objectivesApi = inject(ObjectivesApi),
@@ -47,6 +47,8 @@ export function withUpdateTaskDone() {
                   next: (saved)=> {
                     if (saved === null) return;
                     annonces.annoncer(done ? SUCCESS_ANNOUNCEMENTS.taskDone : SUCCESS_ANNOUNCEMENTS.taskUndone);
+                    // Fait ou non fait, pour l'étape et l'objectif : c'est l'API qui le dit.
+                    store.loadObjectives();
                   },
                   error: (error) => {
                     console.error('Mise à jour du pas non enregistrée :', error);

@@ -23,7 +23,7 @@ export type TaskQuery = {
 
 export function withAddTaskToObjective() {
   return signalStoreFeature(
-    { state: type<ObjectiveState & RequestStatusState>() },
+    { state: type<ObjectiveState & RequestStatusState>(), methods: type<{ loadObjectives: () => unknown }>() },
     withMethods((store,
       objectivesApi = inject(ObjectivesApi),
       sessionStore = inject(SessionStore),
@@ -75,6 +75,8 @@ export function withAddTaskToObjective() {
                   });
 
                   annonces.annoncer(SUCCESS_ANNOUNCEMENTS.taskAdded);
+                  // Fait ou non fait, pour l'étape et l'objectif : c'est l'API qui le dit.
+                  store.loadObjectives();
                 },
                 error: (error) => {
                   console.error(error);

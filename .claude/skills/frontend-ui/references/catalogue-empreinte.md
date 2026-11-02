@@ -1,6 +1,6 @@
 # Catalogue : les composants Empreinte pour Apex
 
-Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.3.0** et **`@empreinte-studio/tokens` 0.3.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
+Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.4.0** et **`@empreinte-studio/tokens` 0.4.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11) ; la 0.4 retire toute notion d'ordre : une étape est faite ou à faire, un pas aussi (§ 2.6, § 2.20, § 4). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
 
 Le cahier de la migration (`docs/features/migration-empreinte.md`) fixe le périmètre, le vocabulaire et les règles d'écran ; ce catalogue dit **avec quoi** les construire.
 
@@ -25,7 +25,7 @@ import { EMatrice, EMatriceElement } from '@empreinte-studio/angular/matrice'; /
 
 ### 1.1 Dépendances
 
-`@empreinte-studio/angular` 0.3.0 demande en pair `@angular/aria`, `@angular/cdk`, `@angular/common`, `@angular/core`, `@angular/forms` en `^22.2.0` (installés en 22.2.3). Il dépend de `@empreinte-studio/tokens` 0.3.0, qui dépend de `@fontsource/schibsted-grotesk` et `@fontsource/shippori-mincho` (présents dans `node_modules`). Aucune feuille du CDK n'est à charger : le CDK injecte lui-même les styles de l'overlay, du drag-drop et du text-field.
+`@empreinte-studio/angular` 0.4.0 demande en pair `@angular/aria`, `@angular/cdk`, `@angular/common`, `@angular/core`, `@angular/forms` en `^22.2.0` (installés en 22.2.3). Il dépend de `@empreinte-studio/noyau` et de `@empreinte-studio/tokens` 0.4.0 ; `tokens` dépend de `@fontsource/schibsted-grotesk` et `@fontsource/shippori-mincho` (présents dans `node_modules`). Aucune feuille du CDK n'est à charger : le CDK injecte lui-même les styles de l'overlay, du drag-drop et du text-field.
 
 ### 1.2 Les styles globaux
 
@@ -121,8 +121,8 @@ protected readonly themes: OptionFiltre<PreferenceTheme>[] = [
 | `ChargeurStyles` | `charger(porteur: Type<unknown>)` | Interne aux directives : crée une fois, sans l'attacher, un composant vide qui porte une feuille (§ 5.1). |
 | `CONFIG_EMPREINTE`, `CONFIG_PAR_DEFAUT` | jeton et valeurs par défaut | Voir § 1.3. |
 | `idUnique(prefixe)` | `string` | `` `${prefixe}-${n}` ``, compteur global à la page. |
-| `UNITES`, `Unite`, `NomUnite` | unités comptées | `pas`, `etape`, `tache`, `empreinte` (singulier, pluriel, genre, « Premier… »). |
-| Types | `Lumiere` (`'ciel' \| 'aube' \| 'soleil' \| 'fjord'`), `EtatPas` (`'fait' \| 'en-cours' \| 'a-venir'`), `TailleCorne` (`'s' \| 'm' \| 'l'`), `Courant` (`'true' \| 'page' \| 'step' \| 'location' \| 'date' \| 'time'`), `ThemeEmpreinte`, `PreferenceTheme`, `MomentHaptique`, `ConfigEmpreinte`, `Progression`, `OptionsLegende` | |
+| `UNITES`, `Unite`, `NomUnite` | unités comptées | `pas`, `etape`, `tache`, `empreinte` (singulier, pluriel, genre). |
+| Types | `Lumiere` (`'ciel' \| 'aube' \| 'soleil' \| 'fjord'`), `TailleCorne` (`'s' \| 'm' \| 'l'`), `Courant` (`'true' \| 'page' \| 'step' \| 'location' \| 'date' \| 'time'`), `ThemeEmpreinte`, `PreferenceTheme`, `MomentHaptique`, `ConfigEmpreinte`, `Progression`, `OptionsLegende` | |
 
 ---
 
@@ -169,7 +169,7 @@ Hôte : `e-corne`, `e-corne--s` / `e-corne--l`, `e-corne--sans-rabat`, et `aria-
 
 ```html
 <section eSurface eCorne="l" aria-labelledby="t-brouillon">…</section>
-<article eSurface [eCorne]="etape.enCours ? 's' : null" [marquee]="etape.enCours">…</article>
+<a eSurface [eCorne]="actif ? 's' : null" courant="page" routerLink="/matrice">…</a>
 ```
 
 ### 2.3 `bouton` : `EBouton`
@@ -202,7 +202,7 @@ Hôte : `e-btn` + `e-btn--sceau|trait|nu`, `e-btn--petit`, `e-btn--icone`. Conte
 Hôte : `e-etiquette`, `e-etiquette--ciel|aube|soleil|fjord`. `align-self: flex-start` : elle ne s'étire pas dans une pile. Une lumière dit un domaine, **jamais un état** (pas de lumière pour un quadrant ou une étape). Les domaines de vie attendent le back-end (cahier § 3) : en V1, seulement l'étiquette neutre.
 
 ```html
-<e-etiquette>Étape 3</e-etiquette>
+<e-etiquette>Endurance</e-etiquette>
 ```
 
 ### 2.5 `carte` : `ECarte`, `ECarteObjectif`, `ECarteAction`
@@ -226,9 +226,8 @@ Hôte : `e-carte e-surface`. Mise en page intégrée : colonne flex, `gap: --pas
 | `contexte` | `string \| undefined` | — | Texte `detail` à droite de l'étiquette. L'en-tête n'existe que si `domaine` ou `contexte`. |
 | `meta` | `string` | `''` | Ligne du pied (`p.e-carte__meta.detail`, rendue même vide). |
 | `marquee` | bool | `false` | Comme `ECarte`. |
-| `faits`, `enCours`, `aVenir` | nombre, bool, nombre | `0`, `false`, `0` | Transmis à l'`e-pas` intégré. |
+| `faits`, `aFaire` | nombre, nombre | `0`, `0` | Transmis à l'`e-pas` intégré. |
 | `unite` | `'pas' \| 'etape' \| 'tache' \| 'empreinte'` | `'pas'` | Idem (pas d'objet `Unite` ici, contrairement à `e-pas`). |
-| `nomEnCours` | `string \| undefined` | — | Idem. |
 | `accompli` | `string` | `'objectif accompli'` | Idem. |
 | `libelleAction` | `string` | `'Ouvrir'` | Libellé du bouton `trait petit` du pied. |
 
@@ -236,7 +235,7 @@ Sortie : `ouvrir: void` (clic sur le bouton du pied). Contenu : le contenu par d
 
 **`[eCarteAction]`** : directive marqueur, sans entrée.
 
-L'ordre d'`ECarteObjectif` ne correspond pas à la maquette `Objectifs` (horizon en tête, prochain pas dans le pied, après l'`e-pas`) : la carte d'objectif d'Apex se compose avec `article[eCarte]`.
+L'ordre d'`ECarteObjectif` ne correspond pas à la maquette `Objectifs` (horizon en tête, sans étiquette de domaine) : la carte d'objectif d'Apex se compose avec `article[eCarte]`.
 
 ```html
 <article eCarte [attr.aria-labelledby]="'objectif-' + o.id">
@@ -245,14 +244,8 @@ L'ordre d'`ECarteObjectif` ne correspond pas à la maquette `Objectifs` (horizon
   @if (o.pourquoi) {
     <p class="voix e-carte__raison">« {{ o.pourquoi }} »</p>
   }
-  <e-pas [faits]="o.etapesFaites" [enCours]="!!o.etapeEnCours" [aVenir]="o.etapesAVenir"
-         unite="etape" [nomEnCours]="o.etapeEnCours?.nom" />
+  <e-pas [faits]="o.etapesFaites" [aFaire]="o.etapesAFaire" unite="etape" />
   <div class="e-carte__pied">
-    @if (o.prochainPas; as pas) {
-      <ul eListe nue>
-        <li eTache [titre]="pas.titre" meta="Prochain pas" [fait]="pas.fait" (faitChange)="basculer(pas.id, $event)"></li>
-      </ul>
-    }
     <a eBouton="trait" petit [routerLink]="['/objectifs', o.id]">Ouvrir</a>
   </div>
 </article>
@@ -260,23 +253,21 @@ L'ordre d'`ECarteObjectif` ne correspond pas à la maquette `Objectifs` (horizon
 
 ### 2.6 `pas` : `EPas`
 
-**`<e-pas>`** — la progression case par case. On lit ce qui est fait.
+**`<e-pas>`** — la progression case par case. On lit ce qui est fait. Une case est faite ou à faire : les cases comptent, elles ne disent aucun ordre.
 
 | Entrée | Type | Défaut | Effet |
 | --- | --- | --- | --- |
 | `faits` | nombre | `0` | Cases pleines (`encre`). |
-| `enCours` | bool | `false` | Une case en cours (contour `encre` net, corne `s`). Une seule. |
-| `aVenir` | nombre | `0` | Cases à venir **sans** compter celle en cours. |
+| `aFaire` | nombre | `0` | Cases à faire (`creux`, contour `trame-forte`). |
 | `unite` | `'pas' \| 'etape' \| 'tache' \| 'empreinte' \| Unite` | `'pas'` | Ce qu'on compte dans la légende. |
-| `nomEnCours` | `string \| undefined` | — | « 2 étapes faites · Endurance en cours ». |
 | `accompli` | `string \| undefined` | `undefined` → « étape accomplie » | Fin de légende quand tout est fait. |
 | `legende` | `string \| undefined` | `undefined` | Remplace la légende calculée **et** le nom accessible ; `''` les masque tous les deux. |
 
 Hôte : `e-progression`. Rendu : `div.e-pas[role=img][aria-label=descriptionProgression(…)]` + `p.e-pas__legende` (`aria-hidden`, calculée par `legendeProgression`, § 4). Au-delà de 12 cases : `console.warn` en développement (« regroupe-les en étapes ») ; rien n'est tronqué. Aucune case et aucune légende si tout vaut 0.
 
 ```html
-<e-pas [faits]="4" enCours [aVenir]="2" />                                   <!-- « 4 pas faits · 3 à venir » -->
-<e-pas [faits]="2" enCours [aVenir]="3" unite="etape" nomEnCours="Endurance" /> <!-- « 2 étapes faites · Endurance en cours » -->
+<e-pas [faits]="4" [aFaire]="3" />               <!-- « 4 pas faits · 3 à faire » -->
+<e-pas [faits]="2" [aFaire]="4" unite="etape" /> <!-- « 2 étapes faites · 4 à faire » -->
 ```
 
 ### 2.7 `sceau` : `ESceau`, `EEmpreinte`, `ETraits`
@@ -753,28 +744,28 @@ protected readonly cibles = QUADRANTS.map((q): EntreeMenu<Quadrant> => ({ valeur
 </e-matrice>
 ```
 
-### 2.20 `arete` : `EArete`, `etapesAffichees`, `lignesTete`, `MAXIMUM_ARETES`
+### 2.20 `arete` : `EArete`, `etapesAffichees`, `detailEtape`, `resumeArete`, `lignesTete`, `MAXIMUM_ARETES`
 
-**`<e-arete>`** — le diagramme d'Ishikawa : la tête (l'objectif) dans un sceau à corne, une colonne d'encre, une arête à 45° par étape, alternativement au-dessus et au-dessous, de la plus ancienne (à gauche) à la plus proche de l'objectif.
+**`<e-arete>`** — le diagramme d'Ishikawa : la tête (l'objectif) dans un sceau à corne, une colonne d'encre, une arête à 45° par étape, alternativement au-dessus et au-dessous. Les étapes sont indépendantes : leur place sur la colonne ne dit aucun ordre.
 
 | Entrée | Type | Défaut | Effet |
 | --- | --- | --- | --- |
 | `objectif` | `string` | requis | Écrit dans la tête : 2 lignes de 15 caractères au plus (`lignesTete`). |
-| `etapes` | `readonly EtapeArete[]` | requis | `{ nom: string; etat: 'faite' \| 'en-cours' \| 'a-venir'; detail?: string }`. |
+| `etapes` | `readonly EtapeArete[]` | requis | `{ nom: string; faite: boolean; detail?: string }`. |
 | `repere` | `string` | `'OBJECTIF'` | Au-dessus du nom dans la tête. |
 | `interactive` | bool | `false` | Chaque arête devient un bouton (`role="button"`, `tabindex="0"`, Entrée et Espace) avec une zone de clic. |
 
 Sortie : `choisir: EtapeArete` — **l'objet passé dans `etapes`** (pas d'identifiant). Pour retrouver l'étape, passer des objets enrichis (`EtapeArete & { id: string }`) et comparer par référence ; l'arête repliée « Faites » (au-delà de 8 étapes) est un objet créé par le composant, sans `id`.
 
-Rendu : `svg.e-arete` (viewBox de hauteur 300, largeur selon le nombre d'arêtes, `max-width: 720px`, `width: 100%`) avec `role="img"` (ou `group` si interactive) et un `<title>` résumé : « Arête de l'objectif « X » : 6 étapes, 2 faites, 1 en cours, 3 à venir ». Par étape : branche (faite : `trait-net` ; à venir : `trame-forte`), borne carrée de 8px (faite : pleine ; en cours : vide encre ; à venir : vide `trame-forte`), nom tronqué à 18 caractères, détail tronqué à 22 (par défaut « Faite », « En cours », « À venir »). Une nouvelle étape se trace en s'animant. **La tête est un sceau, enregistrée au `GardienSceau`.**
+Rendu : `svg.e-arete` (viewBox de hauteur 300, largeur selon le nombre d'arêtes, `max-width: 720px`, `width: 100%`) avec `role="img"` (ou `group` si interactive) et un `<title>` résumé : « Arête de l'objectif « X » : 6 étapes, 2 faites, 4 à faire » (`resumeArete`). Par étape : branche (faite : `encre` en `trait-net` ; à faire : `trame-forte`), borne carrée de 8px (faite : pleine ; à faire : vide `trame-forte`), nom tronqué à 18 caractères, détail tronqué à 22 (par défaut « Faite » ou « À faire », `detailEtape`). Une nouvelle étape se trace en s'animant. **La tête est un sceau, enregistrée au `GardienSceau`.**
 
-**`etapesAffichees(etapes)`** : au-delà de `MAXIMUM_ARETES` (8) étapes et s'il y en a au moins une faite, les faites se replient en tête de liste dans `{ nom: 'Faites', etat: 'faite', detail: '<n> étapes' }`. Vérifié : 3 faites + 6 autres donnent `Faites (3 étapes)` + les 6.
+**`etapesAffichees(etapes)`** : au-delà de `MAXIMUM_ARETES` (8) étapes et s'il y en a au moins une faite, les faites se replient dans `{ nom: 'Faites', faite: true, detail: '<n> étapes' }`, en tête de liste. Vérifié : 3 faites + 6 autres donnent `Faites (3 étapes)` + les 6.
 
 **`lignesTete(texte, max = 15)`** : vérifié — « Courir un semi-marathon en mai » → `['Courir un', 'semi-marathon…']` ; « Semi-marathon en mai » → `['Semi-marathon', 'en mai']`.
 
 ```ts
 protected readonly etapes = computed<(EtapeArete & { id: string })[]>(() =>
-  this.store.etapes().map((e) => ({ id: e.id, nom: e.titre, etat: e.etat, detail: e.legende })),
+  this.store.etapes().map((e) => ({ id: e.id, nom: e.titre, faite: e.faite })),
 );
 protected choisir(etape: EtapeArete) {
   const choisie = this.etapes().find((e) => e === etape);
@@ -833,33 +824,28 @@ provideIcones({ etape: ['M4 18h16', 'M8 18V10h8v8'] })
 
 Sorties obtenues en exécutant les fonctions installées.
 
-**`legendeProgression(progression: Progression, options?: OptionsLegende): string`** — commence toujours par ce qui est fait. `Progression = { faits: number; enCours?: number; aVenir: number }` (`enCours` vaut 1 s'il est vrai, `aVenir` sans celui en cours). `OptionsLegende = { unite?: NomUnite | Unite; nomEnCours?: string; accompli?: string }` (`accompli` par défaut « étape accomplie »).
+**`legendeProgression(progression: Progression, options?: OptionsLegende): string`** — commence toujours par ce qui est fait. `Progression = { faits: number; aFaire: number }`. `OptionsLegende = { unite?: NomUnite | Unite; accompli?: string }` (`accompli` par défaut « étape accomplie »).
 
 | Appel | Résultat |
 | --- | --- |
-| `{ faits: 4, enCours: 1, aVenir: 2 }` | « 4 pas faits · 3 à venir » |
-| `{ faits: 0, enCours: 1, aVenir: 5 }` | « Premier pas en cours · 5 à venir » |
-| `{ faits: 0, enCours: 1, aVenir: 0 }` | « Premier pas en cours » |
-| `{ faits: 0, aVenir: 3 }` | « 3 pas à venir » |
-| `{ faits: 7, aVenir: 0 }` | « 7 pas faits · étape accomplie » |
-| `{ faits: 1, aVenir: 0 }` | « 1 pas fait · étape accomplie » |
-| `{ faits: 1, enCours: 1, aVenir: 0 }` | « 1 pas fait · 1 à venir » (l'en-cours compte dans « à venir ») |
-| `{ faits: 0, aVenir: 0 }` | « » (chaîne vide) |
-| `{ faits: 2, enCours: 1, aVenir: 3 }, { unite: 'etape', nomEnCours: 'Endurance' }` | « 2 étapes faites · Endurance en cours » |
-| `{ faits: 0, enCours: 1, aVenir: 3 }, { unite: 'etape', nomEnCours: 'Endurance' }` | « Endurance en cours · 3 étapes à venir » |
-| `{ faits: 1, aVenir: 3 }, { unite: 'etape' }` | « 1 étape faite · 3 à venir » |
-| `{ faits: 3, aVenir: 0 }, { unite: 'etape', accompli: 'objectif accompli' }` | « 3 étapes faites · objectif accompli » |
+| `{ faits: 4, aFaire: 3 }` | « 4 pas faits · 3 à faire » |
+| `{ faits: 0, aFaire: 3 }` | « 3 pas à faire » |
+| `{ faits: 7, aFaire: 0 }` | « 7 pas faits · étape accomplie » |
+| `{ faits: 1, aFaire: 0 }` | « 1 pas fait · étape accomplie » |
+| `{ faits: 0, aFaire: 0 }` | « » (chaîne vide) |
+| `{ faits: 1, aFaire: 3 }, { unite: 'etape' }` | « 1 étape faite · 3 à faire » |
+| `{ faits: 0, aFaire: 3 }, { unite: 'etape' }` | « 3 étapes à faire » |
+| `{ faits: 3, aFaire: 0 }, { unite: 'etape', accompli: 'objectif accompli' }` | « 3 étapes faites · objectif accompli » |
 
 **`descriptionProgression(progression, unite = 'pas'): string`** — le nom accessible (`aria-label` d'`e-pas`).
 
 | Appel | Résultat |
 | --- | --- |
-| `{ faits: 4, enCours: 1, aVenir: 2 }` | « 4 pas faits, 1 en cours, 2 à venir » |
-| `{ faits: 0, enCours: 1, aVenir: 5 }` | « Premier pas en cours, 5 à venir » |
-| `{ faits: 7, aVenir: 0 }` | « 7 pas faits, tout est fait » |
-| `{ faits: 2, enCours: 1, aVenir: 3 }, 'etape'` | « 2 étapes faites, 1 en cours, 3 à venir » |
-| `{ faits: 0, enCours: 1, aVenir: 3 }, 'etape'` | « Première étape en cours, 3 à venir » |
-| `{ faits: 0, aVenir: 0 }` | « » |
+| `{ faits: 4, aFaire: 3 }` | « 4 pas faits, 3 à faire » |
+| `{ faits: 0, aFaire: 5 }` | « 5 pas à faire » |
+| `{ faits: 7, aFaire: 0 }` | « 7 pas faits, tout est fait » |
+| `{ faits: 2, aFaire: 4 }, 'etape'` | « 2 étapes faites, 4 à faire » |
+| `{ faits: 0, aFaire: 0 }` | « » |
 
 **`formaterAttente(depuis: Date, maintenant = new Date()): string`** — compare des jours calendaires (exemples avec maintenant = mercredi 21 octobre 2026).
 
@@ -911,7 +897,7 @@ Sorties obtenues en exécutant les fonctions installées.
 | `.section` | structure | 17 / 24 | 600 | Titre de section, de colonne, de quadrant. |
 | `.corps` | structure | 16 / 24 | 400 | Texte courant, intitulés de pas, répliques de la personne. |
 | `.detail` | structure | 14 / 20 | 400 | Métadonnées, aides, légendes. |
-| `.repere` | structure | 12 / 16, approche 0,08em, **capitales** | 600 | Repères : horizons, axes, « ÉTAPE 3 · EN COURS ». |
+| `.repere` | structure | 12 / 16, approche 0,08em, **capitales** | 600 | Repères : horizons, axes, « ÉTAPE · À FAIRE ». |
 
 Elles ne fixent ni couleur ni marge : un `h1.manifeste` garde les marges du navigateur et la couleur héritée (`encre`). Le texte `encre-douce` des maquettes et la remise à zéro des marges viennent d'Apex : `.ds-muted` et les conteneurs `.ds-*` (Empreinte ne livre aucune classe utilitaire de couleur).
 
@@ -983,7 +969,7 @@ Noms exacts des variables CSS (`tokens.css`, généré depuis `tokens.json`, « 
 | `--panneau` | `#ffffff` | `#151b28` | Surfaces, cartes, feuilles, menus : toujours plus lumineux que le fond. |
 | `--creux` | `#ecebe5` | `#1e2534` | Champs, cases vides, survols, rabat de la corne. |
 | `--trame` | `#dedbd2` | `#283044` | Filets décoratifs, contours des surfaces, séparateurs. |
-| `--trame-forte` | `#7a7f8a` | `#6e7890` | Contours des contrôles (saisie, case), éléments « à venir ». 3:1. |
+| `--trame-forte` | `#7a7f8a` | `#6e7890` | Contours des contrôles (saisie, case), éléments « à faire ». 3:1. |
 | `--encre` | `#141b2d` | `#eceff5` | Texte principal, contour marqué, case cochée, anneau de focus. |
 | `--encre-douce` | `#555d70` | `#a1a9bb` | Texte secondaire, détails, tâche faite. |
 | `--sceau` | `#cc3a1d` | `#ff6a4a` | Engagement : bouton sceau, sceaux, tête d'arête, marque. Jamais une erreur. |
@@ -1107,13 +1093,13 @@ Relevé en comparant les maquettes `Objectifs`, `Arete`, `Matrice`, `Akari` au c
 | Toutes | Aucune classe utilitaire de couleur (`encre-douce`) ni de remise à zéro des marges | Utilitaires `.ds-*` d'Apex (`.ds-muted`, conteneurs). |
 | Toutes (coque) | Pas d'avatar ni d'initiale (bas de navigation « L · Léa ») ; le bas de la navigation est masqué sous 760px | Initiale en `.initial` (`shell.css`, fond creux de la maquette) ; réglages dans un `e-menu` en `.ds-show-mobile`. À proposer à Empreinte : un composant d'initiale. |
 | Toutes | Pas d'indicateur de chargement (bouton, zone), pas d'infobulle, pas de panneau latéral, pas de sélecteur de date | Texte d'état en `role="status"` ; `input[type=date][eSaisie]` ; feuilles centrées. |
-| Objectifs | `ECarteObjectif` ne suit pas la maquette (horizon, pourquoi, pas, prochain pas avec case dans le pied) | Composer avec `article[eCarte]` (§ 2.5). Une `li[eTache]` dans le pied garde son padding de ligne (`--pas-4 --pas-6`). |
+| Objectifs | `ECarteObjectif` ne suit pas la maquette (horizon, pourquoi, pas) | Composer avec `article[eCarte]` (§ 2.5). |
 | Objectifs | Pas de repli générique (`<details>` « Accomplis ») ; `ECarnet` n'est pas un accordéon générique | `details.accomplished` natif (`objectives.css`, fait), ou demande d'ajout à Empreinte. |
-| Arête | Rendu d'`EArete` différent de la maquette : bornes carrées au lieu d'empreintes pour les étapes faites, pas d'étiquette encadrée avec corne pour l'étape en cours, pas de légende (Faite / En cours / À venir), troncatures (18 / 22 / 2×15 caractères), `choisir` sans identifiant | Utiliser `EArete` tel quel ; légende avec `<e-empreinte [taille]="20" decorative />` pour « Faite », les deux autres repères demandent une classe dans `objective-page.css` ; passer un nom d'objectif court. |
+| Arête | Rendu d'`EArete` différent de la maquette : bornes carrées au lieu d'empreintes pour les étapes faites, pas d'étiquette encadrée avec corne pour l'étape ouverte, pas de légende (Faite / À faire), troncatures (18 / 22 / 2×15 caractères), `choisir` sans identifiant | Utiliser `EArete` tel quel ; légende avec `<e-empreinte [taille]="20" decorative />` pour « Faite », les deux autres repères demandent une classe dans `objective-page.css` ; passer un nom d'objectif court. |
 | Matrice | Compte de quadrant non personnalisable (« Important · urgent · 4 pas aujourd'hui » impossible, seulement « 4 pas ») ; titres `h3` figés | Accepter « N pas ». |
 | Matrice | Sous 640px, les axes « Urgent / Pas urgent » restent au-dessus d'une grille passée sur une colonne (la maquette masque les axes) — lu dans la feuille, **non vérifié à l'écran** | À vérifier à 375px ; sinon demande de correction à Empreinte. |
 | Matrice | Pas de ligne « case + titre + objectif » sans le padding de `li[eTache]` dans un quadrant | `ul[eListe nue] > li[eTache]` (padding en plus), ou `input[eCase]` + `label` dans une grille `.ds-check` (fait). |
 | Akari | ~~Pas de composant « réplique »~~ | Réglé en 0.3.0 : `e-conversation`, `ol[eFil]`, `li[eReplique]` (§ 2.10 bis). |
-| Akari (nouvel objectif) | `EArete` n'a pas de variante brouillon : la tête est toujours un sceau, comptée au gardien → avec le bouton `sceau` « Je m'y engage », deux sceaux | Ne pas afficher l'aperçu d'arête dans le brouillon (la maquette le masque déjà sur mobile) et garder la liste numérotée des étapes ; ou demande d'ajout à Empreinte. |
+| Akari (nouvel objectif) | `EArete` n'a pas de variante brouillon : la tête est toujours un sceau, comptée au gardien → avec le bouton `sceau` « Je m'y engage », deux sceaux | Ne pas afficher l'aperçu d'arête dans le brouillon (la maquette le masque déjà sur mobile) et garder une simple liste des étapes, sans numéro ; ou demande d'ajout à Empreinte. |
 | Akari | ~~Aucun style pour le HTML Markdown rendu~~ | Réglé en 0.3.0 : la prose d'une réplique (§ 2.10 bis) ; `.ds-prose` et `.ds-link` ont quitté Apex. |
 | Voix (toutes) | `motsAEviter` rate les mots accentués et ne connaît pas « erreur » ni les emoji (§ 8.6) | Motifs complémentaires dans le test de voix d'Apex. |

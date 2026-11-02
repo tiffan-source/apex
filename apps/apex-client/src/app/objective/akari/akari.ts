@@ -33,7 +33,7 @@ import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
 import { ChatStore } from './chat.store';
 import { PermissionRequestViewModel } from './chat.models';
 import { MarkdownPipe } from './markdown.pipe';
-import { STAGE_STATE_TITLES, stageName } from '../stage-labels';
+import { stageStateTitle, stageName } from '../stage-labels';
 import { firstName } from '../../../chore/mapper/person.mapper';
 
 /** Une invitation d'Akari : sa phrase, son bouton, et le message envoyé quand on l'accepte. */
@@ -179,14 +179,13 @@ export class Akari {
       .join(' · ');
   });
 
-  /** Les étapes de la colonne de droite : numéro, nom, nombre de pas, état. */
+  /** Les étapes de la colonne de droite : nom, nombre de pas, état. */
   protected readonly stageRows = computed(() =>
     (this.detail()?.stages ?? []).map((stage) => ({
       id: stage.id,
-      index: stage.index,
       title: stageName(stage.title),
       taskCount: compter(stage.tasks.length, 'pas', 'pas'),
-      state: [STAGE_STATE_TITLES[stage.state], stage.horizon].filter(Boolean).join(' · '),
+      state: [stageStateTitle(stage.done), stage.horizon].filter(Boolean).join(' · '),
     })),
   );
 

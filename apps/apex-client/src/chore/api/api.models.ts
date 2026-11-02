@@ -68,6 +68,8 @@ export type ObjectiveOutput = {
   why: string;
   dueDate: string | null;
   parentObjective: string | null;
+  /** Fait ou non fait : c'est l'API qui le dit, le client l'affiche sans le calculer. */
+  done: boolean;
 };
 
 /** Un pas. `importance` et `urgency` vont de 1 à 5. */
@@ -80,7 +82,10 @@ export type TaskOutput = {
   objectiveId: string;
 };
 
-/** GET /v1/objectives : tout ce que la personne possède, à plat, dans un ordre stable (création, puis id). */
+/**
+ * GET /v1/objectives : tout ce que la personne possède, à plat. Étapes et pas n'ont aucun ordre : le tri de
+ * l'API (création, puis id) garde seulement l'affichage stable d'un chargement à l'autre.
+ */
 export type ObjectivesResponse = {
   objectives: ObjectiveOutput[];
   tasks: TaskOutput[];
