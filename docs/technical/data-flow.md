@@ -89,6 +89,6 @@ The API does not expose this yet, so the web client still derives it from what `
 
 -   the Eisenhower quadrant of a step (threshold 3 on importance and urgency, `quadrantOf`) and the levels a step gets when it is moved to a quadrant (`levelsForQuadrant`), in `chore/mapper/matrix.mapper.ts`. The quadrant in `TaskOutput` and a `MoveTaskToQuadrant` use case would replace them.
 
-Whether a stage or an objective is done is not one of these rules: the API says so (`done` in `GET /v1/objectives`), the client displays it and counts it, and reads the objectives again after a write that can change it (`loadObjectives`, after checking, adding or moving a step). Stages and steps have no order: they are independent, the client numbers none and picks none.
+Whether a stage or an objective is done is not one of these rules: the API says so (`done` in `GET /v1/objectives`), the client displays it and counts it, and reads the objectives again after a write that can change it (`loadObjectives`, after checking, adding or moving a step). That re-read keeps trying while the failure is transient: the shell's note comes with the fourth retry and goes as soon as the server answers. The words « étape accomplie » follow `done` too, never the count of steps. Stages and steps have no order: they are independent, the client numbers none and picks none.
 
 No other business rule belongs in the client: a new one goes into the API first.

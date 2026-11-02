@@ -37,7 +37,7 @@ import { AddTaskSheet, type AddTaskSheetData } from './sheets/add-task-sheet';
 import { EditObjectiveSheet, type EditObjectiveSheetData } from './sheets/edit-objective-sheet';
 import { EditStageSheet, type EditStageSheetData } from './sheets/edit-stage-sheet';
 import { EditTaskSheet, type EditTaskSheetData } from './sheets/edit-task-sheet';
-import { stageName, stageStateLabel } from './stage-labels';
+import { stageAccomplishment, stageName, stageStateLabel } from './stage-labels';
 
 /** Ce que l'étape ouverte suit : l'objectif et ses étapes. */
 type OpenStageSource = {
@@ -83,6 +83,7 @@ export class ObjectivePage {
   private readonly document = inject(DOCUMENT);
 
   protected readonly stageStateLabel = stageStateLabel;
+  protected readonly stageAccomplishment = stageAccomplishment;
   /** La coque affiche un signalement (une note d'Akari) : l'écran n'en pose pas une seconde. */
   protected readonly hasReport = this.annonces.aUnSignalement;
   protected readonly quadrantTitles = TITRES_QUADRANTS;

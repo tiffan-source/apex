@@ -672,6 +672,58 @@ describe('ObjectiveStore', () => {
       expect(s.store.error()).toBe(FAILURE_REPORTS.loadObjectives);
     });
   });
+
+  describe('une relecture sans réponse', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      s.api.list.mockClear();
+      s.api.list.mockRejectedValue(ko('NETWORK_ERROR'));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('insiste, le dit au bout de quelques essais, et s’en va dès que le serveur répond', async () => {
+      s.store.loadObjectives();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(s.api.list).toHaveBeenCalledTimes(1);
+      expect(s.annonces.signalement()).toBeNull();
+
+      await vi.advanceTimersByTimeAsync(7000); // 1 s, 2 s, 4 s : le quatrième nouvel essai le dit.
+      expect(s.api.list).toHaveBeenCalledTimes(4);
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.reloadObjectives);
+      expect(s.store.error()).toBeNull();
+
+      const answered: ObjectivesResponse = structuredClone(LOADED);
+      answered.objectives[1].done = true;
+      s.api.list.mockResolvedValue(answered);
+      await vi.advanceTimersByTimeAsync(8000);
+      expect(s.annonces.signalement()).toBeNull();
+      expect(s.store.isFulfilled()).toBe(true);
+    });
+
+    it('s’arrête à la déconnexion, sans rien laisser à l’écran de connexion', async () => {
+      s.store.loadObjectives();
+      await vi.advanceTimersByTimeAsync(7000);
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.reloadObjectives);
+
+      s.store.clearObjectives();
+      s.api.list.mockClear();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(s.api.list).not.toHaveBeenCalled();
+      expect(s.annonces.signalement()).toBeNull();
+      expect(s.store.isPending()).toBe(false);
+    });
+
+    it('s’arrête sur un refus, qui est signalé', async () => {
+      s.api.list.mockRejectedValue(ko('UNAUTHENTICATED'));
+      s.store.loadObjectives();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(s.api.list).toHaveBeenCalledTimes(1);
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.sessionEnded);
+    });
+  });
 });
 
 describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
@@ -733,6 +785,9 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
 
       for (const [text] of s.announce.mock.calls) texts.add(text as string);
     }
+
+    // Dite au bout de quelques essais : voir « une relecture sans réponse ».
+    texts.add(FAILURE_REPORTS.reloadObjectives);
 
     // Toutes les phrases de messages.constante.ts sont passées au moins une fois
     expect([...texts]).toEqual(expect.arrayContaining([

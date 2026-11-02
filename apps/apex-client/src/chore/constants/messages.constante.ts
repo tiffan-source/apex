@@ -36,6 +36,8 @@ export const FAILURE_REPORTS = {
   toggleTask: "Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.",
   moveTask: "Je n'ai pas pu déplacer ce pas. Vérifie ta connexion, puis réessaie.",
   loadObjectives: "Je n'ai pas pu charger tes objectifs. Vérifie ta connexion, puis recharge la page.",
+  /** Une relecture reste sans réponse : le store continue d'essayer, la note part dès que le serveur répond. */
+  reloadObjectives: "Je n'arrive pas à relire tes objectifs pour l'instant. Vérifie ta connexion, je réessaie en attendant.",
   objectiveNotFound: 'Je ne retrouve plus cet objectif. Recharge la page, puis réessaie.',
   taskNotFound: 'Je ne retrouve plus ce pas. Recharge la page, puis réessaie.',
   // L'API borne les textes (200 caractères pour un nom, 5 000 pour une description ou un pourquoi).

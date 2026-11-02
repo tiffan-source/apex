@@ -228,7 +228,7 @@ Hôte : `e-carte e-surface`. Mise en page intégrée : colonne flex, `gap: --pas
 | `marquee` | bool | `false` | Comme `ECarte`. |
 | `faits`, `aFaire` | nombre, nombre | `0`, `0` | Transmis à l'`e-pas` intégré. |
 | `unite` | `'pas' \| 'etape' \| 'tache' \| 'empreinte'` | `'pas'` | Idem (pas d'objet `Unite` ici, contrairement à `e-pas`). |
-| `accompli` | `string` | `'objectif accompli'` | Idem. |
+| `accompli` | `string \| undefined` | `undefined` | Idem. |
 | `libelleAction` | `string` | `'Ouvrir'` | Libellé du bouton `trait petit` du pied. |
 
 Sortie : `ouvrir: void` (clic sur le bouton du pied). Contenu : le contenu par défaut se place **entre le titre et l'`e-pas`** (par exemple `<p class="voix e-carte__raison">« … »</p>`) ; un élément `[eCarteAction]` remplace le bouton du pied (par exemple un lien). Ordre fixe : en-tête, titre, contenu, `e-pas`, pied (meta + action).
@@ -260,7 +260,7 @@ L'ordre d'`ECarteObjectif` ne correspond pas à la maquette `Objectifs` (horizon
 | `faits` | nombre | `0` | Cases pleines (`encre`). |
 | `aFaire` | nombre | `0` | Cases à faire (`creux`, contour `trame-forte`). |
 | `unite` | `'pas' \| 'etape' \| 'tache' \| 'empreinte' \| Unite` | `'pas'` | Ce qu'on compte dans la légende. |
-| `accompli` | `string \| undefined` | `undefined` → « étape accomplie » | Fin de légende quand tout est fait. |
+| `accompli` | `string \| undefined` | `undefined` | Ajouté à la légende quand tout est fait. Compter ne le prouve pas : Apex ne le passe que si l'API dit l'étape faite. |
 | `legende` | `string \| undefined` | `undefined` | Remplace la légende calculée **et** le nom accessible ; `''` les masque tous les deux. |
 
 Hôte : `e-progression`. Rendu : `div.e-pas[role=img][aria-label=descriptionProgression(…)]` + `p.e-pas__legende` (`aria-hidden`, calculée par `legendeProgression`, § 4). Au-delà de 12 cases : `console.warn` en développement (« regroupe-les en étapes ») ; rien n'est tronqué. Aucune case et aucune légende si tout vaut 0.
@@ -830,8 +830,8 @@ Sorties obtenues en exécutant les fonctions installées.
 | --- | --- |
 | `{ faits: 4, aFaire: 3 }` | « 4 pas faits · 3 à faire » |
 | `{ faits: 0, aFaire: 3 }` | « 3 pas à faire » |
-| `{ faits: 7, aFaire: 0 }` | « 7 pas faits · étape accomplie » |
-| `{ faits: 1, aFaire: 0 }` | « 1 pas fait · étape accomplie » |
+| `{ faits: 7, aFaire: 0 }` | « 7 pas faits » |
+| `{ faits: 7, aFaire: 0 }, { accompli: 'étape accomplie' }` | « 7 pas faits · étape accomplie » |
 | `{ faits: 0, aFaire: 0 }` | « » (chaîne vide) |
 | `{ faits: 1, aFaire: 3 }, { unite: 'etape' }` | « 1 étape faite · 3 à faire » |
 | `{ faits: 0, aFaire: 3 }, { unite: 'etape' }` | « 3 étapes à faire » |
@@ -843,7 +843,7 @@ Sorties obtenues en exécutant les fonctions installées.
 | --- | --- |
 | `{ faits: 4, aFaire: 3 }` | « 4 pas faits, 3 à faire » |
 | `{ faits: 0, aFaire: 5 }` | « 5 pas à faire » |
-| `{ faits: 7, aFaire: 0 }` | « 7 pas faits, tout est fait » |
+| `{ faits: 7, aFaire: 0 }` | « 7 pas faits » |
 | `{ faits: 2, aFaire: 4 }, 'etape'` | « 2 étapes faites, 4 à faire » |
 | `{ faits: 0, aFaire: 0 }` | « » |
 
@@ -1058,7 +1058,7 @@ Inventaire des usages actuels sous `apps/apex-client/src/app` : 24 `<p-button>`,
 11. **`[attend]` avec une date future** affiche « Pour aujourd'hui » et les actions : ne passer une `Date` que si elle est passée. Les échéances des pas attendent le back-end (cahier § 3).
 12. **`e-pas [legende]=""`** masque la légende **et** vide le nom accessible (`role="img"` sans nom). Pour masquer seulement la légende visible, il n'y a pas d'option.
 13. **`e-pas`** au-delà de 12 cases : avertissement console, rien n'est coupé.
-14. **`ECarteObjectif`** : ordre de rendu figé (en-tête, titre, contenu, pas, pied) ; `accompli` vaut par défaut « objectif accompli » (celui d'`e-pas` : « étape accomplie ») ; le pied rend un `<p>` même si `meta` est vide.
+14. **`ECarteObjectif`** : ordre de rendu figé (en-tête, titre, contenu, pas, pied) ; `accompli` n'a pas de valeur par défaut, comme celui d'`e-pas` : seule l'application sait si c'est vrai ; le pied rend un `<p>` même si `meta` est vide.
 15. **`EEmpreinte [pose]`** ne joue qu'au premier rendu : pour poser une empreinte quand une étape s'achève, faire apparaître l'élément à ce moment-là (`@if`). `ESceau` rejoue quand `palier` augmente.
 16. **`EArete`** : `choisir` émet l'objet d'étape, sans identifiant ; noms tronqués à 18 caractères, détails à 22, tête à 2 lignes de 15 caractères (« Courir un / semi-marathon… ») ; au-delà de 8 étapes, les faites se replient en une arête « Faites » synthétique ; la tête est toujours un sceau. Aucune légende n'est dessinée.
 17. **`EMatrice`** : `piste` par défaut = identité (la liste est recréée si le store renvoie de nouveaux objets) ; `unite` attend un tuple (`as const` dans la classe, pas de tableau littéral dans le gabarit) ; titres en `h3` figés ; le compte n'écrit que « N unité » ; pas de glisser-déposer au clavier ; `appliquerDeplacement` sans `piste` compare par référence.
