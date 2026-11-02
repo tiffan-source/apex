@@ -195,7 +195,7 @@ export function stageOptions(objectiveId: string, objectives: readonly Objective
   return stagesOf(objectiveId, objectives).map((stage) => ({ valeur: stage.id, libelle: stage.title }));
 }
 
-/** Les objectifs racines pour e-filtres ou e-selection : { valeur: id, libelle: titre }. */
+/** Les objectifs racines pour e-selection : { valeur: id, libelle: titre }. */
 export function rootObjectiveOptions(objectives: readonly ObjectiveViewModel[]): OptionSelection<string>[] {
   return rootObjectives(objectives).map((objective) => ({ valeur: objective.id, libelle: objective.title }));
 }

@@ -50,8 +50,9 @@
         </div>
 
         <!-- L'arête prend la largeur de la colonne (ses noms restent lisibles sur ordinateur). Masquée sur
-             mobile, comme l'aperçu de la maquette : la liste des étapes suit. -->
-        <div class="ds-hide-mobile">
+             mobile, comme l'aperçu de la maquette : la liste des étapes suit. Les lecteurs d'écran passent par
+             cette liste, qui dit tout : l'arête, dessinée sans état, résumerait ses étapes comme « à venir ». -->
+        <div class="ds-hide-mobile" aria-hidden="true">
           <e-arete [objectif]="d.objective.title" [etapes]="d.aretes" />
         </div>
 

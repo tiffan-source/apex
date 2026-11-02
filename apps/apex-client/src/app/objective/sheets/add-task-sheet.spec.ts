@@ -53,7 +53,7 @@ describe('AddTaskSheet', () => {
   it("propose les étapes de l'objectif, l'étape choisie par défaut, et les niveaux", () => {
     expect(element.querySelector('.e-feuille__titre')?.textContent?.trim()).toBe('Ajouter un pas');
     expect(store.stageOptions).toHaveBeenCalledWith('obj-1');
-    // Un nouveau pas naît « À planifier » : important, pas urgent.
+    // Les niveaux choisis d'avance (NEW_TASK_LEVELS) : la personne les change.
     expect(selections()).toEqual(['Endurance', 'Important', 'Pas urgent']);
     const labels = [...element.querySelectorAll('.e-champ__libelle')].map((label) => label.textContent?.trim());
     expect(labels).toEqual(['Le pas', 'Étape', 'Importance', 'Urgence']);

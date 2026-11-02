@@ -568,6 +568,8 @@ describe('Akari : l’arête à droite', () => {
     expect(text(panel.querySelector('h2'))).toBe("L'arête");
     expect(text(panel)).toContain('2 étapes · 4 pas');
     expect(panel.querySelector('.ds-hide-mobile > e-arete')).not.toBeNull();
+    // La liste des étapes dit tout aux lecteurs d'écran ; l'arête sans état n'y résume rien.
+    expect(panel.querySelector('.ds-hide-mobile')?.getAttribute('aria-hidden')).toBe('true');
     expect(panel.querySelector('e-arete')?.hasAttribute('interactive')).toBe(false);
 
     // Sans état d'étape : l'API ne rend pas la progression.

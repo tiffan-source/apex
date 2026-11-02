@@ -11,7 +11,7 @@
  *  Ce fichier rassemble ce qui sert à plusieurs écrans d'Apex : la page, les
  *  empilements et rangées, la trame de panneaux, quelques modificateurs.
  *  Ce qui n'appartient qu'à un écran (la coque, la place de la conversation
- *  avec Akari, le bloc « Accomplis », la connexion…) vit dans la feuille du
+ *  avec Akari, la connexion…) vit dans la feuille du
  *  composant, à côté de son gabarit. La conversation elle-même (fil,
  *  répliques, prose du Markdown, zone de réponse) vient d'Empreinte.
  *
@@ -59,7 +59,7 @@
  *  Dans tout conteneur .ds-*, les enfants directs perdent leurs marges par
  *  défaut (h1, p, ul…) : l'espacement vient de l'écart (gap) du conteneur.
  *  Spécificité nulle (:where) : la marge propre à un composant d'Empreinte
- *  (légende de e-pas, case…) l'emporte toujours.
+ *  (une légende, une case…) l'emporte toujours.
  * ========================================================================== */
 :where(
     .ds-page,
@@ -259,7 +259,7 @@
 }
 
 /* Lignes séparées par des filets trame (dessus de chaque ligne, dessous de la
-   dernière), espacées de pas-3 : étapes du brouillon, objectifs accomplis. */
+   dernière), espacées de pas-3 : la liste des étapes d'Akari. */
 .ds-divided {
   margin: 0;
   padding: 0;
@@ -286,8 +286,8 @@
 
 /* Case et intitulé : la case (input[eCase]) dans une colonne de 20px,
    l'intitulé à côté ; les enfants suivants (détail, action) passent sous
-   l'intitulé. Pour une case hors d'une liste ul[eListe] (élément de matrice,
-   prochain pas d'une carte). */
+   l'intitulé. Pour une case hors d'une liste ul[eListe]. Sans usage depuis le
+   retrait de la matrice et du prochain pas des cartes (ils attendent l'API). */
 .ds-check {
   display: grid;
   grid-template-columns: var(--ds-check-lead) minmax(0, 1fr);

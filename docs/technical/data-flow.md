@@ -94,3 +94,5 @@ The API does not return them yet, so the screens do not show them (removed from 
 -   the matrix screen is withdrawn (`/matrice`, `/matrix` and `/focus` lead home), and so is « move to a quadrant ».
 
 To bring them back, the API returns them first — computed fields in `GET /v1/objectives` (the state of a stage, the next step, an objective accomplished, the quadrant of a step) and a `MoveTaskToQuadrant` use case — then the client maps and displays them. Never compute them in the client.
+
+What stays in the client is presentation and form values, not rules: the names of the five importance and urgency levels (`IMPORTANCE_OPTIONS`, `URGENCY_OPTIONS`) and the levels pre-selected in the « Ajouter un pas » sheet (`NEW_TASK_LEVELS`, which the person changes), all in `chore/constants/task.constante.ts`. The client sends the levels; which quadrant they put a step in is the API's answer.
