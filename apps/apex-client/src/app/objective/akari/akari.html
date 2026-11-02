@@ -62,7 +62,9 @@
                 <span class="objectif">{{ stage.index }}</span>
                 <span class="corps ds-break">{{ stage.title }}</span>
                 <span class="detail ds-muted ds-nowrap">{{ stage.taskCount }}</span>
-                <span class="detail ds-muted">{{ stage.state }}</span>
+                @if (stage.horizon) {
+                  <span class="detail ds-muted">{{ stage.horizon }}</span>
+                }
               </li>
             }
           </ol>

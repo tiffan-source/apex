@@ -14,10 +14,12 @@ export const toObjectivePage: RedirectFunction = ({ params, queryParams, fragmen
  * L'ordre compte : « objectifs/nouveau » passe avant « objectifs/:id ».
  */
 export const routes: Routes = [
-  // Les anciennes adresses. L'écran Focus sort de la V1 : le quadrant « Maintenant » de la matrice joue son rôle.
+  // Les anciennes adresses. La matrice (et l'écran Focus avant elle) attend que l'API rende le quadrant d'un
+  // pas et sache l'y déplacer : ses adresses mènent à l'accueil.
   { path: 'objective/:id', pathMatch: 'full', redirectTo: toObjectivePage },
-  { path: 'matrix', pathMatch: 'full', redirectTo: '/matrice' },
-  { path: 'focus', pathMatch: 'full', redirectTo: '/matrice' },
+  { path: 'matrice', pathMatch: 'full', redirectTo: '/' },
+  { path: 'matrix', pathMatch: 'full', redirectTo: '/' },
+  { path: 'focus', pathMatch: 'full', redirectTo: '/' },
   {
     path: '',
     loadComponent: () => import('./shell/shell').then((m) => m.Shell),
@@ -45,11 +47,6 @@ export const routes: Routes = [
         // L'écran tient dans la fenêtre au-dessus de 1100px : la coque lui donne la hauteur qui reste (shell.css).
         data: { fitsWindow: true },
         loadComponent: () => import('./objective/akari/akari').then((m) => m.Akari),
-      },
-      {
-        path: 'matrice',
-        title: 'La matrice · Apex',
-        loadComponent: () => import('./matrix/matrix').then((m) => m.Matrix),
       },
     ],
   },

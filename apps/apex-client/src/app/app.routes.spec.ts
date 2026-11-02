@@ -32,9 +32,9 @@ const childPaths = children.map((r) => r.path);
 
 describe('routes', () => {
   describe('la configuration', () => {
-    it('met les quatre écrans de la V1 dans la coque, protégée par authGuard', () => {
+    it('met les écrans de la V1 dans la coque, protégée par authGuard (la matrice attend l’API)', () => {
       expect(shellRoute.canActivate).toEqual([authGuard]);
-      expect(childPaths).toEqual(['', 'objectifs/nouveau', 'objectifs/:id', 'objectifs/:id/akari', 'matrice']);
+      expect(childPaths).toEqual(['', 'objectifs/nouveau', 'objectifs/:id', 'objectifs/:id/akari']);
       for (const child of children) expect(child.loadComponent).toBeTypeOf('function');
     });
 
@@ -48,9 +48,9 @@ describe('routes', () => {
       expect(auth.loadComponent).toBeTypeOf('function');
     });
 
-    it('n’a plus de route Focus ni d’anciennes adresses servies par un écran', () => {
+    it('n’a plus de route Focus ni matrice, ni d’anciennes adresses servies par un écran', () => {
       const all = [...routes, ...children];
-      for (const path of ['focus', 'matrix', 'objective/:id']) {
+      for (const path of ['focus', 'matrix', 'matrice', 'objective/:id']) {
         const route = present(all.find((r) => r.path === path), `la route ${path}`);
         expect(route.redirectTo, path).toBeDefined();
         expect(route.loadComponent, path).toBeUndefined();
@@ -65,7 +65,6 @@ describe('routes', () => {
         'Nouvel objectif · Apex',
         "L'arête · Apex",
         'Akari · Apex',
-        'La matrice · Apex',
         'Connexion · Apex',
       ]);
       for (const title of titles) {
@@ -97,7 +96,6 @@ describe('routes', () => {
       ['/objectifs/nouveau', 'objectifs/nouveau', 'Nouvel objectif · Apex'],
       ['/objectifs/42', 'objectifs/:id', "L'arête · Apex"],
       ['/objectifs/42/akari?etape=7', 'objectifs/:id/akari', 'Akari · Apex'],
-      ['/matrice', 'matrice', 'La matrice · Apex'],
       ['/auth', 'auth', 'Connexion · Apex'],
     ])('%s ouvre « %s » et titre la page « %s »', async (url, path, expected) => {
       expect(await router.navigateByUrl(url)).toBe(true);
@@ -109,8 +107,9 @@ describe('routes', () => {
     it.each([
       ['/objective/42', '/objectifs/42'],
       ['/objective/42?etape=7#contenu', '/objectifs/42?etape=7#contenu'],
-      ['/matrix', '/matrice'],
-      ['/focus', '/matrice'],
+      ['/matrice', '/'],
+      ['/matrix', '/'],
+      ['/focus', '/'],
       ['/une/adresse/inconnue', '/'],
       ['/objectifs/42/autre/chose', '/'],
     ])('%s mène à %s', async (from, to) => {

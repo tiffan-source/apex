@@ -29,10 +29,10 @@ Apex V1 fait une seule chose : mener un objectif jusqu'au sommet, pas après pas
 | Nouvel objectif | `/objectifs/nouveau` | modale `create-objective` | `Akari` (phase brouillon) |
 | Objectif · l'arête | `/objectifs/:id` | `objective-overview` | `Arete` |
 | Akari pour un objectif | `/objectifs/:id/akari` | tiroir `chat` | `Akari` (conversation) |
-| La matrice | `/matrice` | `matrix` | `Matrice` |
+| La matrice (retirée en attendant l'API, § 4) | ~~`/matrice`~~ | `matrix` | `Matrice` |
 | Connexion | `/auth` | page d'authentification | aucune : même langue que les autres écrans |
 
-Redirections : `/objective/:id` → `/objectifs/:id`, `/matrix` → `/matrice`, `/focus` → `/matrice`.
+Redirections : `/objective/:id` → `/objectifs/:id` ; `/matrice`, `/matrix` et `/focus` → `/` tant que la matrice attend l'API.
 
 **Ce qui sort de l'interface**, par décision du périmètre V1 : l'écran Focus du jour (le quadrant « Maintenant » joue ce rôle), les cartes de statistiques du tableau de bord, les toasts.
 
@@ -50,13 +50,15 @@ Cinq mots : **objectif, étape, pas, arête, laisser filer**. L'interface s'arr�
 | Horizon | `dueDate` | « Jusqu'en mai », ou « Jusqu'en mai 2027 » si l'année n'est pas l'année en cours. |
 | Pourquoi | `why` | Écrit en `voix`, entre « ». |
 
+**Progression et quadrants : des règles d'Apex Brain** (2 novembre 2026). Le client ne les calcule pas : tant que l'API ne les rend pas, les écrans ne les montrent pas. L'arête est dessinée sans état (chaque étape pareille, avec son nombre de pas sous son nom), les cartes d'objectifs n'ont ni progression ni prochain pas, la liste « Accomplis » et la matrice sont retirées. Les règles ci-dessous sont celles que le serveur doit porter ; les écrans les retrouveront avec les champs de l'API.
+
 **État d'une étape** : *faite* si elle a au moins un pas et que tous ses pas sont faits ; *en cours* pour la première étape non faite (une seule par objectif) ; *à venir* pour les suivantes.
 
 **Prochain pas d'un objectif** : le premier pas non fait de l'étape en cours, sinon le premier pas non fait de l'objectif.
 
 **Objectif accompli** : au moins un pas, et tous faits. Les objectifs accomplis passent dans une liste repliée « Accomplis ».
 
-**Quadrants** (la règle `ApexLibsMetier.getEisenhowerCategory` reste la source) :
+**Quadrants** (à rendre par l'API pour chaque pas) :
 
 | `EisenhowerCategory` | Quadrant Empreinte | Titre |
 | --- | --- | --- |
@@ -65,9 +67,9 @@ Cinq mots : **objectif, étape, pas, arête, laisser filer**. L'interface s'arr�
 | `DELEGATE` | `confier` | À confier |
 | `DELETE` | `laisser-filer` | À laisser filer |
 
-Déplacer un pas vers un quadrant ne change que ce qui doit changer : côté « important » ou « urgent », une valeur sous 3 passe à 3 ; côté « secondaire » ou « pas urgent », une valeur de 3 ou plus passe à 2. La persistance passe par le cas d'usage d'édition de tâche existant, avec mise à jour optimiste et retour en arrière.
+Déplacer un pas vers un quadrant ne change que ce qui doit changer : côté « important » ou « urgent », une valeur sous 3 passe à 3 ; côté « secondaire » ou « pas urgent », une valeur de 3 ou plus passe à 2 (un cas d'usage à créer dans Apex Brain, que le client appellera avec le quadrant d'arrivée, en mise à jour optimiste avec retour en arrière).
 
-**Un nouveau pas naît « À planifier »** : importance 3, urgence 2 (`NEW_TASK_LEVELS`, `apps/apex-client/src/chore/constants/task.constante.ts`), les valeurs par défaut de la feuille « Ajouter un pas ». Le brand book d'Empreinte fait de ce quadrant « le cœur de la progression : on y place les pas des objectifs ». Avant, un nouveau pas valait 1 / 1 et tombait sous « À laisser filer » tant qu'on ne changeait pas ses niveaux. La personne les règle dans la feuille, ou plus tard en déplaçant le pas dans la matrice.
+**Les niveaux d'un nouveau pas** : importance 3, urgence 2 (`NEW_TASK_LEVELS`, `apps/apex-client/src/chore/constants/task.constante.ts`), les valeurs choisies d'avance dans la feuille « Ajouter un pas ». Le brand book d'Empreinte fait du quadrant « À planifier » « le cœur de la progression : on y place les pas des objectifs ». La personne les change dans la feuille.
 
 ## 5. Akari, un geste
 
@@ -120,7 +122,7 @@ Le client n'a plus ni domaine ni infrastructure : il appelle l'API d'Apex Brain 
 - **Le workflow d'Akari** tourne dans le serveur : une panne ramène le tour au repos avec `lastError` (plus de « Akari réfléchit… » sans fin), sans inspecteur Stately.
 - **Les longueurs** : l'API borne un nom à 200 caractères, une description ou un pourquoi à 5 000 (`TEXT_MAX_LENGTH`, `api.models.ts`), un message à Akari à 4 000. Les formulaires s'arrêtent avant (`limitText`, `sheet-validation.ts` ; `[formField]` pose `maxlength`), et e-champ dit « C'est un peu long : … caractères au plus. » pour un texte écrit avant cette limite. La zone de réponse d'Akari ne borne pas encore son message : l'API le refuse, et la note le dit.
 - **Encore à faire côté client** : la déconnexion (`POST /v1/auth/logout`) et retirer une échéance (`dueDate: null`) existent dans l'API mais attendent leur geste dans l'interface. Laisser filer ou supprimer (objectif, étape, pas), la pause et la reprise, les domaines de vie, les échéances des pas, les empreintes et les paliers attendent encore leurs cas d'usage (§ 3).
-- **Règles encore dans le client** (quadrant d'un pas, déplacement vers un quadrant, progression des étapes) : voir `docs/technical/data-flow.md`, « Rules still in the client ».
+- **Plus aucune règle métier dans le client** (2 novembre 2026) : la progression (état des étapes, prochain pas, objectif accompli), le quadrant d'un pas et son déplacement sont retirés du client. Ils attendent les champs et le cas d'usage d'Apex Brain (§ 4 ; `docs/technical/data-flow.md`, « What the client does not compute ») : d'ici là, l'arête est sans état, les cartes sans progression, et la matrice retirée de la navigation.
 
 ### Empreinte, en amont (à proposer dans le dépôt `empreinte-studio/empreinte`)
 
@@ -128,7 +130,7 @@ Le client n'a plus ni domaine ni infrastructure : il appelle l'API d'Apex Brain 
 - **Akari** : réglé en 0.3.0. Les répliques sont des `li[eReplique]` (dans `e-conversation` ou un `ol[eFil]`), plus des `aside[eNote]` : plus de régions « complementary » en double, et la seule note de l'écran est celle de la coque.
 - **Navigation** : `ELienNav` ne pose la corne que pour `aria-current="page"` (pas pour `"true"`, la section courante) ; `e-menu` ne marque pas l'entrée choisie (ni `menuitemradio` ni `aria-checked` : Apex écrit « · choisi ») ; pas de composant d'initiale (Apex : `.initial`, `shell.css`).
 - **`e-matrice`** : sous 640px, les axes restent au-dessus d'une grille passée sur une colonne et deviennent faux ; le compte d'un quadrant n'est pas personnalisable et ses titres sont figés en `h3` ; au toucher, le glisser bloque le défilement (Apex règle un délai par `CDK_DRAG_CONFIG` ; à porter dans le composant).
-- **`e-arete`** : pas de variante brouillon (la tête est toujours un sceau), pas de légende (Apex compose avec des cases d'`e-pas`, dont la case « En cours » porte une corne, `clip-path` à `--corne-s`, que la borne en cours de l'arête n'a pas : dans la légende, cette corne est décorative et sans `aria-current`, contraire au § 10 ; aucune primitive d'Empreinte ne dessine la borne sans corne), noms tronqués (18 / 22 / 2 × 15 caractères), pas d'identifiant dans `choisir` pour l'arête repliée « Faites », l'étape choisie n'est pas marquée, bornes carrées au lieu d'empreintes.
+- **`e-arete`** : pas d'état neutre. Sans progression (§ 4), Apex dessine toutes les étapes « à venir » et remplace leur détail par leur nombre de pas, mais le résumé du `<title>`, lu aux lecteurs d'écran, compte encore les étapes « à venir » ; un état « sans état » (ou un résumé réglable) l'éviterait. Pas de variante brouillon (la tête est toujours un sceau), pas de légende (Apex compose avec des cases d'`e-pas`, dont la case « En cours » porte une corne, `clip-path` à `--corne-s`, que la borne en cours de l'arête n'a pas : dans la légende, cette corne est décorative et sans `aria-current`, contraire au § 10 ; aucune primitive d'Empreinte ne dessine la borne sans corne), noms tronqués (18 / 22 / 2 × 15 caractères), pas d'identifiant dans `choisir` pour l'arête repliée « Faites », l'étape choisie n'est pas marquée, bornes carrées au lieu d'empreintes.
 - **`e-filtres`** : pas de nom accessible par option (`OptionFiltre` n'a que `valeur`, `libelle`, `lumiere`) ; le libellé, coupé pour tenir sur un téléphone, est le seul nom du bouton. Apex garde des libellés différents (`distinctShortTitles`, « Préparer le… 2027 ») ; un `libelleComplet` (ou `aria-label`) par option rendrait le titre entier aux lecteurs d'écran.
 - **Contenu** : la prose du Markdown rendu est réglée en 0.3.0, dans les répliques (`.ds-prose` a quitté Apex) ; pas de repli générique `details` (Apex : `details.accomplished`, `objectives.css`).
 

@@ -1,14 +1,13 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { EIcone, motsAEviter } from '@empreinte-studio/angular';
+import { motsAEviter } from '@empreinte-studio/angular';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { voiceIssues } from '../../chore/constants/messages.constante';
 import type { ObjectiveCardViewModel } from '../../chore/models/objective-card.viewmodel';
 import { TODAY_CHECK_INTERVAL, formatToday } from '../../chore/clock/today';
-import { Objectives, cardProgress } from './objectives';
+import { Objectives, cardContents } from './objectives';
 
 /** Une carte d'objectif, à compléter selon le cas. */
 function card(overrides: Partial<ObjectiveCardViewModel> = {}): ObjectiveCardViewModel {
@@ -17,35 +16,18 @@ function card(overrides: Partial<ObjectiveCardViewModel> = {}): ObjectiveCardVie
     title: 'Courir un semi-marathon en mai',
     why: 'Pour me prouver que je peux tenir quelque chose sur six mois.',
     horizon: "Jusqu'en mai",
-    stageProgress: { done: 2, inProgress: true, upcoming: 3, inProgressName: 'Endurance' },
     stageCount: 6,
-    taskCount: { done: 9, total: 20 },
-    nextTask: { id: 't1', title: 'Sortie de 30 minutes en endurance', done: false },
-    accomplished: false,
+    taskCount: 20,
     ...overrides,
   };
 }
 
-const ACCOMPLISHED = card({
-  id: 'studio',
-  title: "M'installer dans mon studio",
-  why: '',
-  horizon: '',
-  stageProgress: { done: 2, inProgress: false, upcoming: 0 },
-  stageCount: 2,
-  taskCount: { done: 5, total: 5 },
-  nextTask: null,
-  accomplished: true,
-});
-
-/** Un ObjectiveStore simulé : seulement ce que l'écran lit et appelle. */
+/** Un ObjectiveStore simulé : seulement ce que l'écran lit. */
 function createStore() {
   return {
     objectiveCards: signal<ObjectiveCardViewModel[]>([]),
-    accomplishedObjectives: signal<ObjectiveCardViewModel[]>([]),
     objectivesLoaded: signal(false),
     error: signal<string | null>(null),
-    updateTaskDone: vi.fn(),
   };
 }
 
@@ -67,8 +49,6 @@ describe('Objectives', () => {
     return element;
   };
   const text = (selector: string) => element.querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-  const texts = (selector: string) =>
-    [...element.querySelectorAll(selector)].map((node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '');
 
   beforeEach(async () => {
     store = createStore();
@@ -87,15 +67,14 @@ describe('Objectives', () => {
   });
 
   describe('en-tête', () => {
-    it('dit la date du jour, le manifeste et ce qui est en marche et accompli', () => {
+    it('dit la date du jour, le manifeste et le nombre d’objectifs', () => {
       store.objectivesLoaded.set(true);
       store.objectiveCards.set([card(), card({ id: 'licence', title: 'Valider ma première année' })]);
-      store.accomplishedObjectives.set([ACCOMPLISHED]);
       render();
 
       expect(text('header .repere')).toBe(formatToday(new Date()));
       expect(text('h1.manifeste')).toBe('Mes objectifs');
-      expect(text('header .detail')).toBe('2 en marche · 1 accompli');
+      expect(text('header .detail')).toBe('2 objectifs');
     });
 
     it('passe au jour suivant à minuit, même si l’écran reste ouvert, et arrête de vérifier en partant', () => {
@@ -126,17 +105,16 @@ describe('Objectives', () => {
       expect(formatToday(new Date(2026, 9, 21))).toBe('Mercredi 21 octobre');
     });
 
-    it('accorde le compte des accomplis et omet ce qui vaut zéro', () => {
+    it('accorde le compte au singulier', () => {
       store.objectivesLoaded.set(true);
-      store.accomplishedObjectives.set([ACCOMPLISHED, { ...ACCOMPLISHED, id: 'permis' }]);
+      store.objectiveCards.set([card()]);
       render();
-      expect(text('header .detail')).toBe('2 accomplis');
+      expect(text('header .detail')).toBe('1 objectif');
     });
 
     it('porte un seul sceau, « Nouvel objectif », qui mène au nouvel objectif', () => {
       store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
-      store.accomplishedObjectives.set([ACCOMPLISHED]);
       render();
 
       const seals = element.querySelectorAll('.e-btn--sceau');
@@ -146,8 +124,8 @@ describe('Objectives', () => {
     });
   });
 
-  describe('cartes des objectifs en marche', () => {
-    it('montre l’horizon, le nom lié à la carte, le pourquoi entre « » et la progression par étapes', () => {
+  describe('cartes des objectifs', () => {
+    it('montre l’horizon, le nom lié à la carte, le pourquoi entre « » et ce que l’objectif porte', () => {
       store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       render();
@@ -163,161 +141,51 @@ describe('Objectives', () => {
       expect(article.getAttribute('aria-labelledby')).toBe(title.id);
       expect(article.textContent).toContain("Jusqu'en mai");
       expect(text('article .voix')).toBe('« Pour me prouver que je peux tenir quelque chose sur six mois. »');
-      expect(text('article .e-pas__legende')).toBe('2 étapes faites · Endurance en cours');
+      expect(article.textContent).toContain('6 étapes · 20 pas');
     });
 
-    it('offre le prochain pas avec sa case, et « Ouvrir » vers l’arête', () => {
+    it('ne dit rien de la progression : ni cases, ni prochain pas, ni « Accomplis »', () => {
       store.objectivesLoaded.set(true);
       store.objectiveCards.set([card()]);
       render();
 
-      const box = element.querySelector('input[type=checkbox]') as HTMLInputElement;
-      expect(box.classList.contains('e-case')).toBe(true);
-      expect(text(`label[for="${box.id}"]`)).toBe('Sortie de 30 minutes en endurance');
-      expect(text(`#${box.getAttribute('aria-describedby')}`)).toBe('Prochain pas');
+      expect(element.querySelector('e-pas')).toBeNull();
+      expect(element.querySelector('input[type=checkbox]')).toBeNull();
+      expect(element.querySelector('details')).toBeNull();
+      expect(element.textContent).not.toMatch(/prochain pas|accompli|en cours|à venir/i);
+    });
+
+    it('« Ouvrir » mène à l’arête et dit quel objectif il ouvre', () => {
+      store.objectivesLoaded.set(true);
+      store.objectiveCards.set([card()]);
+      render();
+
       const open = [...element.querySelectorAll('article a')].find((a) => a.textContent?.trim() === 'Ouvrir');
       expect(open?.getAttribute('href')).toBe('/objectifs/semi');
-      // « Ouvrir » dit quel objectif il ouvre.
       expect(text(`#${open?.getAttribute('aria-describedby')}`)).toBe('Courir un semi-marathon en mai');
     });
 
-    it('cocher le prochain pas passe par la mise à jour optimiste du store', () => {
+    it('sans étape, la carte compte ses pas', () => {
       store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card()]);
+      store.objectiveCards.set([card({ stageCount: 0, taskCount: 3 })]);
       render();
-
-      (element.querySelector('input[type=checkbox]') as HTMLInputElement).click();
-      expect(store.updateTaskDone).toHaveBeenCalledWith({ taskId: 't1', done: true });
-    });
-
-    it('le pas suivant arrive avec une case vide, pas avec celle qu’on vient de cocher', () => {
-      store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card()]);
-      store.updateTaskDone.mockImplementation(() =>
-        store.objectiveCards.set([card({ nextTask: { id: 't2', title: 'Courir 8 km', done: false } })]),
-      );
-      render();
-
-      (element.querySelector('input[type=checkbox]') as HTMLInputElement).click();
-      render();
-
-      const box = element.querySelector('input[type=checkbox]') as HTMLInputElement;
-      expect(box.id).toBe('prochain-pas-t2');
-      expect(box.checked).toBe(false);
-      expect(text(`label[for="${box.id}"]`)).toBe('Courir 8 km');
-    });
-
-    it('au clavier, le focus passe à la case du nouveau prochain pas', async () => {
-      store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card()]);
-      store.updateTaskDone.mockImplementation(() =>
-        store.objectiveCards.set([card({ nextTask: { id: 't2', title: 'Courir 8 km', done: false } })]),
-      );
-      render();
-
-      const checked = element.querySelector('#prochain-pas-t1') as HTMLInputElement;
-      checked.focus();
-      checked.click();
-      render();
-      await fixture.whenStable();
-
-      // La case cochée a disparu : le focus n'est pas tombé sur la page.
-      expect(checked.isConnected).toBe(false);
-      expect(document.activeElement).toBe(element.querySelector('#prochain-pas-t2'));
-    });
-
-    it('sans prochain pas, le focus va au lien « Ouvrir » de la carte', async () => {
-      store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card()]);
-      store.updateTaskDone.mockImplementation(() => store.objectiveCards.set([card({ nextTask: null })]));
-      render();
-
-      const checked = element.querySelector('#prochain-pas-t1') as HTMLInputElement;
-      checked.focus();
-      checked.click();
-      render();
-      await fixture.whenStable();
-
-      expect(document.activeElement).toBe(element.querySelector('#ouvrir-semi'));
-      expect(document.activeElement?.textContent?.trim()).toBe('Ouvrir');
-    });
-
-    it('le dernier pas coché range la carte dans « Accomplis » : le focus va au résumé de la liste', async () => {
-      store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card()]);
-      store.updateTaskDone.mockImplementation(() => {
-        store.objectiveCards.set([]);
-        store.accomplishedObjectives.set([card({ nextTask: null, accomplished: true })]);
-      });
-      render();
-
-      const checked = element.querySelector('#prochain-pas-t1') as HTMLInputElement;
-      checked.focus();
-      checked.click();
-      render();
-      await fixture.whenStable();
-
-      expect(document.activeElement).toBe(element.querySelector('details > summary'));
-    });
-
-    it('laisse le focus où il est quand la personne est ailleurs', async () => {
-      store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card()]);
-      store.updateTaskDone.mockImplementation(() =>
-        store.objectiveCards.set([card({ nextTask: { id: 't2', title: 'Courir 8 km', done: false } })]),
-      );
-      render();
-
-      const seal = element.querySelector('.e-btn--sceau') as HTMLElement;
-      (element.querySelector('#prochain-pas-t1') as HTMLInputElement).click();
-      seal.focus();
-      render();
-      await fixture.whenStable();
-
-      expect(document.activeElement).toBe(seal);
-    });
-
-    it('sans étape, la progression se lit par pas', () => {
-      store.objectivesLoaded.set(true);
-      store.objectiveCards.set([
-        card({ stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 1, total: 3 } }),
-      ]);
-      render();
-      expect(text('article .e-pas__legende')).toBe('1 pas fait · 2 à venir');
-    });
-
-    it('au-delà de 12 étapes, la légende se lit seule, sans barre', () => {
-      store.objectivesLoaded.set(true);
-      store.objectiveCards.set([
-        card({ stageCount: 14, stageProgress: { done: 3, inProgress: true, upcoming: 10, inProgressName: 'Endurance' } }),
-      ]);
-      render();
-      expect(element.querySelector('e-pas')).toBeNull();
-      expect(text('article > p.detail')).toBe('3 étapes faites · Endurance en cours');
+      expect(element.querySelector('article')?.textContent).toContain('3 pas');
+      expect(element.querySelector('article')?.textContent).not.toContain("Aucune étape pour l'instant");
     });
 
     it('sans étape ni pas, invite à poser la première étape', () => {
       store.objectivesLoaded.set(true);
-      store.objectiveCards.set([
-        card({
-          stageCount: 0,
-          stageProgress: { done: 0, inProgress: false, upcoming: 0 },
-          taskCount: { done: 0, total: 0 },
-          nextTask: null,
-        }),
-      ]);
+      store.objectiveCards.set([card({ stageCount: 0, taskCount: 0 })]);
       render();
 
-      expect(element.querySelector('e-pas')).toBeNull();
       expect(element.querySelector('article')?.textContent).toContain(
         "Aucune étape pour l'instant. Pose la première quand tu veux.",
       );
-      expect(element.querySelector('input[type=checkbox]')).toBeNull();
     });
 
     it('un objectif pas encore enregistré ne met pas son id temporaire dans une adresse', () => {
       store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card({ id: 'temp-id-123', nextTask: null })]);
+      store.objectiveCards.set([card({ id: 'temp-id-123' })]);
       render();
 
       expect(element.querySelector('article a')).toBeNull();
@@ -336,7 +204,7 @@ describe('Objectives', () => {
       expect(text('h1')).toBe('Mes objectifs');
     });
 
-    it('une fois chargé, sans objectif en marche, Akari demande ce que tu veux construire', () => {
+    it('une fois chargé, sans objectif, Akari demande ce que tu veux construire', () => {
       store.objectivesLoaded.set(true);
       render();
 
@@ -402,51 +270,6 @@ describe('Objectives', () => {
     });
   });
 
-  describe('Accomplis', () => {
-    beforeEach(() => {
-      store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card()]);
-      store.accomplishedObjectives.set([ACCOMPLISHED]);
-    });
-
-    it('est replié sous la grille, avec le compte', () => {
-      render();
-      const details = element.querySelector('details') as HTMLDetailsElement;
-      expect(details.open).toBe(false);
-      expect(details.compareDocumentPosition(element.querySelector('.ds-panels') as Node) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
-      expect(texts('summary span')).toEqual(['Accomplis', '1']);
-    });
-
-    it('chaque ligne porte la petite empreinte, « Accompli » et un lien vers l’objectif', () => {
-      render();
-      const row = element.querySelector('details li') as HTMLElement;
-      expect(row.querySelector('e-empreinte')).toBeTruthy();
-      expect(row.textContent).toContain("M'installer dans mon studio");
-      expect(row.textContent).toContain('Accompli');
-      expect(row.querySelector('a')?.getAttribute('href')).toBe('/objectifs/studio');
-      expect(element.textContent).not.toMatch(/laiss[ée] filer/i);
-    });
-
-    it('se déplie et change de chevron', () => {
-      render();
-      const chevron = () => fixture.debugElement.query(By.css('summary')).query(By.directive(EIcone)).componentInstance as EIcone;
-      expect(chevron().nom()).toBe('chevron-droite');
-
-      const details = element.querySelector('details') as HTMLDetailsElement;
-      details.open = true;
-      details.dispatchEvent(new Event('toggle'));
-      render();
-
-      expect(chevron().nom()).toBe('chevron-bas');
-    });
-
-    it('n’apparaît pas sans objectif accompli', () => {
-      store.accomplishedObjectives.set([]);
-      render();
-      expect(element.querySelector('details')).toBeNull();
-    });
-  });
-
   describe('voix', () => {
     it('tous les textes de l’écran parlent comme Empreinte', () => {
       const seen: string[] = [];
@@ -464,13 +287,11 @@ describe('Objectives', () => {
       collect(); // vide
       store.objectiveCards.set([
         card(),
-        card({ id: 'b', stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 2, total: 5 } }),
-        card({ id: 'c', stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 0, total: 0 }, nextTask: null }),
-        card({ id: 'd', stageCount: 2, stageProgress: { done: 2, inProgress: false, upcoming: 0 }, taskCount: { done: 6, total: 8 } }),
-        card({ id: 'e', stageCount: 14, stageProgress: { done: 3, inProgress: true, upcoming: 10, inProgressName: 'Endurance' } }),
-        card({ id: 'temp-id-9', nextTask: null }),
+        card({ id: 'b', stageCount: 0, taskCount: 5 }),
+        card({ id: 'c', stageCount: 0, taskCount: 0 }),
+        card({ id: 'd', stageCount: 1, taskCount: 1 }),
+        card({ id: 'temp-id-9' }),
       ]);
-      store.accomplishedObjectives.set([ACCOMPLISHED]);
       collect(); // plein
 
       for (const value of seen) {
@@ -481,41 +302,15 @@ describe('Objectives', () => {
   });
 });
 
-describe('cardProgress', () => {
-  it('suit les étapes quand l’objectif en a', () => {
-    expect(cardProgress(card())).toEqual({
-      kind: 'cases',
-      unit: 'etape',
-      done: 2,
-      inProgress: true,
-      upcoming: 3,
-      currentName: 'Endurance',
-      legend: undefined,
-    });
+describe('cardContents', () => {
+  it('dit ce que l’objectif porte : étapes et pas, au singulier comme au pluriel', () => {
+    expect(cardContents(card())).toBe('6 étapes · 20 pas');
+    expect(cardContents(card({ stageCount: 1, taskCount: 1 }))).toBe('1 étape · 1 pas');
   });
 
-  it('ne dit pas « accompli » quand toutes les étapes sont faites mais que des pas sans étape attendent', () => {
-    const progress = cardProgress(
-      card({ stageCount: 3, stageProgress: { done: 3, inProgress: false, upcoming: 0 }, taskCount: { done: 7, total: 9 } }),
-    );
-    expect(progress).toMatchObject({ kind: 'cases', legend: '3 étapes faites · 2 pas sans étape à venir' });
-  });
-
-  it('compte les pas quand il n’y a pas d’étape : le prochain est en cours', () => {
-    expect(
-      cardProgress(card({ stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 4, total: 7 } })),
-    ).toEqual({ kind: 'cases', unit: 'pas', done: 4, inProgress: true, upcoming: 2 });
-  });
-
-  it('au-delà de 12 cases, ne garde que la légende', () => {
-    expect(
-      cardProgress(card({ stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 4, total: 20 } })),
-    ).toEqual({ kind: 'legend', text: '4 pas faits · 16 à venir' });
-  });
-
-  it('sans étape ni pas, invite à commencer', () => {
-    expect(
-      cardProgress(card({ stageCount: 0, stageProgress: { done: 0, inProgress: false, upcoming: 0 }, taskCount: { done: 0, total: 0 } })),
-    ).toEqual({ kind: 'invite' });
+  it('omet ce qui vaut zéro, et reste vide quand l’objectif ne porte rien encore', () => {
+    expect(cardContents(card({ stageCount: 2, taskCount: 0 }))).toBe('2 étapes');
+    expect(cardContents(card({ stageCount: 0, taskCount: 4 }))).toBe('4 pas');
+    expect(cardContents(card({ stageCount: 0, taskCount: 0 }))).toBe('');
   });
 });

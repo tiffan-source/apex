@@ -9,7 +9,7 @@ import type { ObjectiveViewModel, TaskViewModel } from '../../../chore/models/ob
 import { rootObjectiveOptions, toObjectiveDetail } from '../../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
 import { Akari, objectiveInvitation, permissionPrompt, stageInvitation } from './akari';
-import { STAGE_STATE_TITLES, UNTITLED_STAGE } from '../stage-labels';
+import { UNTITLED_STAGE } from '../stage-labels';
 import { AKARI_REPLIED, AKARI_REPORTS, AKARI_STATUS, ChatStore } from './chat.store';
 import type { MessageViewModel, PermissionRequestViewModel } from './chat.models';
 
@@ -570,16 +570,29 @@ describe('Akari : l’arête à droite', () => {
     expect(panel.querySelector('.ds-hide-mobile > e-arete')).not.toBeNull();
     expect(panel.querySelector('e-arete')?.hasAttribute('interactive')).toBe(false);
 
+    // Sans état d'étape : l'API ne rend pas la progression.
     const rows = Array.from(panel.querySelectorAll('ol.ds-divided > li.stage'));
     expect(rows.map((row) => Array.from(row.children).map(text))).toEqual([
-      ['1', 'Endurance', '2 pas', 'En cours'],
-      ['2', 'Vitesse', '1 pas', 'À venir'],
+      ['1', 'Endurance', '2 pas'],
+      ['2', 'Vitesse', '1 pas'],
     ]);
     expect(text(panel)).toContain('1 pas sans étape');
 
     const see = buttonNamed(panel, "Voir l'arête") as HTMLAnchorElement;
     expect(see.getAttribute('href')).toBe('/objectifs/semi');
     expect(see.classList).toContain('e-btn--trait');
+  });
+
+  it('écrit l’horizon d’une étape sous son nom', async () => {
+    const { root } = await setup({
+      configure: (_, store) => {
+        store.objectives.update((list) =>
+          list.map((item) => (item.id === 'vitesse' ? { ...item, dueDate: new Date(2030, 4, 1).toISOString() } : item)),
+        );
+      },
+    });
+    const rows = Array.from(root.querySelectorAll('ol.ds-divided > li.stage'));
+    expect(Array.from(rows[1].children).map(text)).toEqual(['2', 'Vitesse', '1 pas', "Jusqu'en mai 2030"]);
   });
 
   it('invite Akari quand l’objectif n’a pas encore d’étape', async () => {
@@ -727,7 +740,6 @@ describe('Akari : la voix', () => {
     permissionPrompt({ kind: 'task', title: 'Courir 10 km', objectiveId: 'endurance' }, () => 'Endurance'),
     permissionPrompt({ kind: 'task', title: '', objectiveId: null }),
     permissionPrompt({ kind: 'other' }),
-    ...Object.values(STAGE_STATE_TITLES),
     UNTITLED_STAGE,
     ...Object.values(AKARI_STATUS),
     ...Object.values(AKARI_REPORTS),
