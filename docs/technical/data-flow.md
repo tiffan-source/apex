@@ -87,7 +87,7 @@ Rules still in the client
 
 The API does not expose these yet, so the web client still derives them from what `GET /v1/objectives` returns. Each one should move to the server (a computed field or a use case), where the mobile application can share it:
 
--   the Eisenhower quadrant of a step (threshold 3 on importance and urgency, `quadrantOf`) and the levels a step gets when it is moved to a quadrant (`levelsForQuadrant`), in `chore/mapper/matrix.mapper.ts`. The quadrant in `TaskOutput` and a `MoveTaskToQuadrant` use case would replace them;
+-   the Eisenhower quadrant of a step (threshold 3 on importance and urgency, `quadrantOf`), in `chore/mapper/matrix.mapper.ts`. The quadrant in `TaskOutput` would replace it. A step never moves from the matrix: it changes quadrant when its importance or urgency is edited on its objective;
 -   the progress of an objective and of its stages — a stage done, the stage in progress, the next step, an objective « accomplished » (`isStageDone`, `stageStates`, `nextTaskOf`, `isAccomplished`), in `chore/mapper/objective-view.mapper.ts`.
 
 No other business rule belongs in the client: a new one goes into the API first.

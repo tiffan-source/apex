@@ -276,7 +276,7 @@ describe('Shell', () => {
     it('affiche un signalement en haut du contenu, signé Akari, jusqu’à « Compris »', async () => {
       const harness = await open();
       const annonces = TestBed.inject(AnnoncesStore);
-      annonces.signaler(FAILURE_REPORTS.moveTask);
+      annonces.signaler(FAILURE_REPORTS.editTask);
       harness.detectChanges();
 
       const root = shellOf(harness);
@@ -286,7 +286,7 @@ describe('Shell', () => {
       expect(content.firstElementChild).toBe(note);
       expect(present(note.querySelector('.e-note__qui'), 'la signature').textContent?.trim()).toBe('Akari');
       expect(note.getAttribute('aria-label')).toBe("Message d'Akari");
-      expect(note.textContent).toContain(FAILURE_REPORTS.moveTask);
+      expect(note.textContent).toContain(FAILURE_REPORTS.editTask);
 
       const understood = present([...note.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Compris'), '« Compris »');
       understood.focus();

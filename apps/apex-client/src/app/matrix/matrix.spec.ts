@@ -2,20 +2,16 @@ import { LOCALE_ID, computed, signal } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { CdkDrag } from '@angular/cdk/drag-drop';
-import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { motsAEviter } from '@empreinte-studio/angular/core';
-import { EMatrice, QUADRANTS, TITRES_QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
-import { EMenu } from '@empreinte-studio/angular/menu';
+import { QUADRANTS, TITRES_QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
-import { filterMatrixByObjective, levelsForQuadrant, toMatrix } from '../../chore/mapper/matrix.mapper';
+import { filterMatrixByObjective, toMatrix } from '../../chore/mapper/matrix.mapper';
 import { rootObjectiveOptions } from '../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../chore/constants/messages.constante';
 import type { ObjectiveViewModel, TaskViewModel } from '../../chore/models/objective.viewmodel';
-import type { MatrixTaskViewModel } from '../../chore/models/matrix.viewmodel';
-import { MATRIX_DRAG_CONFIG, Matrix } from './matrix';
+import { Matrix } from './matrix';
 
 registerLocaleData(localeFr);
 
@@ -66,7 +62,6 @@ function createFakeStore(objectives: ObjectiveViewModel[] = OBJECTIVES, tasks: T
     objectivesLoaded: signal(true),
     error: signal<string | null>(null),
     updateTaskDone: vi.fn(),
-    moveTaskToQuadrant: vi.fn(),
   };
 }
 
@@ -110,12 +105,6 @@ describe('Matrix', () => {
   const checkbox = (taskId: string) => element.querySelector<HTMLInputElement>(`#matrix-task-${taskId}`);
   const label = (taskId: string) => element.querySelector<HTMLLabelElement>(`label[for="matrix-task-${taskId}"]`);
   const filterButtons = () => all('e-filtres button');
-  const matriceInstance = () => fixture.debugElement.query(By.directive(EMatrice)).componentInstance as EMatrice<MatrixTaskViewModel>;
-  const taskOf = (taskId: string): MatrixTaskViewModel => {
-    const found = QUADRANTS.flatMap((quadrant) => store.matrix()[quadrant]).find((item) => item.id === taskId);
-    if (!found) throw new Error(`Pas introuvable : ${taskId}`);
-    return found;
-  };
 
   beforeEach(() => {
     // Lundi 19 octobre 2026, seule l'horloge de Date est simulée.
@@ -123,10 +112,7 @@ describe('Matrix', () => {
     vi.setSystemTime(new Date(2026, 9, 19, 9, 0));
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    document.querySelectorAll('.cdk-overlay-container').forEach((overlay) => overlay.remove());
-  });
+  afterEach(() => vi.useRealTimers());
 
   describe('en-tête', () => {
     beforeEach(() => render());
@@ -200,88 +186,21 @@ describe('Matrix', () => {
       expect(store.updateTaskDone).toHaveBeenCalledWith({ taskId: 't2', done: false });
     });
 
-    it('un pas glissé vers un autre quadrant est déplacé par le store ; remis dans le même, rien ne part', () => {
-      matriceInstance().deplacement.emit({ element: taskOf('t1'), de: 'maintenant', vers: 'planifier', index: 0 });
-      expect(store.moveTaskToQuadrant).toHaveBeenCalledWith('t1', 'planifier');
-
-      store.moveTaskToQuadrant.mockClear();
-      matriceInstance().deplacement.emit({ element: taskOf('t1'), de: 'maintenant', vers: 'maintenant', index: 1 });
-      expect(store.moveTaskToQuadrant).not.toHaveBeenCalled();
+    it('ne laisse déplacer aucun pas depuis la matrice : ni glisser-déposer, ni menu', () => {
+      expect(element.querySelector('.cdk-drag, .cdk-drop-list')).toBeNull();
+      expect(element.querySelector('e-menu')).toBeNull();
+      expect(all('[aria-label*="Déplacer"]')).toEqual([]);
     });
 
-    it('chaque pas a un menu « Déplacer vers… » nommé, avec les trois autres quadrants', () => {
-      const menus = fixture.debugElement.queryAll(By.directive(EMenu));
-      expect(menus).toHaveLength(5);
-
-      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('e-menu button');
-      expect(trigger?.getAttribute('aria-label')).toBe('Déplacer « Sortie de 30 minutes en endurance » vers…');
-
-      const entries = (taskId: string) => {
-        const host = label(taskId)?.closest('li')?.querySelector('e-menu');
-        const menu = menus.find((debug) => debug.nativeElement === host)?.componentInstance as EMenu<Quadrant>;
-        return menu.entrees().map((entry) => ('libelle' in entry ? entry.libelle : '—'));
-      };
-      expect(entries('t1')).toEqual(['À planifier', 'À confier', 'À laisser filer']);
-      expect(entries('t3')).toEqual(['Maintenant', 'À confier', 'À laisser filer']);
-      expect(entries('t4')).toEqual(['Maintenant', 'À planifier', 'À laisser filer']);
-      expect(entries('t5')).toEqual(['Maintenant', 'À planifier', 'À confier']);
-    });
-
-    it('choisir un quadrant dans le menu y déplace le pas', async () => {
-      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('e-menu button');
-      trigger?.click();
+    it('un pas change de quadrant quand son importance ou son urgence change, modifiées sur son objectif', () => {
+      store.state.update(({ objectives, tasks }) => ({
+        objectives,
+        tasks: tasks.map((item) => (item.id === 't1' ? { ...item, importance: 2 } : item)),
+      }));
       fixture.detectChanges();
-      await fixture.whenStable();
 
-      const items = Array.from(document.querySelectorAll<HTMLElement>('.e-menu__element'));
-      expect(items.map(text)).toEqual(['À planifier', 'À confier', 'À laisser filer']);
-
-      items[1].click();
-      fixture.detectChanges();
-      expect(store.moveTaskToQuadrant).toHaveBeenCalledWith('t1', 'confier');
-    });
-
-    it('au toucher, un pas ne se saisit qu’après un appui (le doigt fait défiler la page) ; à la souris, tout de suite', () => {
-      const drags = fixture.debugElement.queryAll(By.directive(CdkDrag)).map((debug) => debug.injector.get(CdkDrag));
-      expect(drags).toHaveLength(5);
-      for (const drag of drags) expect(drag.dragStartDelay).toEqual({ touch: 300, mouse: 0 });
-      expect(MATRIX_DRAG_CONFIG.dragStartDelay).toEqual({ touch: 300, mouse: 0 });
-    });
-  });
-
-  describe('déplacer au clavier', () => {
-    /** Un store dont le déplacement range vraiment le pas ailleurs, comme la mise à jour optimiste. */
-    function movingStore(): FakeStore {
-      const fake = createFakeStore();
-      fake.moveTaskToQuadrant.mockImplementation((taskId: string, quadrant: Quadrant) =>
-        fake.state.update(({ objectives, tasks }) => ({
-          objectives,
-          tasks: tasks.map((item) => (item.id === taskId ? { ...item, ...levelsForQuadrant(item, quadrant) } : item)),
-        })),
-      );
-      return fake;
-    }
-
-    it('après « Déplacer vers… », le focus revient sur la case du pas, dans son nouveau quadrant', async () => {
-      await render(movingStore());
-      const trigger = label('t1')?.closest('li')?.querySelector<HTMLButtonElement>('e-menu button');
-      trigger?.focus();
-      trigger?.click();
-      fixture.detectChanges();
-      await fixture.whenStable();
-
-      const items = Array.from(document.querySelectorAll<HTMLElement>('.e-menu__element'));
-      items[1].click(); // À confier
-      fixture.detectChanges();
-      await fixture.whenStable();
-
-      expect(store.moveTaskToQuadrant).toHaveBeenCalledWith('t1', 'confier');
       expect(taskLabels('maintenant')).toEqual(['Réviser le chapitre 4']);
       expect(taskLabels('confier')).toEqual(['Sortie de 30 minutes en endurance', 'Enchaîner le couplet du deuxième morceau']);
-      // La ligne a été recréée ailleurs : le focus n'est pas resté sur un bouton disparu.
-      expect(trigger?.isConnected).toBe(false);
-      expect(document.activeElement).toBe(checkbox('t1'));
-      expect(quadrantSection('confier')?.contains(document.activeElement)).toBe(true);
     });
   });
 

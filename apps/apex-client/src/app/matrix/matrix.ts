@@ -1,28 +1,10 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DOCUMENT,
-  Injector,
-  afterNextRender,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
-import { CDK_DRAG_CONFIG, type DragDropConfig } from '@angular/cdk/drag-drop';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { EBouton } from '@empreinte-studio/angular/bouton';
 import { ECase } from '@empreinte-studio/angular/case';
 import { compter } from '@empreinte-studio/angular/core';
 import { EFiltres, type OptionFiltre } from '@empreinte-studio/angular/filtres';
-import {
-  EMatrice,
-  EMatriceElement,
-  QUADRANTS,
-  TITRES_QUADRANTS,
-  type DeplacementMatrice,
-  type Quadrant,
-} from '@empreinte-studio/angular/matrice';
-import { EMenu, type EntreeMenu } from '@empreinte-studio/angular/menu';
+import { EMatrice, EMatriceElement, QUADRANTS } from '@empreinte-studio/angular/matrice';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import type { MatrixTaskViewModel } from '../../chore/models/matrix.viewmodel';
@@ -34,30 +16,14 @@ import { formatToday, injectToday } from '../../chore/clock/today';
 export const ALL_OBJECTIVES = 'Tous les objectifs';
 
 /**
- * Au toucher, un pas ne se saisit qu'après un appui d'un moment (en millisecondes) : sans ce délai, le doigt
- * qui glisse sur la liste pour faire défiler la page déplacerait le pas (le CDK démarre le glisser au premier
- * mouvement et bloque le défilement). À la souris, rien ne change. e-matrice n'expose pas ce réglage : il passe
- * par la configuration du glisser-déposer du CDK, que ses pas lisent.
- */
-export const MATRIX_DRAG_CONFIG: DragDropConfig = { dragStartDelay: { touch: 300, mouse: 0 } };
-
-/** Les quadrants vers lesquels un pas peut aller : les trois autres. */
-function moveTargetsFrom(quadrant: Quadrant): readonly EntreeMenu<Quadrant>[] {
-  return QUADRANTS.filter((target) => target !== quadrant).map((target) => ({
-    valeur: target,
-    libelle: TITRES_QUADRANTS[target],
-  }));
-}
-
-/**
  * La matrice d'Eisenhower (route /matrice) : tous les pas, faits compris, rangés dans les quatre
- * quadrants d'Empreinte. On coche un pas sur place, on le déplace en le glissant ou, au clavier,
- * par le menu « Déplacer vers… ». Le filtre par objectif ne vit que dans la page.
+ * quadrants d'Empreinte d'après leur importance et leur urgence. On coche un pas sur place, on ne l'y
+ * déplace pas : il change de quadrant quand ses niveaux changent, dans « Modifier le pas », sur son objectif.
+ * Le filtre par objectif ne vit que dans la page.
  */
 @Component({
   selector: 'app-matrix',
-  imports: [RouterLink, EBouton, ECase, EFiltres, EMatrice, EMatriceElement, EMenu],
-  providers: [{ provide: CDK_DRAG_CONFIG, useValue: MATRIX_DRAG_CONFIG }],
+  imports: [RouterLink, EBouton, ECase, EFiltres, EMatrice, EMatriceElement],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './matrix.html',
   styleUrl: './matrix.css',
@@ -65,8 +31,6 @@ function moveTargetsFrom(quadrant: Quadrant): readonly EntreeMenu<Quadrant>[] {
 export class Matrix {
   private readonly store = inject(ObjectiveStore);
   private readonly annonces = inject(AnnoncesStore);
-  private readonly document = inject(DOCUMENT);
-  private readonly injector = inject(Injector);
 
   /** « Lundi 19 octobre » : la date du jour, qui change à minuit, comme sur l'écran Objectifs. */
   private readonly today = injectToday();
@@ -142,15 +106,7 @@ export class Matrix {
   /** Ce que compte chaque quadrant (« 4 pas ») ; un tuple, pas un tableau littéral du gabarit. */
   protected readonly taskUnit = ['pas', 'pas'] as const;
 
-  /** Pour chaque quadrant, les trois autres, proposés par « Déplacer vers… ». */
-  protected readonly moveTargets: Readonly<Record<Quadrant, readonly EntreeMenu<Quadrant>[]>> = {
-    maintenant: moveTargetsFrom('maintenant'),
-    planifier: moveTargetsFrom('planifier'),
-    confier: moveTargetsFrom('confier'),
-    'laisser-filer': moveTargetsFrom('laisser-filer'),
-  };
-
-  /** L'id de la case d'un pas (le label la vise, et le focus y revient après un déplacement au clavier). */
+  /** L'id de la case d'un pas (le label la vise). */
   protected checkboxId(task: MatrixTaskViewModel): string {
     return `matrix-task-${task.id}`;
   }
@@ -175,22 +131,5 @@ export class Matrix {
   /** Coche ou décoche un pas : mise à jour optimiste du store, retour en arrière s'il n'est pas enregistré. */
   protected toggle(task: MatrixTaskViewModel, done: boolean): void {
     this.store.updateTaskDone({ taskId: task.id, done });
-  }
-
-  /** Un pas glissé vers un autre quadrant (l'ordre dans un quadrant n'est pas enregistré). */
-  protected move(deplacement: DeplacementMatrice<MatrixTaskViewModel>): void {
-    if (deplacement.de === deplacement.vers) return;
-    this.store.moveTaskToQuadrant(deplacement.element.id, deplacement.vers);
-  }
-
-  /**
-   * Un pas envoyé vers un quadrant par le menu « Déplacer vers… ». Le menu rend le focus à son bouton, mais
-   * la ligne du pas est aussitôt recréée dans son nouveau quadrant : le focus tomberait sur la page. Il revient
-   * donc sur la case du pas, à sa nouvelle place, pour que le clavier reprenne là où il était.
-   */
-  protected moveTo(task: MatrixTaskViewModel, quadrant: Quadrant): void {
-    const id = this.checkboxId(task);
-    this.store.moveTaskToQuadrant(task.id, quadrant);
-    afterNextRender({ write: () => this.document.getElementById(id)?.focus() }, { injector: this.injector });
   }
 }

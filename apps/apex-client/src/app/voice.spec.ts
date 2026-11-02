@@ -241,7 +241,7 @@ describe('la voix de tout src/app', () => {
       'Aller au contenu', // texte de la coque
       "Légende de l'arête", // aria-label
       'Réponds à Akari…', // indication (le texte indicatif de la zone de réponse)
-      'Déplacer «', // chaîne d'un [libelle] lié
+      'Modifier «', // chaîne d'un [attr.aria-label] lié
       "Je m'y engage", // bouton sceau du nouvel objectif
       'Objectifs · Apex', // titre de route
     ];

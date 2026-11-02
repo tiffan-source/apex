@@ -27,7 +27,7 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [] Déconnexion : `POST /v1/auth/logout` existe, il manque le geste dans l'interface
 - [] Retirer une échéance : l'API accepte `dueDate: null`, les feuilles « Modifier » l'interdisent encore
 - [] Cas d'usage manquants : laisser filer ou supprimer (objectif, étape, pas)
-- [] Règles encore dans le client, à exposer par l'API : quadrant d'un pas et déplacement vers un quadrant (`matrix.mapper.ts`), progression des étapes et objectif accompli (`objective-view.mapper.ts`)
+- [] Règles encore dans le client, à exposer par l'API : quadrant d'un pas (`matrix.mapper.ts`), progression des étapes et objectif accompli (`objective-view.mapper.ts`)
 - [] Akari : remplacer l'interrogation chaque seconde par un flux (SSE) côté API
 
 ### Empreinte, en amont (dépôt `empreinte-studio/empreinte`)
@@ -36,7 +36,7 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [x] Un composant « réplique » pour Akari : `e-conversation`, `ol[eFil]`, `li[eReplique]` (0.3.0)
 - [] `ELienNav` ne pose la corne que pour `aria-current="page"`
 - [] `e-menu` sans état choisi
-- [] `e-matrice` : axes faux sous 640px, compte non personnalisable, titres figés, glisser qui bloque le défilement tactile
+- [] `e-matrice` : axes faux sous 640px, compte non personnalisable, titres figés
 - [] `e-arete` : pas de brouillon, pas de légende (Apex compose avec des cases d'`e-pas`, dont la case « En cours » porte une corne absente de la borne), noms tronqués, pas d'id dans `choisir`, étape choisie non marquée
 - [] `e-filtres` : pas de nom accessible par option (le libellé coupé est le seul nom du bouton)
 - [x] Un style « prose » pour le Markdown, dans les répliques (0.3.0)

@@ -1,6 +1,6 @@
 # Catalogue : les composants Empreinte pour Apex
 
-Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.3.0** et **`@empreinte-studio/tokens` 0.3.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
+Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.4.0** et **`@empreinte-studio/tokens` 0.4.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11) ; la 0.4 retire le glisser-déposer de la matrice (§ 2.19). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
 
 Le cahier de la migration (`docs/features/migration-empreinte.md`) fixe le périmètre, le vocabulaire et les règles d'écran ; ce catalogue dit **avec quoi** les construire.
 
@@ -25,7 +25,7 @@ import { EMatrice, EMatriceElement } from '@empreinte-studio/angular/matrice'; /
 
 ### 1.1 Dépendances
 
-`@empreinte-studio/angular` 0.3.0 demande en pair `@angular/aria`, `@angular/cdk`, `@angular/common`, `@angular/core`, `@angular/forms` en `^22.2.0` (installés en 22.2.3). Il dépend de `@empreinte-studio/tokens` 0.3.0, qui dépend de `@fontsource/schibsted-grotesk` et `@fontsource/shippori-mincho` (présents dans `node_modules`). Aucune feuille du CDK n'est à charger : le CDK injecte lui-même les styles de l'overlay, du drag-drop et du text-field.
+`@empreinte-studio/angular` 0.4.0 demande en pair `@angular/aria`, `@angular/cdk`, `@angular/common`, `@angular/core`, `@angular/forms` en `^22.2.0` (installés en 22.2.3). Il dépend de `@empreinte-studio/noyau` 0.4.0 et de `@empreinte-studio/tokens` 0.4.0, qui dépend de `@fontsource/schibsted-grotesk` et `@fontsource/shippori-mincho` (présents dans `node_modules`). Aucune feuille du CDK n'est à charger : le CDK injecte lui-même les styles de l'overlay et du text-field.
 
 ### 1.2 Les styles globaux
 
@@ -535,10 +535,13 @@ type EntreeMenu<V> = ElementMenu<V> | SeparateurMenu;
 `doux` : texte `encre-douce` (sorties douces). `desactive` (masculin ici, `desactivee` ailleurs). Le menu ne marque pas l'élément choisi (pas d'élément radio) : pour un choix exclusif visible, préférer `e-filtres` ou `e-selection`. Hôte : `e-menu-hote`. Rendu : `div.e-menu` > `div.e-menu__element` (44px), `div.e-menu__separateur[role=separator]`.
 
 ```ts
-protected readonly cibles = QUADRANTS.map((q): EntreeMenu<Quadrant> => ({ valeur: q, libelle: TITRES_QUADRANTS[q] }));
+protected readonly reglages: readonly EntreeMenu<PreferenceTheme>[] = [
+  { valeur: 'jour', libelle: 'Jour' },
+  { valeur: 'nuit', libelle: 'Nuit' },
+];
 ```
 ```html
-<e-menu libelle="Déplacer vers…" icone="deplacer" petit [entrees]="cibles" (choix)="deplacerVers(pas, $event)" />
+<e-menu libelle="Réglages" icone="reglages" [entrees]="reglages" (choix)="choisirTheme($event)" />
 ```
 
 ### 2.14 `filtres` : `EFiltres`
@@ -706,48 +709,37 @@ Une feuille ouverte par-dessus un écran qui a déjà son sceau (la tête de l'a
 
 **`li[ePli]`** : `valeur` (`unknown`, requis), `titre` (`string`, requis), `date` (`string`, `''`), `marque` (`'sceau' \| 'pause' \| null`), `libelle` (nom accessible du dos), `niveau` (nombre, `3`, `aria-level` de l'en-tête). Un seul pli ouvert ; le pli ouvert porte la corne. Pensé pour l'historique des décisions : ce n'est pas un accordéon générique.
 
-### 2.19 `matrice` : `EMatrice`, `EMatriceElement`, `appliquerDeplacement`, `QUADRANTS`, `TITRES_QUADRANTS`
+### 2.19 `matrice` : `EMatrice`, `EMatriceElement`, `QUADRANTS`, `TITRES_QUADRANTS`
 
-**`<e-matrice>`** — la matrice d'Eisenhower en shoji ; elle ne garde rien et annonce `(deplacement)`.
+**`<e-matrice>`** — la matrice d'Eisenhower en shoji ; elle montre les quadrants que la page lui donne et ne déplace rien : un pas suit son importance et son urgence.
 
 | Entrée | Type | Défaut | Effet |
 | --- | --- | --- | --- |
 | `quadrants` | `Readonly<Record<Quadrant, readonly T[]>>` | requis | Les éléments de chaque quadrant (`'maintenant' \| 'planifier' \| 'confier' \| 'laisser-filer'`). |
-| `piste` | `(element: T) => unknown` | identité | Clé du `@for` et repère de l'élément qui arrive. Passer `(t) => t.id` dès que les objets sont recréés par le store. |
+| `piste` | `(element: T) => unknown` | identité | Clé du `@for`. Passer `(t) => t.id` dès que les objets sont recréés par le store. |
 | `courant` | `Quadrant \| null` | `'maintenant'` | Le quadrant qui porte la corne et `aria-current="true"`. |
 | `titres` | `Readonly<Record<Quadrant, string>>` | `TITRES_QUADRANTS` | Maintenant, À planifier, À confier, À laisser filer. |
 | `axes` | `{ urgent; pasUrgent; important; secondaire }` (chaînes) | Urgent, Pas urgent, Important, Secondaire | |
 | `unite` | `readonly [string, string]` (singulier, pluriel) | `['tâche', 'tâches']` | Le compte de chaque quadrant : `compter(n, …)`, par exemple « 4 pas ». |
 | `libelle` | `string` | « Matrice d'Eisenhower » | `aria-label` du groupe des quadrants. |
-| `deplacable` | bool | `true` | Glisser-déposer (CDK) actif. |
 
-Sortie : `deplacement: DeplacementMatrice<T>` = `{ element: T; de: Quadrant; vers: Quadrant; index: number }` (index dans le quadrant d'arrivée). Rien n'est émis si l'élément revient à sa place. L'élément arrivé se déplie (`e-quadrant__element--arrive`).
+Aucune sortie : rien ne se saisit, rien ne se dépose.
 
 Contenu : **`ng-template[eMatriceElement]`** — le gabarit d'un élément. Contexte : `$implicit` (l'élément) et `quadrant`. L'entrée `eMatriceElement` (les quadrants ou une liste) ne sert qu'à typer `let-…`. Sans gabarit, chaque élément s'affiche en texte avec une puce.
 
-Rendu : grille `auto 1fr 1fr` ; axes en `repere` ; `div.e-matrice__grille[role=group]` sur fond `encre` ; quatre `section.e-quadrant.e-surface[aria-labelledby]` dans l'ordre maintenant, planifier (rangée Important), confier, laisser-filer (rangée Secondaire) ; titre **`h3.e-quadrant__titre`** ; `p.e-quadrant__compte` ; `ul.e-quadrant__liste[cdkDropList]` > `li.e-quadrant__element[cdkDrag]` (toute la ligne se saisit, curseur « grab »). Sous 640px, les quadrants s'empilent sur une colonne.
+Rendu : grille `auto 1fr 1fr` ; axes en `repere` ; `div.e-matrice__grille[role=group]` sur fond `encre` ; quatre `section.e-quadrant.e-surface[aria-labelledby]` dans l'ordre maintenant, planifier (rangée Important), confier, laisser-filer (rangée Secondaire) ; titre **`h3.e-quadrant__titre`** ; `p.e-quadrant__compte` ; `ul.e-quadrant__liste` > `li.e-quadrant__element`. Sous 640px, les quadrants s'empilent sur une colonne.
 
-Le glisser-déposer ne se fait pas au clavier : chaque élément doit offrir une action « Déplacer vers… » (`e-menu`).
-
-**`appliquerDeplacement(quadrants, deplacement, piste?)`** : renvoie de nouveaux quadrants sans muter (retire l'élément du départ par sa clé, l'insère à `index` borné). Vérifié : déplacer `{id:1}` de `maintenant` vers `planifier` à l'index 0 donne `planifier: [{id:1},{id:3}]`. Sans `piste`, la comparaison se fait par référence.
-
-**`QUADRANTS`** = `['maintenant', 'planifier', 'confier', 'laisser-filer']` ; **`TITRES_QUADRANTS`** = `{ maintenant: 'Maintenant', planifier: 'À planifier', confier: 'À confier', 'laisser-filer': 'À laisser filer' }`. Types `Quadrant`, `DeplacementMatrice<T>`, `ContexteElementMatrice<T>`.
+**`QUADRANTS`** = `['maintenant', 'planifier', 'confier', 'laisser-filer']` ; **`TITRES_QUADRANTS`** = `{ maintenant: 'Maintenant', planifier: 'À planifier', confier: 'À confier', 'laisser-filer': 'À laisser filer' }`. Types `Quadrant`, `ContexteElementMatrice<T>`.
 
 ```ts
 protected readonly parId = (pas: TaskViewModelWithCategoryAndObjectiveTitle) => pas.id;
 protected readonly unitePas = ['pas', 'pas'] as const;   // un tableau littéral dans le gabarit serait typé string[]
-protected readonly cibles = QUADRANTS.map((q): EntreeMenu<Quadrant> => ({ valeur: q, libelle: TITRES_QUADRANTS[q] }));
 ```
 ```html
-<e-matrice [quadrants]="quadrants()" [piste]="parId" [unite]="unitePas" (deplacement)="deplacer($event)">
-  <ng-template [eMatriceElement]="quadrants()" let-pas let-quadrant="quadrant">
+<e-matrice [quadrants]="quadrants()" [piste]="parId" [unite]="unitePas">
+  <ng-template [eMatriceElement]="quadrants()" let-pas>
     <ul eListe nue>
-      <li eTache [titre]="pas.title" [meta]="pas.objectiveTitle" [fait]="pas.done" (faitChange)="basculer(pas.id, $event)">
-        <div eTacheActions>
-          <e-menu libelle="Déplacer vers…" icone="deplacer" petit [entrees]="cibles"
-                  (choix)="deplacer({ element: pas, de: quadrant, vers: $event, index: 0 })" />
-        </div>
-      </li>
+      <li eTache [titre]="pas.title" [meta]="pas.objectiveTitle" [fait]="pas.done" (faitChange)="basculer(pas.id, $event)"></li>
     </ul>
   </ng-template>
 </e-matrice>
@@ -1075,7 +1067,7 @@ Inventaire des usages actuels sous `apps/apex-client/src/app` : 24 `<p-button>`,
 14. **`ECarteObjectif`** : ordre de rendu figé (en-tête, titre, contenu, pas, pied) ; `accompli` vaut par défaut « objectif accompli » (celui d'`e-pas` : « étape accomplie ») ; le pied rend un `<p>` même si `meta` est vide.
 15. **`EEmpreinte [pose]`** ne joue qu'au premier rendu : pour poser une empreinte quand une étape s'achève, faire apparaître l'élément à ce moment-là (`@if`). `ESceau` rejoue quand `palier` augmente.
 16. **`EArete`** : `choisir` émet l'objet d'étape, sans identifiant ; noms tronqués à 18 caractères, détails à 22, tête à 2 lignes de 15 caractères (« Courir un / semi-marathon… ») ; au-delà de 8 étapes, les faites se replient en une arête « Faites » synthétique ; la tête est toujours un sceau. Aucune légende n'est dessinée.
-17. **`EMatrice`** : `piste` par défaut = identité (la liste est recréée si le store renvoie de nouveaux objets) ; `unite` attend un tuple (`as const` dans la classe, pas de tableau littéral dans le gabarit) ; titres en `h3` figés ; le compte n'écrit que « N unité » ; pas de glisser-déposer au clavier ; `appliquerDeplacement` sans `piste` compare par référence.
+17. **`EMatrice`** : `piste` par défaut = identité (la liste est recréée si le store renvoie de nouveaux objets) ; `unite` attend un tuple (`as const` dans la classe, pas de tableau littéral dans le gabarit) ; titres en `h3` figés ; le compte n'écrit que « N unité ».
 18. **`EMenu`** : `icone` est un nom d'icône (chaîne), alors que sur `eBouton` `icone` est un booléen ; désactiver une entrée = `desactive` (masculin), alors que c'est `desactivee` dans `OptionSelection`, `ETache` et `ESelection`, et `desactive` sur `eOnglet`. Le menu ne montre pas l'entrée choisie.
 19. **`EFiltres`** : compare par `===` (pas d'objets comme valeurs, sauf même référence) ; `libelleTous` à `null` pour un choix sans « Tous ».
 20. **`ESelection`** : pas d'erreur automatique de Signal Forms (passer `[erreur]`) ; dans un `e-champ`, le `<label for>` vise un `div` (cliquer le libellé ne déplie pas la liste) ; `libelle` ne sert que hors champ.

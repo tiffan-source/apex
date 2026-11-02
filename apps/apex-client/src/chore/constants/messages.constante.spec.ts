@@ -1,11 +1,9 @@
 import { motsAEviter } from '@empreinte-studio/angular/core';
-import { QUADRANTS } from '@empreinte-studio/angular/matrice';
 import {
   CREATE_OBJECTIVE_FAILURES,
   FAILURE_REPORTS,
   SUCCESS_ANNOUNCEMENTS,
   failureReport,
-  taskMovedAnnouncement,
   voiceIssues,
 } from './messages.constante';
 import { IMPORTANCE_OPTIONS, URGENCY_OPTIONS } from './task.constante';
@@ -14,7 +12,6 @@ import { IMPORTANCE_OPTIONS, URGENCY_OPTIONS } from './task.constante';
 const texts = [
   ...Object.values(SUCCESS_ANNOUNCEMENTS),
   ...Object.values(FAILURE_REPORTS),
-  ...QUADRANTS.map(taskMovedAnnouncement),
   ...IMPORTANCE_OPTIONS.map((option) => option.libelle),
   ...URGENCY_OPTIONS.map((option) => option.libelle),
 ];
@@ -29,17 +26,13 @@ describe('les textes de la plomberie', () => {
   it('chaque signalement dit quoi faire ensuite', () => {
     for (const report of Object.values(FAILURE_REPORTS)) expect(report).toMatch(/réessaie|recharge la page/);
   });
-
-  it('nomme le quadrant d’arrivée', () => {
-    expect(taskMovedAnnouncement('planifier')).toBe('Ce pas passe dans « À planifier ».');
-  });
 });
 
 describe('failureReport', () => {
   it('choisit la phrase de l’action par défaut', () => {
     expect(failureReport('addTask')).toBe("Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.");
     expect(failureReport('createObjective', 'FAIL_TO_SAVE_OBJECTIVE')).toBe(FAILURE_REPORTS.createObjective);
-    expect(failureReport('moveTask', 'UNKNOWN_ERROR')).toBe(FAILURE_REPORTS.moveTask);
+    expect(failureReport('toggleTask', 'UNKNOWN_ERROR')).toBe(FAILURE_REPORTS.toggleTask);
   });
 
   it('dit ce qui manque quand l’API ne retrouve plus l’objectif ou le pas', () => {

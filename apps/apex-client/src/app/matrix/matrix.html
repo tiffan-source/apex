@@ -39,36 +39,21 @@
   @if (loaded()) {
     <section aria-labelledby="matrix-title">
       <h2 class="e-masque" id="matrix-title">Tes pas, par urgence et importance</h2>
-      <e-matrice
-        courant="maintenant"
-        [quadrants]="matrix()"
-        [piste]="trackById"
-        [unite]="taskUnit"
-        (deplacement)="move($event)"
-      >
-        <ng-template [eMatriceElement]="matrix()" let-task let-quadrant="quadrant">
-          <div class="ds-row ds-items-start task">
-            <div class="ds-check ds-grow">
-              <input
-                #box
-                type="checkbox"
-                eCase
-                [id]="checkboxId(task)"
-                [checked]="task.done"
-                (change)="toggle(task, box.checked)"
-              />
-              <label class="corps ds-break" [class.ds-muted]="task.done" [for]="checkboxId(task)">{{ task.title }}</label>
-              @if (taskDetail(task); as detail) {
-                <span class="detail ds-muted ds-break">{{ detail }}</span>
-              }
-            </div>
-            <e-menu
-              icone="deplacer"
-              petit
-              [libelle]="'Déplacer « ' + task.title + ' » vers…'"
-              [entrees]="moveTargets[quadrant]"
-              (choix)="moveTo(task, $event)"
+      <e-matrice courant="maintenant" [quadrants]="matrix()" [piste]="trackById" [unite]="taskUnit">
+        <ng-template [eMatriceElement]="matrix()" let-task>
+          <div class="ds-check task">
+            <input
+              #box
+              type="checkbox"
+              eCase
+              [id]="checkboxId(task)"
+              [checked]="task.done"
+              (change)="toggle(task, box.checked)"
             />
+            <label class="corps ds-break" [class.ds-muted]="task.done" [for]="checkboxId(task)">{{ task.title }}</label>
+            @if (taskDetail(task); as detail) {
+              <span class="detail ds-muted ds-break">{{ detail }}</span>
+            }
           </div>
         </ng-template>
       </e-matrice>
