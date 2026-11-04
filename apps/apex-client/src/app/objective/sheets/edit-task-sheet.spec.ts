@@ -21,7 +21,6 @@ const task = (objectiveId: string): StageTaskViewModel => ({
   importance: 4,
   urgency: 2,
   objectiveId,
-  quadrant: 'planifier',
 });
 
 describe('EditTaskSheet', () => {

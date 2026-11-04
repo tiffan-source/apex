@@ -239,14 +239,14 @@ describe('la voix de tout src/app', () => {
     const samples = [
       'Mes objectifs', // texte d'un gabarit
       'Aller au contenu', // texte de la coque
-      "Légende de l'arête", // aria-label
+      'Navigation principale', // aria-label
       'Réponds à Akari…', // indication (le texte indicatif de la zone de réponse)
-      'Déplacer «', // chaîne d'un [libelle] lié
+      'Modifier «', // chaîne d'un [attr.aria-label] lié
       "Je m'y engage", // bouton sceau du nouvel objectif
       'Objectifs · Apex', // titre de route
     ];
     expect(samples.filter((sample) => !texts.includes(sample))).toEqual([]);
-    expect(routeTitles(routes).length).toBeGreaterThanOrEqual(6);
+    expect(routeTitles(routes).length).toBeGreaterThanOrEqual(5);
   });
 
   it('parle dans la voix d’Empreinte : motsAEviter() et voiceIssues() ne trouvent rien', () => {

@@ -182,8 +182,28 @@ export type ConversationResponse = {
 /** Où en est le workflow d'Akari : prêt pour un message, en plein tour, ou en attente d'un accord. */
 export type WorkflowStatus = 'ready' | 'processing' | 'awaiting-permission';
 
-/** La position de la machine du workflow : une étape, ou une étape composée (`{ ExecutingAllTool: 'ExecutingTool' }`). */
-export type WorkflowStateValue = string | { [step: string]: WorkflowStateValue };
+/** Ce qu'Akari peut être en train de faire pendant un tour. Un code inconnu de ce client garde une phrase par défaut. */
+export type WorkflowActivityStep =
+  | 'saving-message'
+  | 'thinking'
+  | 'checking-permission'
+  | 'awaiting-permission'
+  | 'reading'
+  | 'writing'
+  | 'reviewing'
+  | 'saving-reply';
+
+/** Ce que fait Akari pendant un tour, sans rien de la machine du workflow. */
+export type WorkflowActivity = {
+  /** Ce qu'il fait maintenant. */
+  step: WorkflowActivityStep;
+  /** Le temps déjà passé sur cette étape, en millisecondes (mesuré par le serveur). */
+  elapsedMs: number;
+  /** Ses passages par l'IA depuis le début du tour : à partir de 2, il repart pour un tour de boucle. */
+  round: number;
+  /** Ce qu'il a déjà fait pendant ce tour, du plus ancien au plus récent. */
+  done: WorkflowActivityStep[];
+};
 
 /** Ce qu'Akari demande la permission de faire : ajouter une étape (`createSubObjective`), un pas (`createTask`)… */
 export type ToolCall = {
@@ -203,8 +223,9 @@ export type RegisteredMessage = {
 /** L'état du workflow d'un objectif (GET …/assistant, et les réponses 202 de POST …/messages et …/permission). */
 export type WorkflowState = {
   objectiveId: string;
-  value: WorkflowStateValue;
   status: WorkflowStatus;
+  /** Ce que fait Akari ; null au repos. */
+  activity: WorkflowActivity | null;
   /** L'outil qui attend l'accord de la personne, quand `status` vaut `awaiting-permission`. */
   pendingToolCall: ToolCall | null;
   lastRegisteredMessage: RegisteredMessage | null;

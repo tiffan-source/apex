@@ -1,19 +1,18 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
 import { ObjectivesApi } from '../api/objectives.api';
 import { ApiError } from '../api/api-error';
-import type { ObjectivesResponse, TaskOutput } from '../api/api.models';
+import type { ObjectivesResponse } from '../api/api.models';
 import { SessionStore } from './session.store';
 import { AnnoncesStore } from './annonces.store';
 import { ObjectiveStore } from './objective.store';
 import { isTemporaryId } from './utils/map-optimistique-id';
-import { FAILURE_REPORTS, SUCCESS_ANNOUNCEMENTS, taskMovedAnnouncement, voiceIssues } from '../constants/messages.constante';
+import { FAILURE_REPORTS, SUCCESS_ANNOUNCEMENTS, voiceIssues } from '../constants/messages.constante';
 
 /*
  * ObjectiveStore entier, API simulée : gestes rapprochés (rien ne se perd, rien ne s'écrase),
- * ids temporaires, retours en arrière, déplacements dans la matrice, voix de tout ce qui est annoncé.
+ * ids temporaires, retours en arrière, voix de tout ce qui est annoncé.
  */
 
 /** Le message technique (anglais) d'une erreur de l'API : il ne doit jamais atteindre la personne. */
@@ -176,7 +175,7 @@ describe('ObjectiveStore', () => {
 
       t.store.createObjective({ title: 'Guitare' });
       t.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 3 } });
-      t.store.moveTaskToQuadrant('t1', 'maintenant');
+      t.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 4, urgency: 3, objectiveId: 'endurance' } });
       await settle();
 
       expect(t.api.create).not.toHaveBeenCalled();
@@ -300,12 +299,11 @@ describe('ObjectiveStore', () => {
     it('un retour en arrière n’écrase pas un geste plus récent', async () => {
       s.api.editTask.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK')).mockResolvedValueOnce({});
 
-      s.store.moveTaskToQuadrant('t1', 'maintenant'); // 4/1 → 4/3
-      s.store.moveTaskToQuadrant('t1', 'confier'); // 4/3 → 2/3
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 4, urgency: 3, objectiveId: 'endurance' } });
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 2, urgency: 3, objectiveId: 'endurance' } });
       await settle();
 
       expect(task('t1')).toMatchObject({ importance: 2, urgency: 3 });
-      expect(s.store.matrix().confier.map((item) => item.id)).toEqual(['t1']);
     });
 
     it('un pas recoché après un échec reste coché', async () => {
@@ -371,7 +369,7 @@ describe('ObjectiveStore', () => {
 
       expect(s.api.addTask).toHaveBeenCalledWith('portfolio', expect.objectContaining({ title: 'Trois projets' }));
       expect(task('p1')?.objectiveId).toBe('portfolio');
-      expect(s.store.matrix().planifier.find((item) => item.id === 'p1')?.rootObjectiveId).toBe('semi');
+      expect(s.store.objectiveDetail('semi')?.stages[1].tasks.map((item) => item.id)).toEqual(['p1']);
     });
 
     it('un pas rangé dans une étape enregistrée pendant que la feuille était ouverte la rejoint à l’écran', async () => {
@@ -423,7 +421,7 @@ describe('ObjectiveStore', () => {
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 3 } });
       const temporaryId = s.store.tasks()[2].id;
       s.store.updateTaskDone({ taskId: temporaryId, done: true });
-      s.store.moveTaskToQuadrant(temporaryId, 'laisser-filer');
+      s.store.editTask({ taskId: temporaryId, input: { title: 'Un', importance: 1, urgency: 1, objectiveId: 'endurance' } });
       await settle();
 
       expect(s.api.setTaskDone).not.toHaveBeenCalled();
@@ -776,7 +774,6 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
       s.store.editTask({ taskId: 't1', input: { title: 'Courir 10 km', importance: 4, urgency: 1, objectiveId: 'endurance' } });
       s.store.updateTaskDone({ taskId: 't1', done: true });
       s.store.updateTaskDone({ taskId: 't2', done: false });
-      for (const quadrant of QUADRANTS) s.store.moveTaskToQuadrant('t2', quadrant);
       if (outcome === 'throw') {
         s.api.list.mockRejectedValueOnce(new Error(DOMAIN_MESSAGE));
         s.store.loadObjectives();
@@ -793,94 +790,11 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
     expect([...texts]).toEqual(expect.arrayContaining([
       ...Object.values(SUCCESS_ANNOUNCEMENTS),
       ...Object.values(FAILURE_REPORTS),
-      ...QUADRANTS.map(taskMovedAnnouncement),
     ]));
     for (const text of texts) {
       expect(voiceIssues(text), text).toEqual([]);
       expect(text).not.toContain(DOMAIN_MESSAGE);
       expect(text).not.toMatch(/[A-Z_]{6,}/); // aucun code d'erreur
-    }
-  });
-});
-
-describe('déplacer un pas vers un quadrant : les 16 cas de départ et d’arrivée, niveaux de 1 à 5', () => {
-  const WANTS: Record<Quadrant, { important: boolean; urgent: boolean }> = {
-    maintenant: { important: true, urgent: true },
-    planifier: { important: true, urgent: false },
-    confier: { important: false, urgent: true },
-    'laisser-filer': { important: false, urgent: false },
-  };
-
-  /** Un pas pour chaque couple (importance, urgence) de 1 à 5. */
-  const TASKS: TaskOutput[] = [];
-  for (let importance = 1; importance <= 5; importance++)
-    for (let urgency = 1; urgency <= 5; urgency++)
-      TASKS.push({ id: `t-${importance}-${urgency}`, title: `Pas ${importance}/${urgency}`, importance, urgency, done: urgency === 5, objectiveId: 'endurance' });
-  const loaded: ObjectivesResponse = { objectives: LOADED.objectives, tasks: TASKS };
-  /** La convention d'Apex, écrite ici en toutes lettres : à partir de 3, important (ou urgent). */
-  const quadrantOf = ({ importance, urgency }: { importance: number; urgency: number }): Quadrant =>
-    importance >= 3 ? (urgency >= 3 ? 'maintenant' : 'planifier') : urgency >= 3 ? 'confier' : 'laisser-filer';
-
-  it('couvre bien les 16 couples (quadrant de départ, quadrant d’arrivée)', () => {
-    const pairs = new Set(TASKS.flatMap((item) => QUADRANTS.map((to) => `${quadrantOf(item)}→${to}`)));
-    expect(pairs.size).toBe(16);
-  });
-
-  it.each(QUADRANTS)('vers « %s » : le pas y retombe (seuil 3), seul l’axe nécessaire change', async (to) => {
-    const s = await setup(loaded);
-    s.api.editTask.mockResolvedValue({});
-
-    for (const item of TASKS) s.store.moveTaskToQuadrant(item.id, to);
-    // Optimiste : tout est déjà en place avant toute réponse
-    for (const item of TASKS) {
-      const moved = s.store.tasks().find((t) => t.id === item.id);
-      expect(moved && quadrantOf(moved), item.id).toBe(to);
-    }
-    await settle();
-
-    const sent = new Map(
-      s.api.editTask.mock.calls.map((call) => {
-        const [id, body] = call as [string, Record<string, unknown>];
-        return [id, { id, ...body }] as const;
-      }),
-    );
-    for (const item of TASKS) {
-      const from = quadrantOf(item);
-      const moved = s.store.tasks().find((t) => t.id === item.id);
-      if (!moved) throw new Error(item.id);
-      expect(quadrantOf(moved), `${item.id} ${from}→${to}`).toBe(to);
-      expect(s.store.matrix()[to].some((t) => t.id === item.id)).toBe(true);
-      expect(moved.done).toBe(item.done);
-
-      if (from === to) {
-        expect(sent.has(item.id), `${item.id} ne doit pas partir`).toBe(false);
-        expect(moved).toMatchObject({ importance: item.importance, urgency: item.urgency });
-        continue;
-      }
-      expect(sent.get(item.id)).toEqual({ id: item.id, title: item.title, objectiveId: 'endurance', importance: moved.importance, urgency: moved.urgency });
-      // Seul ce qui doit changer change : sous 3 → 3, 3 ou plus → 2
-      const wants = WANTS[to];
-      expect(moved.importance).toBe(wants.important === item.importance >= 3 ? item.importance : wants.important ? 3 : 2);
-      expect(moved.urgency).toBe(wants.urgent === item.urgency >= 3 ? item.urgency : wants.urgent ? 3 : 2);
-    }
-    expect(sent.size).toBe(TASKS.filter((item) => quadrantOf(item) !== to).length);
-    expect(s.annonces.signalement()).toBeNull();
-  });
-
-  it('revient en arrière dans les 16 cas si l’enregistrement n’aboutit pas', async () => {
-    for (const to of QUADRANTS) {
-      TestBed.resetTestingModule();
-      const s = await setup(loaded);
-      s.api.editTask.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
-      for (const item of TASKS) s.store.moveTaskToQuadrant(item.id, to);
-      await settle();
-      for (const item of TASKS)
-        expect(s.store.tasks().find((t) => t.id === item.id), `${item.id} → ${to}`).toMatchObject({
-          importance: item.importance,
-          urgency: item.urgency,
-          done: item.done,
-        });
-      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.moveTask);
     }
   });
 });

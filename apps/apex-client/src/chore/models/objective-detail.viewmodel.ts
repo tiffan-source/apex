@@ -1,5 +1,4 @@
 import type { EtapeArete } from '@empreinte-studio/angular/arete';
-import type { Quadrant } from '@empreinte-studio/angular/matrice';
 import type { TaskCountViewModel } from './objective-card.viewmodel';
 
 /*
@@ -18,7 +17,6 @@ export type StageTaskViewModel = {
   urgency: number;
   /** L'objectif qui porte réellement le pas (l'étape, ou un sous-objectif plus profond) : à repasser à editTask. */
   objectiveId: string;
-  quadrant: Quadrant;
 };
 
 /** Ce qu'une étape compte, prêt pour e-pas : faits, à faire. */

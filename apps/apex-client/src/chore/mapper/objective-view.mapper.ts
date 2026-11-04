@@ -10,17 +10,18 @@ import type {
   StageTaskViewModel,
   StageViewModel,
 } from '../models/objective-detail.viewmodel';
-import { quadrantOf } from './matrix.mapper';
 
 /*
- * Les vues des écrans Objectifs et Arête, dérivées de l'état du store (cahier de migration, § 4).
+ * Les vues des écrans Objectifs, Arête et Akari, dérivées de l'état du store (cahier de migration, § 4).
  * Fonctions pures : l'heure courante se passe en paramètre (par défaut, maintenant).
  *
  * Vocabulaire : objectif = objectif racine (parentId null) ; étape = sous-objectif DIRECT ; pas = tâche. Les
  * pas des sous-objectifs plus profonds comptent dans leur étape.
  *
  * Étapes et pas sont indépendants : ils n'ont aucun ordre, et l'ordre de chargement ne veut rien dire. Fait ou
- * non fait, c'est l'API qui le dit (`done`) : ces vues l'affichent et comptent, elles ne décident de rien.
+ * non fait, c'est l'API qui le dit (`done`) : ces vues l'affichent et comptent, elles ne décident de rien. Le
+ * quadrant d'un pas relève aussi d'Apex Brain : tant que l'API ne le rend pas, les écrans ne le montrent pas
+ * (docs/technical/data-flow.md).
  */
 
 /** Le texte d'une étape sans pas. */
@@ -140,7 +141,6 @@ function toStageTasks(tasks: readonly TaskViewModel[]): StageTaskViewModel[] {
     importance: task.importance,
     urgency: task.urgency,
     objectiveId: task.objectiveId,
-    quadrant: quadrantOf(task),
   }));
 }
 
@@ -192,7 +192,7 @@ export function stageOptions(objectiveId: string, objectives: readonly Objective
   return stagesOf(objectiveId, objectives).map((stage) => ({ valeur: stage.id, libelle: stage.title }));
 }
 
-/** Les objectifs racines pour e-filtres ou e-selection : { valeur: id, libelle: titre }. */
+/** Les objectifs racines pour e-selection : { valeur: id, libelle: titre }. */
 export function rootObjectiveOptions(objectives: readonly ObjectiveViewModel[]): OptionSelection<string>[] {
   return rootObjectives(objectives).map((objective) => ({ valeur: objective.id, libelle: objective.title }));
 }

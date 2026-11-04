@@ -7,11 +7,11 @@ import {
   toObjectiveCards,
   toObjectiveDetail,
 } from "../../mapper/objective-view.mapper";
-import { filterMatrixByObjective, toMatrix } from "../../mapper/matrix.mapper";
 
 /**
- * Les vues des écrans Empreinte, dérivées de l'état (cahier de migration, § 4) :
- * cartes d'objectifs, vue détaillée pour l'arête, matrice, options des champs.
+ * Les vues des écrans Empreinte, dérivées de l'état (cahier de migration, § 4) : cartes d'objectifs, vue
+ * détaillée pour l'arête, options des champs. Fait ou non fait, c'est l'API qui le dit ; le quadrant d'un pas,
+ * elle ne le rend pas encore (docs/technical/data-flow.md).
  */
 export function withObjectiveViews() {
   return signalStoreFeature(
@@ -23,15 +23,11 @@ export function withObjectiveViews() {
         objectiveCards: computed(() => cards().filter((card) => !card.accomplished)),
         /** Les objectifs que l'API dit faits, pour la liste repliée « Accomplis ». */
         accomplishedObjectives: computed(() => cards().filter((card) => card.accomplished)),
-        /** Tous les pas par quadrant, pour <e-matrice [quadrants]> (filtrer avec filterMatrixByObjective). */
-        matrix: computed(() => toMatrix(objectives(), tasks())),
-        /** Les objectifs racines en { valeur, libelle }, pour e-filtres (matrice) ou e-selection. */
+        /** Les objectifs racines en { valeur, libelle }, pour e-selection. */
         objectiveOptions: computed(() => rootObjectiveOptions(objectives())),
       };
     }),
-    withMethods(({ objectives, tasks, matrix }) => ({
-      /** La matrice d'un objectif racine, ou de tous (null). Réactive dans un computed. */
-      matrixFor: (rootObjectiveId: string | null) => filterMatrixByObjective(matrix(), rootObjectiveId),
+    withMethods(({ objectives, tasks }) => ({
       /** La vue détaillée d'un objectif pour l'arête ; undefined tant qu'il n'est pas chargé. Réactive dans un computed. */
       objectiveDetail: (objectiveId: string) => toObjectiveDetail(objectiveId, objectives(), tasks()),
       /** Les étapes d'un objectif en { valeur, libelle }, pour e-selection. Réactive dans un computed. */

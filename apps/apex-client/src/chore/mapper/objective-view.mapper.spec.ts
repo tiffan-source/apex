@@ -126,7 +126,6 @@ describe('cartes et vue détaillée', () => {
     ]);
     expect(stage.progress).toEqual({ done: 2, toDo: 2 });
     expect(stage.detail).toBe('2 pas faits · 2 à faire');
-    expect(stage.tasks[0].quadrant).toBe('maintenant');
 
     expect(detail.stages[0].detail).toBe('2 pas faits');
     expect(detail.stages[2].detail).toBe(EMPTY_STAGE_DETAIL);
@@ -299,6 +298,6 @@ describe('cas limites du cahier (§ 4)', () => {
       stageProgress: { done: 0, toDo: 1 },
     });
     const detail = toObjectiveDetail('temp-id-o', objectives, tasks, NOW);
-    expect(detail?.stages[0].tasks[0]).toMatchObject({ id: 'temp-id-p', quadrant: 'planifier', done: false });
+    expect(detail?.stages[0].tasks[0]).toMatchObject({ id: 'temp-id-p', done: false });
   });
 });

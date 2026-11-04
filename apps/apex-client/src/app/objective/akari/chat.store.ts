@@ -5,6 +5,7 @@ import { computed, inject } from "@angular/core";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { EMPTY, catchError, concatMap, defer, exhaustMap, from, pipe, switchMap, takeWhile, tap, timer } from "rxjs";
 import { tapResponse } from "@ngrx/operators";
+import { akariJournal, akariStatusLine } from "./activity.mapper";
 import { CREATE_STAGE_TOOL, CREATE_TASK_TOOL, MessageMapper } from "./message.mapper";
 import { whenSignedIn } from "../../../chore/stores/utils/filter-auth-operation";
 import { isTemporaryId, withOptimistiqueId } from "../../../chore/stores/utils/map-optimistique-id";
@@ -16,8 +17,8 @@ import { FAILURE_REPORTS } from "../../../chore/constants/messages.constante";
 import type {
   RegisteredMessage,
   ToolCall,
+  WorkflowActivity,
   WorkflowState,
-  WorkflowStateValue,
   WorkflowStatus,
 } from "../../../chore/api/api.models";
 
@@ -31,8 +32,8 @@ export type ChatState = {
   objectiveId?: string;
   /** Où en est le workflow, d'après l'API ; null tant que son état n'est pas connu. */
   workflowStatus: WorkflowStatus | null;
-  /** L'étape en cours du workflow, pour la phrase de la ligne d'état. */
-  workflowState: WorkflowStateValue;
+  /** Ce que fait Akari pendant un tour, pour la ligne d'état et son journal ; null au repos. */
+  activity: WorkflowActivity | null;
   pendingToolCall: ToolCall | null;
 }
 
@@ -43,7 +44,7 @@ const initialState: ChatState = {
   historyLoaded: false,
   objectiveId: undefined,
   workflowStatus: null,
-  workflowState: "",
+  activity: null,
   pendingToolCall: null
 };
 
@@ -60,18 +61,6 @@ export const AKARI_POLL_INTERVAL = 1000;
  * que quatre fois (1 s, 2 s, 4 s, 8 s) avant de le dire.
  */
 export const AKARI_RETRIES_BEFORE_REPORT = 4;
-
-/** Ce que fait Akari pendant un tour, dit dans la ligne d'état (voix d'Empreinte, sans jargon). */
-export const AKARI_STATUS = {
-  RegisteringUserMessageInConversation: "Akari note ton message…",
-  SendingPromptToAI: "Akari réfléchit…",
-  ExecutingAllTool: "Akari regarde ton objectif…",
-  SendingCallResultToAI: "Akari fait le point…",
-  RegisteringAIResponseInConversation: "Akari écrit sa réponse…",
-} as const satisfies Record<string, string>;
-
-/** L'état par défaut, pour une étape du workflow sans phrase à elle. */
-export const AKARI_THINKING = AKARI_STATUS.SendingPromptToAI;
 
 /** Annoncé aux lecteurs d'écran quand une réponse d'Akari arrive. */
 export const AKARI_REPLIED = "Akari a répondu.";
@@ -146,13 +135,10 @@ export const ChatStore = signalStore(
     // On ne peut écrire que lorsque le workflow est au repos et attend un nouveau message ;
     // tout autre état veut dire qu'un tour est encore en cours sur cette conversation.
     canSendMessage: computed(() => store.workflowStatus() === "ready"),
-    // Ce que fait Akari pendant un tour (voir `isStreaming`). Une étape composée donne
-    // son étape parente (par exemple « ExecutingAllTool »), ce qui suffit à choisir la phrase.
-    processingStatus: computed(() => {
-      const state = store.workflowState();
-      const stateName = typeof state === "string" ? state : Object.keys(state)[0] ?? "";
-      return (AKARI_STATUS as Record<string, string>)[stateName] ?? AKARI_THINKING;
-    }),
+    // Ce que fait Akari pendant un tour (voir `isStreaming`).
+    processingStatus: computed(() => akariStatusLine(store.activity())),
+    // Ce qu'il a déjà fait pendant ce tour.
+    journal: computed(() => akariJournal(store.activity())),
     // Le workflow attend que la personne accepte ou refuse un outil.
     isAwaitingPermission: computed(() => store.pendingToolCall() !== null),
     // Ce qu'Akari demande d'ajouter, pour la phrase de l'écran.
@@ -282,7 +268,7 @@ export const ChatStore = signalStore(
       patchState(store, {
         objectiveId: state.objectiveId,
         workflowStatus: state.status,
-        workflowState: state.value,
+        activity: state.activity ?? null,
         // Pendant l'attente d'un accord, Akari ne « réfléchit » plus : l'écran montre sa
         // demande, avec « Ajouter » et « Pas maintenant ».
         isStreaming: state.status === "processing",
@@ -317,7 +303,7 @@ export const ChatStore = signalStore(
               // sur cette page avant de la recharger.
               console.error(error);
               annonces.signaler(akariFailureReport(AKARI_REPORTS.startConversation, errorCodeOf(error)));
-              patchState(store, { isStreaming: false });
+              patchState(store, { isStreaming: false, activity: null });
               return EMPTY;
             })
           )
@@ -353,7 +339,7 @@ export const ChatStore = signalStore(
      * redémarrage du serveur) reprend sur le serveur sans attendre un nouveau message, et l'écran le suit.
      */
     initWorkflow: (objectiveId: string) => {
-      patchState(store, { objectiveId, workflowStatus: null, workflowState: "", pendingToolCall: null });
+      patchState(store, { objectiveId, workflowStatus: null, activity: null, pendingToolCall: null });
       watchWorkflowState(objectiveId);
     },
     loadChatHistory: rxMethod<{objectifId: string}>(
@@ -386,6 +372,7 @@ export const ChatStore = signalStore(
           objectiveId,
           // Un tour commence : plus d'envoi possible avant la réponse d'Akari.
           workflowStatus: "processing",
+          activity: { step: "saving-message", elapsedMs: 0, round: 0, done: [] },
           isStreaming: true,
           messages: [...store.messages(), {
             id: tempId, // id temporaire, jusqu'à ce que le workflow enregistre le message

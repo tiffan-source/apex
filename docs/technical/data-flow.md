@@ -82,13 +82,15 @@ The clients are complete applications with their own architecture and data flow.
 -   the mappers (`chore/mapper/`) turn the HTTP contract into View Models.
 
 
-Rules still in the client
--------------------------
+What the client does not compute
+--------------------------------
 
-The API does not expose this yet, so the web client still derives it from what `GET /v1/objectives` returns. It should move to the server (a computed field or a use case), where the mobile application can share it:
+The web client holds no business rule. It does not decide whether a stage is done, whether an objective is « accomplished », nor in which Eisenhower quadrant a step falls or what levels a step gets when it is moved to a quadrant. These are Apex Brain's rules (the decisions are written in `docs/features/migration-empreinte.md`, § 4), shared with the mobile application.
 
--   the Eisenhower quadrant of a step (threshold 3 on importance and urgency, `quadrantOf`) and the levels a step gets when it is moved to a quadrant (`levelsForQuadrant`), in `chore/mapper/matrix.mapper.ts`. The quadrant in `TaskOutput` and a `MoveTaskToQuadrant` use case would replace them.
+Whether a stage or an objective is done, the API says so (`done` in `GET /v1/objectives`), the client displays it and counts it, and reads the objectives again after a write that can change it (`loadObjectives`, after checking, adding or moving a step). That re-read keeps trying while the failure is transient: the shell's note comes with the fourth retry and goes as soon as the server answers. The words « étape accomplie » follow `done` too, never the count of steps. Stages and steps have no order: they are independent, the client numbers none and picks none.
 
-Whether a stage or an objective is done is not one of these rules: the API says so (`done` in `GET /v1/objectives`), the client displays it and counts it, and reads the objectives again after a write that can change it (`loadObjectives`, after checking, adding or moving a step). That re-read keeps trying while the failure is transient: the shell's note comes with the fourth retry and goes as soon as the server answers. The words « étape accomplie » follow `done` too, never the count of steps. Stages and steps have no order: they are independent, the client numbers none and picks none.
+The API does not return the quadrant of a step yet, so the screens do not show it (removed from the client on 2 November 2026): the matrix screen is withdrawn (`/matrice`, `/matrix` and `/focus` lead home), and so is « move to a quadrant ».
 
-No other business rule belongs in the client: a new one goes into the API first.
+To bring it back, the API returns it first — a computed field in `GET /v1/objectives` and a `MoveTaskToQuadrant` use case — then the client maps and displays it. Never compute it in the client.
+
+What stays in the client is presentation and form values, not rules: the names of the five importance and urgency levels (`IMPORTANCE_OPTIONS`, `URGENCY_OPTIONS`) and the levels pre-selected in the « Ajouter un pas » sheet (`NEW_TASK_LEVELS`, which the person changes), all in `chore/constants/task.constante.ts`. The client sends the levels; which quadrant they put a step in is the API's answer.

@@ -4,7 +4,7 @@ import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { EMPTY, catchError, defer, exhaustMap, first, from, map, mergeMap, of, pipe, switchMap, take, tap, timer } from 'rxjs';
 import { AssistantApi } from '../api/assistant.api';
 import { isUnknownOutcome, retryWhileTransient } from '../api/api-error';
-import type { WorkflowState, WorkflowStateValue } from '../api/api.models';
+import type { WorkflowState } from '../api/api.models';
 import { ObjectiveStore } from './objective.store';
 
 /** L'intervalle d'interrogation du workflow, comme ChatStore (l'API ne pousse rien). */
@@ -16,11 +16,12 @@ export const AKARI_WRITE_POLL_INTERVAL = 1000;
  */
 export const AKARI_WRITE_MAX_POLLS = 60;
 
-/** Le workflow exécute un outil : l'écriture acceptée est en cours. */
-export function isExecutingTool(value: WorkflowStateValue | undefined): boolean {
-  return (
-    typeof value === 'object' && value !== null && (value as Record<string, unknown>)['ExecutingAllTool'] === 'ExecutingTool'
-  );
+/**
+ * Akari écrit ce que la personne a accepté. Un tour en cours qui ne dit pas ce qu'il fait (commencé avant que l'API
+ * le dise) est réputé écrire encore : recharger trop tôt montrerait une arête sans l'ajout, sans seconde chance.
+ */
+export function isWriting(state: WorkflowState): boolean {
+  return state.activity ? state.activity.step === 'writing' : state.status === 'processing';
 }
 
 /**
@@ -29,9 +30,8 @@ export function isExecutingTool(value: WorkflowStateValue | undefined): boolean 
  * Akari, alors que ChatStore (fourni par l'écran) s'arrête avec lui.
  *
  * À l'accord sur un outil d'écriture, ChatStore lui confie la réponse de l'API à cet accord. Le workflow passe
- * aussitôt à l'exécution de l'outil ({ ExecutingAllTool: 'ExecutingTool' }), sur le serveur ; dès qu'il en sort
- * (nouvelle demande d'accord, envoi du résultat à l'IA, repos…), l'écriture est faite : les objectifs sont
- * rechargés, une fois. Deux ajouts acceptés dans un même tour donnent deux rechargements, chacun après son écriture.
+ * aussitôt à l'écriture (`activity.step` vaut `writing`), sur le serveur ; dès qu'il en sort (nouvelle demande
+ * d'accord, retour à l'IA, repos…), l'écriture est faite : les objectifs sont rechargés, une fois. Deux ajouts acceptés dans un même tour donnent deux rechargements, chacun après son écriture.
  *
  * Une panne passagère ne fait rien abandonner : l'état est relu (de plus en plus espacé) jusqu'à ce que le
  * serveur réponde. Si l'état est refusé, ou si l'outil tarde, les objectifs sont rechargés quand même :
@@ -49,7 +49,7 @@ export const AkariWritesStore = signalStore(
         timer(AKARI_WRITE_POLL_INTERVAL, AKARI_WRITE_POLL_INTERVAL).pipe(
           exhaustMap(() => defer(() => assistant.state(objectiveId)).pipe(retryWhileTransient())),
           take(AKARI_WRITE_MAX_POLLS),
-          first((polled) => !isExecutingTool(polled.value), null),
+          first((polled) => !isWriting(polled), null),
           map(() => undefined),
           catchError((error) => {
             console.error(error);
@@ -63,7 +63,7 @@ export const AkariWritesStore = signalStore(
           pipe(
             mergeMap(({ objectiveId, answered }) =>
               from(answered).pipe(
-                switchMap((state) => (isExecutingTool(state.value) ? toolDone(objectiveId) : of(undefined))),
+                switchMap((state) => (isWriting(state) ? toolDone(objectiveId) : of(undefined))),
                 catchError((error) => {
                   console.error(error);
                   // L'accord est refusé : rien n'a été écrit (ChatStore le signale). Resté sans réponse claire,

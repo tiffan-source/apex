@@ -76,13 +76,7 @@
               <!-- ds-break : un intitulé sans espace (une adresse) passe à la ligne au lieu d'élargir la page. -->
               <ul eListe nue class="ds-break" aria-labelledby="titre-etape">
                 @for (p of s.tasks; track p.id) {
-                  <li
-                    eTache
-                    [titre]="p.title"
-                    [meta]="p.done ? undefined : quadrantTitles[p.quadrant]"
-                    [fait]="p.done"
-                    (faitChange)="toggleTask(p.id, $event)"
-                  >
+                  <li eTache [titre]="p.title" [fait]="p.done" (faitChange)="toggleTask(p.id, $event)">
                     <div eTacheActions>
                       <button
                         eBouton="nu"
@@ -148,13 +142,7 @@
           </div>
           <ul eListe nue class="ds-break" aria-labelledby="titre-sans-etape">
             @for (p of d.tasksWithoutStage; track p.id) {
-              <li
-                eTache
-                [titre]="p.title"
-                [meta]="p.done ? undefined : quadrantTitles[p.quadrant]"
-                [fait]="p.done"
-                (faitChange)="toggleTask(p.id, $event)"
-              >
+              <li eTache [titre]="p.title" [fait]="p.done" (faitChange)="toggleTask(p.id, $event)">
                 <div eTacheActions>
                   <button
                     eBouton="nu"

@@ -6,13 +6,13 @@ import { AkariWritesStore } from '../../../chore/stores/akari-writes.store';
 import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
 import { AssistantApi } from '../../../chore/api/assistant.api';
 import { ApiError } from '../../../chore/api/api-error';
-import type { ToolCall, WorkflowState } from '../../../chore/api/api.models';
+import type { ToolCall, WorkflowActivity, WorkflowActivityStep, WorkflowState } from '../../../chore/api/api.models';
 import { FAILURE_REPORTS, voiceIssues } from '../../../chore/constants/messages.constante';
+import { AKARI_STATUS } from './activity.mapper';
 import {
   AKARI_POLL_INTERVAL,
   AKARI_REPLIED,
   AKARI_REPORTS,
-  AKARI_STATUS,
   ChatStore,
   akariFailureReport,
   sendFailureReport,
@@ -23,7 +23,6 @@ import {
  * secondes, demande d'accord, écriture acceptée confiée à AkariWritesStore, pannes, annonces.
  */
 
-const READY = 'Ready For New Message';
 const STAGE_CALL: ToolCall = { id: 'call-1', name: 'createSubObjective', arguments: { parentObjectiveId: 'semi', title: 'Portfolio' } };
 const TASK_CALL: ToolCall = {
   id: 'call-2',
@@ -34,17 +33,25 @@ const TASK_CALL: ToolCall = {
 /** Un état du workflow tel que l'API le rend : au repos par défaut. */
 const ready = (overrides: Partial<WorkflowState> = {}): WorkflowState => ({
   objectiveId: 'semi',
-  value: READY,
   status: 'ready',
+  activity: null,
   pendingToolCall: null,
   lastRegisteredMessage: null,
   lastError: null,
   ...overrides,
 });
-const processing = (value: WorkflowState['value'], overrides: Partial<WorkflowState> = {}) =>
-  ready({ value, status: 'processing', ...overrides });
+/** Ce que fait Akari : une étape, par défaut au premier passage par l'IA, sans rien de fait avant. */
+const activity = (step: WorkflowActivityStep, overrides: Partial<WorkflowActivity> = {}): WorkflowActivity => ({
+  step,
+  elapsedMs: 0,
+  round: 1,
+  done: [],
+  ...overrides,
+});
+const processing = (step: WorkflowActivityStep, overrides: Partial<WorkflowState> = {}) =>
+  ready({ status: 'processing', activity: activity(step), ...overrides });
 const asking = (call: ToolCall) =>
-  ready({ value: { ExecutingAllTool: 'WaitingForUserPermission' }, status: 'awaiting-permission', pendingToolCall: call });
+  ready({ status: 'awaiting-permission', activity: activity('awaiting-permission'), pendingToolCall: call });
 const registered = (id: string, sender: string, content: string) => ({ id, sender, content, createdAt: new Date().toISOString() });
 
 function setup() {
@@ -169,7 +176,7 @@ describe('ChatStore : le workflow', () => {
 
   it('suit un tour interrompu que le serveur a repris, jusqu’à la réponse', async () => {
     const { store, annonces, setState } = setup();
-    setState(processing('SendingPromptToAI'));
+    setState(processing('thinking'));
     store.initWorkflow('semi');
     await tick();
     expect(store.isStreaming()).toBe(true);
@@ -229,27 +236,27 @@ describe('ChatStore : le workflow', () => {
     store.initWorkflow('semi');
     await tick();
 
-    setState(processing('RegisteringUserMessageInConversation'));
+    setState(processing('saving-message'));
     store.sendMessageToAi({ message: 'On commence ?', objectiveId: 'semi' });
     // Le message de la personne s'affiche tout de suite, avec un id temporaire ; un second envoi attend.
     expect(store.messages()).toHaveLength(1);
     expect(isTemporaryId(store.messages()[0].id)).toBe(true);
     expect(store.canSendMessage()).toBe(false);
+    expect(store.processingStatus()).toBe('Akari note ton message…');
     await tick();
 
     expect(assistant.sendMessage).toHaveBeenCalledWith('semi', 'On commence ?');
     expect(store.isStreaming()).toBe(true);
     expect(store.canSendMessage()).toBe(false);
-    expect(store.processingStatus()).toBe(AKARI_STATUS.RegisteringUserMessageInConversation);
+    expect(store.processingStatus()).toBe(AKARI_STATUS['saving-message']);
 
     // Le workflow a enregistré le message : l'id temporaire est remplacé.
-    setState(processing('SendingPromptToAI', { lastRegisteredMessage: registered('m1', 'u1', 'On commence ?') }));
+    setState(processing('thinking', { lastRegisteredMessage: registered('m1', 'u1', 'On commence ?') }));
     await tick(AKARI_POLL_INTERVAL);
     expect(store.messages().map((m) => m.id)).toEqual(['m1']);
     expect(store.processingStatus()).toBe('Akari réfléchit…');
 
-    // Une étape composée prend la phrase de son étape parente.
-    setState(processing({ ExecutingAllTool: 'PreparingNextTool' }));
+    setState(processing('reading'));
     await tick(AKARI_POLL_INTERVAL);
     expect(store.processingStatus()).toBe('Akari regarde ton objectif…');
 
@@ -283,7 +290,7 @@ describe('ChatStore : le workflow', () => {
     expect(store.isStreaming()).toBe(false);
     expect(store.permissionRequest()).toEqual({ kind: 'stage', title: 'Portfolio', parentId: 'semi' });
 
-    setState(processing('SendingCallResultToAI'));
+    setState(processing('reviewing'));
     store.respondToPermission(true);
     // La demande quitte l'écran tout de suite ; la réponse part avec l'id de l'outil.
     expect(store.isAwaitingPermission()).toBe(false);
@@ -338,7 +345,7 @@ describe('ChatStore : le workflow', () => {
     assistant.sendMessage.mockRejectedValue(new ApiError('NETWORK_ERROR', 0, 'Http failure response'));
 
     // La réponse s'est perdue, mais le tour a commencé sur le serveur.
-    setState(processing('SendingPromptToAI'));
+    setState(processing('thinking'));
     store.sendMessageToAi({ message: 'On commence ?', objectiveId: 'semi' });
     await tick();
     expect(store.messages()).toHaveLength(1);
@@ -395,7 +402,7 @@ describe('ChatStore : le workflow', () => {
     expect(store.canSendMessage()).toBe(true);
 
     // Pendant que la relecture attend, « Second » part ; le serveur l'enregistre (m5) avant qu'elle reprenne.
-    setState(processing('RegisteringUserMessageInConversation'));
+    setState(processing('saving-message'));
     store.sendMessageToAi({ message: 'Second', objectiveId: 'semi' });
     await tick(1000);
     expect(store.messages().map((m) => m.id)).toEqual(['m5']);
@@ -470,7 +477,7 @@ describe('ChatStore : le workflow', () => {
     store.initWorkflow('semi');
     await tick();
     assistant.sendMessage.mockRejectedValue(new ApiError('WORKFLOW_BUSY', 409, 'Workflow busy'));
-    setState(processing('SendingPromptToAI'));
+    setState(processing('thinking'));
 
     store.sendMessageToAi({ message: 'Bonjour', objectiveId: 'semi' });
     await tick();
@@ -490,7 +497,7 @@ describe('ChatStore : le workflow', () => {
     store.initWorkflow('semi');
     await tick();
 
-    setState(processing('RegisteringUserMessageInConversation'));
+    setState(processing('saving-message'));
     store.sendMessageToAi({ message: 'On commence ?', objectiveId: 'semi' });
     await tick();
 
@@ -505,6 +512,51 @@ describe('ChatStore : le workflow', () => {
     expect(annonces.signaler).toHaveBeenCalledWith(AKARI_REPORTS.turnInterrupted);
     expect(store.canSendMessage()).toBe(true);
     expect(store.messages().map((m) => m.id)).toEqual(['m9']);
+  });
+});
+
+describe('ChatStore : ce que fait Akari', () => {
+  it('suit le journal du tour, et l’efface à la fin du tour', async () => {
+    const { store, setState } = setup();
+    setState(ready({ status: 'processing', activity: activity('reviewing', { round: 2, done: ['saving-message', 'reading'] }) }));
+    store.initWorkflow('semi');
+    await tick();
+
+    expect(store.processingStatus()).toBe('Akari fait le point, 2e tour…');
+    expect(store.journal()).toEqual(["J'ai noté ton message.", "J'ai regardé ton objectif."]);
+
+    setState(ready({ lastRegisteredMessage: registered('m2', 'AI', 'Voici 4 étapes.') }));
+    await tick(AKARI_POLL_INTERVAL);
+
+    expect(store.activity()).toBeNull();
+    expect(store.journal()).toEqual([]);
+  });
+
+  it('efface le journal quand l’API refuse de rendre l’état : plus rien ne semble en cours', async () => {
+    const { store, assistant, setState } = setup();
+    setState(ready({ status: 'processing', activity: activity('reviewing', { round: 2, done: ['saving-message'] }) }));
+    store.initWorkflow('semi');
+    await tick();
+    expect(store.journal()).toEqual(["J'ai noté ton message."]);
+
+    assistant.state.mockRejectedValue(new ApiError('CONVERSATION_NOT_FOUND', 404, 'No conversation found for reference semi'));
+    await tick(AKARI_POLL_INTERVAL);
+
+    expect(store.isStreaming()).toBe(false);
+    expect(store.journal()).toEqual([]);
+  });
+
+  it('dit que la réponse à une demande d’accord est partie, le temps que le serveur la rende', async () => {
+    const { store, setState } = setup();
+    setState(asking(STAGE_CALL));
+    store.initWorkflow('semi');
+    await tick();
+
+    setState(processing('writing'));
+    store.respondToPermission(true);
+
+    expect(store.isStreaming()).toBe(true);
+    expect(store.processingStatus()).toBe('Akari reçoit ta réponse…');
   });
 });
 

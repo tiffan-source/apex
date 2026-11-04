@@ -170,9 +170,8 @@ describe('ObjectivePage', () => {
         label.textContent?.trim(),
       );
       expect(titles).toEqual(['Courir 3 km', 'Courir 5 km', 'Sortie longue de 7 km']);
-      // Le quadrant d'un pas à faire, en détail
-      expect(element.textContent).toContain('Maintenant');
-      expect(element.textContent).toContain('À planifier');
+      // Le quadrant d'un pas relève de l'API, qui ne le rend pas encore.
+      expect(element.textContent).not.toMatch(/Maintenant|À planifier|À confier|laisser filer/);
     });
 
     it("nomme une étape sans titre, pour qu'on puisse la corriger", () => {

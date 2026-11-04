@@ -20,7 +20,6 @@ import { EArete, type EtapeArete } from '@empreinte-studio/angular/arete';
 import { EBouton } from '@empreinte-studio/angular/bouton';
 import { Feuilles } from '@empreinte-studio/angular/feuille';
 import { EIcone } from '@empreinte-studio/angular/icone';
-import { TITRES_QUADRANTS } from '@empreinte-studio/angular/matrice';
 import { EFilAriane } from '@empreinte-studio/angular/navigation';
 import { ENote, ENoteActions } from '@empreinte-studio/angular/note';
 import { EPas } from '@empreinte-studio/angular/pas';
@@ -86,7 +85,6 @@ export class ObjectivePage {
   protected readonly stageAccomplishment = stageAccomplishment;
   /** La coque affiche un signalement (une note d'Akari) : l'écran n'en pose pas une seconde. */
   protected readonly hasReport = this.annonces.aUnSignalement;
-  protected readonly quadrantTitles = TITRES_QUADRANTS;
   protected readonly stageName = stageName;
 
   /** Les titres où poser le focus quand le bouton qui a ouvert une feuille a disparu. */
