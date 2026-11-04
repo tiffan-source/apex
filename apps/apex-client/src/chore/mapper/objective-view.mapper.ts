@@ -1,27 +1,25 @@
-import { legendeProgression, type EtatPas } from '@empreinte-studio/angular/core';
+import { compter } from '@empreinte-studio/angular/core';
 import type { EtapeArete, EtatEtape } from '@empreinte-studio/angular/arete';
 import type { OptionSelection } from '@empreinte-studio/angular/selection';
 import type { ObjectiveViewModel, TaskViewModel } from '../models/objective.viewmodel';
-import type {
-  NextTaskViewModel,
-  ObjectiveCardViewModel,
-  TaskCountViewModel,
-} from '../models/objective-card.viewmodel';
+import type { ObjectiveCardViewModel } from '../models/objective-card.viewmodel';
 import type {
   AreteStageViewModel,
   ObjectiveDetailViewModel,
-  StageTaskProgressViewModel,
   StageTaskViewModel,
   StageViewModel,
 } from '../models/objective-detail.viewmodel';
-import { quadrantOf } from './matrix.mapper';
 
 /*
- * Les vues des écrans Objectifs et Arête, dérivées de l'état du store (cahier de migration, § 4).
+ * Les vues des écrans Objectifs, Arête et Akari, dérivées de l'état du store (cahier de migration, § 4).
  * Fonctions pures : l'heure courante se passe en paramètre (par défaut, maintenant).
  *
+ * Elles rangent et mettent en forme ce que l'API rend, sans règle métier : la progression (une étape faite,
+ * l'étape en cours, le prochain pas, un objectif accompli) et le quadrant d'un pas relèvent d'Apex Brain.
+ * Tant que l'API ne les rend pas, les écrans ne les montrent pas (docs/technical/data-flow.md).
+ *
  * Vocabulaire : objectif = objectif racine (parentId null) ; étape = sous-objectif DIRECT, dans l'ordre
- * de chargement ; pas = tâche. Les pas des sous-objectifs plus profonds comptent dans leur étape.
+ * de chargement ; pas = tâche. Les pas des sous-objectifs plus profonds sont rangés dans leur étape.
  */
 
 /** Le texte d'une étape sans pas. */
@@ -88,137 +86,57 @@ export function tasksInSubtree(
   return tasks.filter((task) => ids.has(task.objectiveId));
 }
 
-function allDone(tasks: readonly TaskViewModel[]): boolean {
-  return tasks.length > 0 && tasks.every((task) => task.done);
-}
+/** Le texte court d'une étape sans pas, sur l'arête (Empreinte coupe le détail à 22 caractères). */
+export const NO_TASK = 'Aucun pas';
 
-/** Une étape est faite quand elle a au moins un pas et que tous ses pas sont faits. */
-export function isStageDone(tasks: readonly TaskViewModel[]): boolean {
-  return allDone(tasks);
-}
-
-/** Un objectif est accompli quand il a au moins un pas et que tous ses pas sont faits. */
-export function isAccomplished(tasks: readonly TaskViewModel[]): boolean {
-  return allDone(tasks);
+/** Ce qu'une étape porte, sous son nom : « 3 pas », ou « Aucun pas pour l'instant ». */
+export function stageDetail(taskCount: number): string {
+  return taskCount > 0 ? compter(taskCount, 'pas', 'pas') : EMPTY_STAGE_DETAIL;
 }
 
 /**
- * L'état de chaque étape, à partir de ses pas : « faite » (au moins un pas, tous faits),
- * « en-cours » pour la première étape non faite (une seule), « a-venir » pour les suivantes.
+ * L'état qu'Empreinte exige pour chaque étape de l'arête. L'API ne rend pas la progression : toutes les
+ * étapes sont dessinées de la même façon, et leur détail dit seulement combien de pas elles portent (le
+ * texte « À venir » d'Empreinte n'est jamais écrit).
  */
-export function stageStates(tasksByStage: readonly (readonly TaskViewModel[])[]): EtatEtape[] {
-  let currentGiven = false;
-  return tasksByStage.map((tasks) => {
-    if (isStageDone(tasks)) return 'faite';
-    if (!currentGiven) {
-      currentGiven = true;
-      return 'en-cours';
-    }
-    return 'a-venir';
-  });
-}
+export const ARETE_STAGE_STATE: EtatEtape = 'a-venir';
 
-/**
- * L'état de chaque pas d'une étape : « fait », puis, dans l'étape en cours seulement, le premier pas
- * non fait est « en-cours » ; les autres pas non faits sont « a-venir ».
- */
-export function taskStates(tasks: readonly TaskViewModel[], stageState: EtatEtape): EtatPas[] {
-  let currentGiven = stageState !== 'en-cours';
-  return tasks.map((task) => {
-    if (task.done) return 'fait';
-    if (!currentGiven) {
-      currentGiven = true;
-      return 'en-cours';
-    }
-    return 'a-venir';
-  });
-}
-
-/** Ce qu'on compte à partir des états des pas : faits, un en cours, à venir. */
-export function progressFromStates(states: readonly EtatPas[]): StageTaskProgressViewModel {
+/** Une étape pour <e-arete> : son nom, l'état neutre, et « 3 pas » (ou « Aucun pas ») sous son nom. */
+function toAreteStage(stage: StageViewModel): AreteStageViewModel {
+  // Le nom affiché (« Étape sans nom ») : stages[].title garde le vrai titre, que la feuille « Modifier l'étape » préremplit.
   return {
-    done: states.filter((state) => state === 'fait').length,
-    inProgress: states.includes('en-cours'),
-    upcoming: states.filter((state) => state === 'a-venir').length,
+    id: stage.id,
+    nom: stageName(stage.title),
+    etat: ARETE_STAGE_STATE,
+    detail: stage.tasks.length > 0 ? compter(stage.tasks.length, 'pas', 'pas') : NO_TASK,
   };
 }
 
-/** « 4 pas faits · 3 à venir » (legendeProgression d'Empreinte), ou le texte d'une étape vide. */
-export function stageDetail(progress: StageTaskProgressViewModel): string {
-  const legend = legendeProgression({
-    faits: progress.done,
-    enCours: progress.inProgress ? 1 : 0,
-    aVenir: progress.upcoming,
-  });
-  return legend || EMPTY_STAGE_DETAIL;
+function toStageTask(task: TaskViewModel): StageTaskViewModel {
+  return {
+    id: task.id,
+    title: task.title,
+    done: task.done,
+    importance: task.importance,
+    urgency: task.urgency,
+    objectiveId: task.objectiveId,
+  };
 }
 
-/**
- * Le texte court sous le nom d'une étape, sur l'arête (Empreinte le coupe à 22 caractères) :
- * « 4 pas faits » pour l'étape en cours qui a avancé ; sinon l'état en toutes lettres
- * (« Faite », « En cours », « À venir »), laissé au composant.
- */
-export function areteDetail(state: EtatEtape, progress: StageTaskProgressViewModel): string | undefined {
-  if (state === 'en-cours' && progress.done > 0) return `${progress.done} pas ${progress.done >= 2 ? 'faits' : 'fait'}`;
-  return undefined;
-}
-
-/** Le premier pas non fait de l'étape en cours, sinon le premier pas non fait de l'objectif. */
-export function nextTaskOf(
-  currentStageTasks: readonly TaskViewModel[] | null,
-  objectiveTasks: readonly TaskViewModel[],
-): NextTaskViewModel | null {
-  const next = currentStageTasks?.find((task) => !task.done) ?? objectiveTasks.find((task) => !task.done);
-  return next ? { id: next.id, title: next.title, done: next.done } : null;
-}
-
-function countTasks(tasks: readonly TaskViewModel[]): TaskCountViewModel {
-  return { done: tasks.filter((task) => task.done).length, total: tasks.length };
-}
-
-type StageWithTasks = {
-  stage: ObjectiveViewModel;
-  tasks: TaskViewModel[];
-  state: EtatEtape;
-};
-
-/** Les étapes d'un objectif avec leurs pas (sous-objectifs profonds compris) et leur état. */
-function stagesWithTasks(
-  objectiveId: string,
-  objectives: readonly ObjectiveViewModel[],
-  tasks: readonly TaskViewModel[],
-): StageWithTasks[] {
-  const stages = stagesOf(objectiveId, objectives);
-  const tasksByStage = stages.map((stage) => tasksInSubtree(stage.id, objectives, tasks));
-  const states = stageStates(tasksByStage);
-  return stages.map((stage, index) => ({ stage, tasks: tasksByStage[index], state: states[index] }));
-}
-
-/** La carte d'un objectif. */
+/** La carte d'un objectif : ce que l'API en rend, et ce qu'il porte. */
 export function toObjectiveCard(
   objective: ObjectiveViewModel,
   objectives: readonly ObjectiveViewModel[],
   tasks: readonly TaskViewModel[],
   now: Date = new Date(),
 ): ObjectiveCardViewModel {
-  const stages = stagesWithTasks(objective.id, objectives, tasks);
-  const objectiveTasks = tasksInSubtree(objective.id, objectives, tasks);
-  const current = stages.find((item) => item.state === 'en-cours') ?? null;
   return {
     id: objective.id,
     title: objective.title,
     why: objective.why,
     horizon: formatHorizon(objective.dueDate, now),
-    stageProgress: {
-      done: stages.filter((item) => item.state === 'faite').length,
-      inProgress: current !== null,
-      upcoming: stages.filter((item) => item.state === 'a-venir').length,
-      ...(current ? { inProgressName: current.stage.title } : {}),
-    },
-    stageCount: stages.length,
-    taskCount: countTasks(objectiveTasks),
-    nextTask: nextTaskOf(current?.tasks ?? null, objectiveTasks),
-    accomplished: isAccomplished(objectiveTasks),
+    stageCount: stagesOf(objective.id, objectives).length,
+    taskCount: tasksInSubtree(objective.id, objectives, tasks).length,
   };
 }
 
@@ -231,19 +149,6 @@ export function toObjectiveCards(
   return rootObjectives(objectives).map((objective) => toObjectiveCard(objective, objectives, tasks, now));
 }
 
-function toStageTasks(tasks: readonly TaskViewModel[], states: readonly EtatPas[]): StageTaskViewModel[] {
-  return tasks.map((task, index) => ({
-    id: task.id,
-    title: task.title,
-    done: task.done,
-    state: states[index],
-    importance: task.importance,
-    urgency: task.urgency,
-    objectiveId: task.objectiveId,
-    quadrant: quadrantOf(task),
-  }));
-}
-
 /** La vue détaillée d'un objectif pour l'arête ; undefined s'il n'est pas chargé. */
 export function toObjectiveDetail(
   objectiveId: string,
@@ -254,32 +159,18 @@ export function toObjectiveDetail(
   const objective = objectives.find((item) => item.id === objectiveId);
   if (!objective) return undefined;
 
-  const withTasks = stagesWithTasks(objectiveId, objectives, tasks);
-  const stages: StageViewModel[] = withTasks.map(({ stage, tasks: stageTasks, state }, index) => {
-    const states = taskStates(stageTasks, state);
-    const progress = progressFromStates(states);
+  const stages: StageViewModel[] = stagesOf(objectiveId, objectives).map((stage, index) => {
+    const stageTasks = tasksInSubtree(stage.id, objectives, tasks);
     return {
       id: stage.id,
       title: stage.title,
       description: stage.description,
       dueDate: stage.dueDate,
       horizon: formatHorizon(stage.dueDate, now),
-      state,
       index: index + 1,
-      tasks: toStageTasks(stageTasks, states),
-      progress,
-      detail: stageDetail(progress),
+      tasks: stageTasks.map(toStageTask),
+      detail: stageDetail(stageTasks.length),
     };
-  });
-
-  const looseTasks = tasks.filter((task) => task.objectiveId === objectiveId);
-  const objectiveTasks = tasksInSubtree(objectiveId, objectives, tasks);
-  const current = withTasks.find((item) => item.state === 'en-cours') ?? null;
-
-  const aretes: AreteStageViewModel[] = stages.map((stage) => {
-    const detail = areteDetail(stage.state, stage.progress);
-    // Le nom affiché (« Étape sans nom ») : stages[].title garde le vrai titre, que la feuille « Modifier l'étape » préremplit.
-    return { id: stage.id, nom: stageName(stage.title), etat: stage.state, ...(detail ? { detail } : {}) };
   });
 
   return {
@@ -292,10 +183,10 @@ export function toObjectiveDetail(
       horizon: formatHorizon(objective.dueDate, now),
     },
     stages,
-    tasksWithoutStage: toStageTasks(looseTasks, looseTasks.map((task) => (task.done ? 'fait' : 'a-venir'))),
-    aretes,
-    defaultStageId: current?.stage.id ?? (stages.length > 0 ? stages[stages.length - 1].id : null),
-    taskCount: countTasks(objectiveTasks),
+    tasksWithoutStage: tasks.filter((task) => task.objectiveId === objectiveId).map(toStageTask),
+    aretes: stages.map(toAreteStage),
+    defaultStageId: stages[0]?.id ?? null,
+    taskCount: tasksInSubtree(objectiveId, objectives, tasks).length,
   };
 }
 
@@ -304,14 +195,14 @@ export function stageOptions(objectiveId: string, objectives: readonly Objective
   return stagesOf(objectiveId, objectives).map((stage) => ({ valeur: stage.id, libelle: stage.title }));
 }
 
-/** Les objectifs racines pour e-filtres ou e-selection : { valeur: id, libelle: titre }. */
+/** Les objectifs racines pour e-selection : { valeur: id, libelle: titre }. */
 export function rootObjectiveOptions(objectives: readonly ObjectiveViewModel[]): OptionSelection<string>[] {
   return rootObjectives(objectives).map((objective) => ({ valeur: objective.id, libelle: objective.title }));
 }
 
 /**
- * L'id de l'étape choisie sur <e-arete (choisir)>. Null pour l'arête « Faites » qu'Empreinte forme
- * au-delà de 8 étapes en repliant les étapes faites (elle ne correspond à aucune étape).
+ * L'id de l'étape choisie sur <e-arete (choisir)>. Null pour une arête qu'Empreinte aurait formée lui-même
+ * (« Faites », au-delà de 8 étapes, quand des étapes sont faites : jamais sans état d'étape).
  */
 export function stageIdFromArete(etape: EtapeArete): string | null {
   const id = (etape as Partial<AreteStageViewModel>).id;

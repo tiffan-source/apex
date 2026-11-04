@@ -20,10 +20,8 @@ import { EArete, type EtapeArete } from '@empreinte-studio/angular/arete';
 import { EBouton } from '@empreinte-studio/angular/bouton';
 import { Feuilles } from '@empreinte-studio/angular/feuille';
 import { EIcone } from '@empreinte-studio/angular/icone';
-import { TITRES_QUADRANTS } from '@empreinte-studio/angular/matrice';
 import { EFilAriane } from '@empreinte-studio/angular/navigation';
 import { ENote, ENoteActions } from '@empreinte-studio/angular/note';
-import { EPas } from '@empreinte-studio/angular/pas';
 import { EListe, ETache, ETacheActions } from '@empreinte-studio/angular/tache';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
@@ -36,9 +34,9 @@ import { AddTaskSheet, type AddTaskSheetData } from './sheets/add-task-sheet';
 import { EditObjectiveSheet, type EditObjectiveSheetData } from './sheets/edit-objective-sheet';
 import { EditStageSheet, type EditStageSheetData } from './sheets/edit-stage-sheet';
 import { EditTaskSheet, type EditTaskSheetData } from './sheets/edit-task-sheet';
-import { STAGE_STATE_LABELS, stageName } from './stage-labels';
+import { stageName } from './stage-labels';
 
-/** Ce que l'étape ouverte suit : l'objectif, ses étapes et celle en cours. */
+/** Ce que l'étape ouverte suit : l'objectif, ses étapes et celle ouverte par défaut. */
 type OpenStageSource = {
   objectiveId: string;
   stageIds: readonly string[];
@@ -62,7 +60,6 @@ type OpenStageSource = {
     EListe,
     ENote,
     ENoteActions,
-    EPas,
     ETache,
     ETacheActions,
   ],
@@ -81,10 +78,8 @@ export class ObjectivePage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
 
-  protected readonly stageStateLabels = STAGE_STATE_LABELS;
   /** La coque affiche un signalement (une note d'Akari) : l'écran n'en pose pas une seconde. */
   protected readonly hasReport = this.annonces.aUnSignalement;
-  protected readonly quadrantTitles = TITRES_QUADRANTS;
   protected readonly stageName = stageName;
 
   /** Les titres où poser le focus quand le bouton qui a ouvert une feuille a disparu. */
@@ -114,10 +109,9 @@ export class ObjectivePage {
   protected readonly stageCount = computed(() => compter(this.detail()?.stages.length ?? 0, 'étape'));
 
   /**
-   * L'id de l'étape ouverte à droite de l'arête : d'abord celle en cours. Elle reste ouverte tant qu'elle
-   * existe, même quand elle s'achève et qu'une autre passe en cours : cocher son dernier pas ne fait ni
-   * sauter le panneau vers l'étape suivante, ni perdre le focus de la case. Elle revient à l'étape en
-   * cours sur un autre objectif, et quand son id temporaire est remplacé à l'enregistrement.
+   * L'id de l'étape ouverte à droite de l'arête : d'abord la première. Elle reste ouverte tant qu'elle
+   * existe : cocher un pas ne fait ni sauter le panneau, ni perdre le focus de la case. Elle revient à la
+   * première étape sur un autre objectif, et quand son id temporaire est remplacé à l'enregistrement.
    */
   private readonly openStageId = linkedSignal<OpenStageSource, string | null>({
     source: () => {
@@ -155,23 +149,11 @@ export class ObjectivePage {
 
   /** Une arête a été choisie : son étape s'ouvre à droite, et les lecteurs d'écran l'entendent. */
   protected chooseStage(etape: EtapeArete): void {
-    const stages = this.detail()?.stages ?? [];
-    const id = stageIdFromArete(etape) ?? this.foldedDoneStageId(stages);
-    const stage = stages.find((item) => item.id === id);
+    const id = stageIdFromArete(etape);
+    const stage = this.detail()?.stages.find((item) => item.id === id);
     if (!stage) return;
     this.openStageId.set(stage.id);
-    this.annonces.annoncer(`Étape ${stage.index} · ${STAGE_STATE_LABELS[stage.state]} : ${stageName(stage.title)}`);
-  }
-
-  /**
-   * Au-delà de 8 étapes, Empreinte replie les étapes faites dans une arête « Faites » sans id. Chaque choix
-   * de cette arête ouvre l'étape faite d'avant, en partant de la plus récente : toutes restent atteignables.
-   */
-  private foldedDoneStageId(stages: readonly StageViewModel[]): string | null {
-    const done = stages.filter((stage) => stage.state === 'faite');
-    if (done.length === 0) return null;
-    const open = done.findIndex((stage) => stage.id === this.openStageId());
-    return done[open > 0 ? open - 1 : done.length - 1].id;
+    this.annonces.annoncer(`Étape ${stage.index} : ${stageName(stage.title)}`);
   }
 
   /** Cocher ou décocher un pas : le store le change tout de suite, et revient en arrière s'il n'est pas enregistré. */

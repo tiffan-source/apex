@@ -19,8 +19,9 @@ class HomeStub {
   readonly store = inject(ObjectiveStore);
 }
 
-@Component({ template: '<p>Page de la matrice</p>' })
-class MatrixStub {}
+/** Une page de la coque hors des objectifs. */
+@Component({ template: '<p>Une autre page</p>' })
+class OtherStub {}
 
 @Component({ template: '<p>Page d’un objectif</p>' })
 class ObjectiveStub {}
@@ -50,7 +51,7 @@ describe('Shell', () => {
             component: Shell,
             children: [
               { path: '', pathMatch: 'full', component: HomeStub },
-              { path: 'matrice', component: MatrixStub },
+              { path: 'autre', component: OtherStub },
               { path: 'objectifs/nouveau', component: ObjectiveStub },
               { path: 'objectifs/:id', component: ObjectiveStub },
               { path: 'objectifs/:id/akari', component: ObjectiveStub, data: { fitsWindow: true } },
@@ -85,34 +86,32 @@ describe('Shell', () => {
   const labels = (entries: readonly unknown[]) => (entries as ElementMenu<PreferenceTheme>[]).map((e) => e.libelle);
 
   describe('la navigation', () => {
-    it('affiche la marque « Apex » et deux entrées : Objectifs et Matrice, avec leurs icônes', async () => {
+    it('affiche la marque « Apex » et une entrée, Objectifs, avec son icône (la matrice attend l’API)', async () => {
       const root = shellOf(await open());
       const marque = present(root.querySelector<HTMLAnchorElement>('nav a.brand'), 'la marque');
       expect(marque.textContent?.trim()).toBe('Apex');
       expect(marque.getAttribute('href')).toBe('/');
 
       const links = [...root.querySelectorAll<HTMLAnchorElement>('ul a')];
-      expect(links.map((a) => a.textContent?.trim())).toEqual(['Objectifs', 'Matrice']);
-      expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/matrice']);
+      expect(links.map((a) => a.textContent?.trim())).toEqual(['Objectifs']);
+      expect(links.map((a) => a.getAttribute('href'))).toEqual(['/']);
       for (const link of links) expect(link.querySelector('e-icone svg')).not.toBeNull();
       // Le libellé est dans une balise d'Apex, que shell.css cache sous 760px (le nom du lien reste).
-      expect(links.map((a) => a.querySelector('.link-label')?.textContent)).toEqual(['Objectifs', 'Matrice']);
+      expect(links.map((a) => a.querySelector('.link-label')?.textContent)).toEqual(['Objectifs']);
       expect(root.textContent).not.toContain('Focus');
+      expect(root.textContent).not.toContain('Matrice');
     });
 
-    it('pose la corne (aria-current="page") sur Objectifs à l’accueil, et seulement là', async () => {
+    it('pose la corne (aria-current="page") sur Objectifs à l’accueil', async () => {
       const root = shellOf(await open('/'));
       expect(navLink(root, 'Objectifs').getAttribute('aria-current')).toBe('page');
-      expect(navLink(root, 'Matrice').hasAttribute('aria-current')).toBe(false);
     });
 
-    it('pose la corne sur Matrice dans la matrice, pas sur Objectifs (« / » est exact)', async () => {
+    it('ne pose pas la corne sur Objectifs hors des objectifs (« / » est exact)', async () => {
       const harness = await open('/');
-      await harness.navigateByUrl('/matrice');
+      await harness.navigateByUrl('/autre');
       harness.detectChanges();
-      const root = shellOf(harness);
-      expect(navLink(root, 'Matrice').getAttribute('aria-current')).toBe('page');
-      expect(navLink(root, 'Objectifs').hasAttribute('aria-current')).toBe(false);
+      expect(navLink(shellOf(harness), 'Objectifs').hasAttribute('aria-current')).toBe(false);
     });
 
     it.each(['/objectifs/nouveau', '/objectifs/42', '/objectifs/42/akari?etape=7'])(
@@ -120,7 +119,6 @@ describe('Shell', () => {
       async (url) => {
         const root = shellOf(await open(url));
         expect(navLink(root, 'Objectifs').getAttribute('aria-current')).toBe('page');
-        expect(navLink(root, 'Matrice').hasAttribute('aria-current')).toBe(false);
       },
     );
 
@@ -230,11 +228,11 @@ describe('Shell', () => {
 
   describe('le lien d’évitement', () => {
     it('est le premier élément de la coque et vise la page courante, pas l’accueil', async () => {
-      const root = shellOf(await open('/matrice'));
+      const root = shellOf(await open('/autre'));
       const skip = root.firstElementChild as HTMLAnchorElement;
       expect(skip.matches('a.skip-link')).toBe(true);
       expect(skip.textContent?.trim()).toBe('Aller au contenu');
-      expect(skip.getAttribute('href')).toBe('/matrice#contenu');
+      expect(skip.getAttribute('href')).toBe('/autre#contenu');
       expect(skip.getAttribute('href')).not.toBe('/#contenu');
     });
 
@@ -244,7 +242,7 @@ describe('Shell', () => {
     });
 
     it('donne le focus au contenu et reste sur la page', async () => {
-      const harness = await open('/matrice');
+      const harness = await open('/autre');
       const root = shellOf(harness);
       present(root.querySelector<HTMLAnchorElement>('a.skip-link'), "le lien d'évitement").click();
       await harness.fixture.whenStable();
@@ -254,8 +252,8 @@ describe('Shell', () => {
       expect(main.getAttribute('tabindex')).toBe('-1');
       expect(document.activeElement).toBe(main);
       const router = TestBed.inject(Router);
-      expect(router.url).toBe('/matrice#contenu');
-      expect(root.textContent).toContain('Page de la matrice');
+      expect(router.url).toBe('/autre#contenu');
+      expect(root.textContent).toContain('Une autre page');
     });
   });
 
@@ -340,13 +338,13 @@ describe('Shell', () => {
     });
 
     it('laisse le focus sur une entrée de la navigation, qui reste à l’écran', async () => {
-      const harness = await open('/');
-      const matrice = navLink(shellOf(harness), 'Matrice');
-      matrice.focus();
-      await harness.navigateByUrl('/matrice');
+      const harness = await open('/autre');
+      const objectifs = navLink(shellOf(harness), 'Objectifs');
+      objectifs.focus();
+      await harness.navigateByUrl('/');
       harness.detectChanges();
       await harness.fixture.whenStable();
-      expect(document.activeElement).toBe(matrice);
+      expect(document.activeElement).toBe(objectifs);
     });
 
     it('ne bouge pas quand seuls la requête ou le fragment changent', async () => {

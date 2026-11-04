@@ -1,4 +1,3 @@
-import type { EtatEtape } from '@empreinte-studio/angular/arete';
 import type { OptionSelection } from '@empreinte-studio/angular/selection';
 
 import { UNTITLED_STAGE } from '../../chore/mapper/objective-view.mapper';
@@ -8,20 +7,6 @@ import { UNTITLED_STAGE } from '../../chore/mapper/objective-view.mapper';
  * nom (UNTITLED_STAGE, stageName) vient du mapper des vues, qui le pose aussi sur l'arête.
  */
 export { UNTITLED_STAGE, stageName } from '../../chore/mapper/objective-view.mapper';
-
-/** L'état d'une étape dans son repère : « Étape 3 · en cours ». */
-export const STAGE_STATE_LABELS: Readonly<Record<EtatEtape, string>> = {
-  faite: 'faite',
-  'en-cours': 'en cours',
-  'a-venir': 'à venir',
-};
-
-/** L'état d'une étape seul sur sa ligne (la liste des étapes d'Akari) : « En cours ». */
-export const STAGE_STATE_TITLES: Readonly<Record<EtatEtape, string>> = {
-  faite: 'Faite',
-  'en-cours': 'En cours',
-  'a-venir': 'À venir',
-};
 
 /** Les étapes d'un objectif pour e-selection, sans option vide. */
 export function namedStageOptions(options: readonly OptionSelection<string>[]): OptionSelection<string>[] {

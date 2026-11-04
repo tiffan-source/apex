@@ -213,7 +213,7 @@ describe('AkariWritesStore', () => {
     await tick();
 
     chat.respondToPermission(true);
-    leave(); // « Voir l'arête », ou la matrice : ChatStore part avec l'écran, avant même la réponse de l'API
+    leave(); // « Voir l'arête », ou l'accueil : ChatStore part avec l'écran, avant même la réponse de l'API
 
     await tick();
     setState(state('SendingCallResultToAI'));

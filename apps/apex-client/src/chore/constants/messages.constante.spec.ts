@@ -32,7 +32,7 @@ describe('failureReport', () => {
   it('choisit la phrase de l’action par défaut', () => {
     expect(failureReport('addTask')).toBe("Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.");
     expect(failureReport('createObjective', 'FAIL_TO_SAVE_OBJECTIVE')).toBe(FAILURE_REPORTS.createObjective);
-    expect(failureReport('toggleTask', 'UNKNOWN_ERROR')).toBe(FAILURE_REPORTS.toggleTask);
+    expect(failureReport('editTask', 'UNKNOWN_ERROR')).toBe(FAILURE_REPORTS.editTask);
   });
 
   it('dit ce qui manque quand l’API ne retrouve plus l’objectif ou le pas', () => {
@@ -71,7 +71,7 @@ describe('les niveaux d’importance et d’urgence', () => {
     expect(new Set(options.map((option) => option.libelle)).size).toBe(5);
   });
 
-  it('le niveau 3 est le premier « important » et le premier « urgent » (seuil de la matrice)', () => {
+  it('nomme les niveaux : « Secondaire » puis « Important », « Pas urgent » puis « Urgent »', () => {
     expect(IMPORTANCE_OPTIONS.find((option) => option.valeur === 2)?.libelle).toBe('Secondaire');
     expect(IMPORTANCE_OPTIONS.find((option) => option.valeur === 3)?.libelle).toBe('Important');
     expect(URGENCY_OPTIONS.find((option) => option.valeur === 2)?.libelle).toBe('Pas urgent');
@@ -100,7 +100,7 @@ describe('voiceIssues', () => {
   it('laisse passer la voix d’Empreinte', () => {
     expect(voiceIssues('4 pas faits · 3 à venir')).toEqual([]);
     expect(voiceIssues('Un pas de plus.')).toEqual([]);
-    expect(voiceIssues('Ce pas passe dans « À laisser filer ».')).toEqual([]);
+    expect(voiceIssues('Laisser filer cet objectif.')).toEqual([]);
     expect(voiceIssues('Je ne retrouve plus ce pas. Recharge la page, puis réessaie.')).toEqual([]);
   });
 });

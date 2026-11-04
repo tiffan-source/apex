@@ -283,7 +283,6 @@ describe('ObjectiveStore', () => {
       await settle();
 
       expect(task('t1')).toMatchObject({ importance: 2, urgency: 3 });
-      expect(s.store.matrix().confier.map((item) => item.id)).toEqual(['t1']);
     });
 
     it('un pas recoché après un échec reste coché', async () => {
@@ -349,7 +348,7 @@ describe('ObjectiveStore', () => {
 
       expect(s.api.addTask).toHaveBeenCalledWith('portfolio', expect.objectContaining({ title: 'Trois projets' }));
       expect(task('p1')?.objectiveId).toBe('portfolio');
-      expect(s.store.matrix().planifier.find((item) => item.id === 'p1')?.rootObjectiveId).toBe('semi');
+      expect(s.store.objectiveDetail('semi')?.stages[1].tasks.map((item) => item.id)).toEqual(['p1']);
     });
 
     it('un pas rangé dans une étape enregistrée pendant que la feuille était ouverte la rejoint à l’écran', async () => {

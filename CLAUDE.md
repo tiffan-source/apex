@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Apex is a goal/objective-management app (objectives → stages/sub-objectives → steps/tasks, an Eisenhower matrix, and the Akari AI assistant). This repository is the **web client**: an **Nx 23 monorepo** with a single **Angular 22** app, `apex-client` (TypeScript 6). **The business rules, the data and Akari live in Apex Brain**, the server (repo `tiffan-source/apex-brain`, NestJS, hosted on Render at `https://apex-brain-kapj.onrender.com`): the client displays and calls its REST API. The contract is `docs/api.md` in apex-brain, and `/docs` (Swagger UI) or `/docs-json` on the server. The codebase is written in English, but **docs, code comments, UI strings, and commit messages are in French** — match that when editing those.
+Apex is a goal/objective-management app (objectives → stages/sub-objectives → steps/tasks, and the Akari AI assistant; the Eisenhower matrix is withdrawn until the API ranks steps). This repository is the **web client**: an **Nx 23 monorepo** with a single **Angular 22** app, `apex-client` (TypeScript 6). **The business rules, the data and Akari live in Apex Brain**, the server (repo `tiffan-source/apex-brain`, NestJS, hosted on Render at `https://apex-brain-kapj.onrender.com`): the client displays and calls its REST API. The contract is `docs/api.md` in apex-brain, and `/docs` (Swagger UI) or `/docs-json` on the server. The codebase is written in English, but **docs, code comments, UI strings, and commit messages are in French** — match that when editing those.
 
 ## Commands
 
@@ -34,7 +34,7 @@ Apex is a goal/objective-management app (objectives → stages/sub-objectives �
 
 ## Architecture
 
-The client does **no business operation**: no use case, repository, domain model, nor Supabase, Firebase or Gemini SDK. It sends the person's gestures to the API and renders what the API returns. The few rules the API does not expose yet are listed in `docs/technical/data-flow.md` (« Rules still in the client ») — do not add new ones: add an endpoint to apex-brain instead.
+The client does **no business operation**: no use case, repository, domain model, nor Supabase, Firebase or Gemini SDK. It sends the person's gestures to the API and renders what the API returns. It holds **no business rule** either: the progression (a stage done or in progress, the next step, an objective accomplished) and the Eisenhower quadrant of a step are Apex Brain's. Until the API returns them, the screens do not show them (the arête draws stages without state, the cards show no progress, the matrix is withdrawn): see `docs/technical/data-flow.md` (« What the client does not compute »). Never compute a rule in the client: add a field or an endpoint to apex-brain.
 
 ### Calling the API (`apps/apex-client/src/chore/api/`)
 

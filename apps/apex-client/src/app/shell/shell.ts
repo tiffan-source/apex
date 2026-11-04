@@ -18,7 +18,6 @@ import {
   NavigationEnd,
   Router,
   RouterLink,
-  RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
 import { filter } from 'rxjs';
@@ -53,7 +52,7 @@ export const THEME_ANNOUNCEMENTS: Readonly<Record<PreferenceTheme, string>> = {
 const PATHS_ONLY: Partial<IsActiveMatchOptions> = { queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' };
 
 /**
- * La coque d'Apex : la navigation (Objectifs, Matrice ; en bas, la personne et ses réglages) et la page.
+ * La coque d'Apex : la navigation (Objectifs ; en bas, la personne et ses réglages) et la page.
  * Elle affiche en haut du contenu ce qui n'a pas marché (AnnoncesStore.signaler), dans une note d'Akari.
  * ObjectiveStore est fourni ici : tous les écrans de la coque partagent les mêmes objectifs. AkariWritesStore
  * aussi : ce qu'Akari ajoute recharge ces objectifs, même après le départ de l'écran Akari.
@@ -63,7 +62,6 @@ const PATHS_ONLY: Partial<IsActiveMatchOptions> = { queryParams: 'ignored', matr
   imports: [
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     ELienNav,
     EMarque,
     EMenu,
