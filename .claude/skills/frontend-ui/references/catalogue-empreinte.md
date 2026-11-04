@@ -236,7 +236,7 @@ Hôte : `e-carte e-surface`. Mise en page intégrée : colonne flex, `gap: --pas
 | `legende` | `string \| undefined` | `undefined` | Idem : remplace la légende calculée et le nom accessible. |
 | `libelleAction` | `string` | `'Ouvrir'` | Libellé du bouton `trait petit` du pied. |
 
-Sortie : `ouvrir: void` (clic sur le bouton du pied). Contenu : le contenu par défaut se place **entre le titre et l'`e-pas`** (par exemple `<p class="voix e-carte__raison">« … »</p>`) ; un élément `[eCarteAction]` remplace le bouton du pied (par exemple un lien). Ordre fixe : en-tête, horizon, titre, pourquoi (ces trois-là grandissent, pour que deux cartes voisines alignent leurs pas et leurs pieds), contenu, `e-pas` ou `[eCarteProgression]`, pied (meta + action).
+Sortie : `ouvrir: void` (clic sur le bouton du pied). Contenu : le contenu par défaut se place **entre le titre et l'`e-pas`** (par exemple `<p class="voix e-carte__raison">« … »</p>`) ; un élément `[eCarteAction]` remplace le bouton du pied (par exemple un lien). Ordre fixe : en-tête, puis le bloc de texte (horizon, titre, pourquoi, contenu), qui grandit pour que deux cartes voisines alignent leurs pas et leurs pieds, `e-pas` ou `[eCarteProgression]`, pied (meta + action).
 
 **`[eCarteAction]`** : directive marqueur, sans entrée.
 
@@ -425,7 +425,7 @@ Mise en page : l'hôte est une colonne flexible sans marge ni fond ; l'écran r�
 
 ### 2.10 ter `prose` : `EMarkdown`, `rendreMarkdown`
 
-**`texte | eMarkdown`** (`EMarkdown`) — le Markdown d'une réplique, rendu par `marked` puis assaini par DOMPurify, à insérer par `[innerHTML]` dans `.e-replique__prose` (une réplique d'`e-conversation` y est déjà). Un titre devient un paragraphe en gras (la page a déjà son titre) ; pas d'italique ; un retour à la ligne simple est gardé ; ni style, ni classe, ni identifiant venus du texte ; rien ne se charge tout seul (une image devient un lien, les médias écrits en HTML sont retirés). **`rendreMarkdown(texte)`** rend la même chaîne HTML assainie, hors d'un gabarit.
+**`texte | eMarkdown`** (`EMarkdown`) — le Markdown d'une réplique, rendu par `marked` puis assaini par DOMPurify, à insérer par `[innerHTML]` dans `.e-replique__prose` (une réplique d'`e-conversation` y est déjà). Un titre devient un paragraphe en gras (la page a déjà son titre) ; pas d'italique ; un retour à la ligne simple est gardé. Seules les balises de la prose passent (paragraphes, listes, liens, code, tableaux), avec `href`, `title`, `align`, `start`, `colspan` et `rowspan` : ni style, ni classe, ni `tabindex`, ni `role`, ni `aria-*` venus du texte, dont le contenu reste. Rien ne se charge tout seul : une image devient un lien, et dans un lien elle n'est plus que son texte. **`rendreMarkdown(texte)`** rend la même chaîne HTML assainie, hors d'un gabarit.
 
 ### 2.11 `champ` : `EChamp`, `ESaisie`, `ETailleAuto`, `ecrireErreur`
 
@@ -590,7 +590,7 @@ Vues qui sont des routes (liens, sans rôle d'onglet) : **`nav[eVues]`** (`e-ong
 | `a[eLienNav]` | `icone: string \| null` (défaut `null`) | `e-nav__lien` | Lien 44px avec `e-icone` 20px, puis le contenu projeté dans `span.e-nav__libelle`. L'entrée qui porte `aria-current="page"` devient un panneau éclairé avec corne `s`. |
 | `e-marque`, `a[eMarque]` | — | `e-marque` | Petit sceau à corne (non compté par le gardien) + nom en `sens` 26/32 semi-gras, 44px. |
 | `nav[eFilAriane]` | `libelle: string` (défaut « Fil d'Ariane ») | `e-fil-ariane`, `aria-label` | Fil d'Ariane : `ol > li`, séparateurs « / » dessinés, liens soulignés `encre-douce`, page courante `[aria-current=page]` en encre. |
-| `a[eLienEvitement]` | — | `e-lien-evitement` | Le lien d'évitement, premier élément de la page : hors de l'écran tant qu'il n'a pas le focus, puis en haut à gauche sur un panneau. L'application dit où il mène et y pose le focus (`shell.html`). |
+| `a[eLienEvitement]` | — | `e-lien-evitement` | Le lien d'évitement, premier élément de la page : hors de l'écran tant qu'il n'a pas le focus, puis en haut à gauche sur un panneau. L'application dit où il mène et y pose le focus (`shell.html`) : par le routeur, jamais par un `href="#contenu"` écrit en dur, qui renverrait à l'accueil avec `<base href="/">`. |
 
 **La coque est celle d'Apex**, dans `app/shell/shell.html` et `shell.css` : une grille de deux colonnes, la navigation (232px, à hauteur d'écran, qui reste à l'écran quand la page défile, un filet `trame` à droite) et la page (`padding: 48px 56px 72px`, contenu centré de 1120px au plus, sections espacées de 40px). Sous 760px, une seule colonne : la navigation devient un bandeau au-dessus de la page (`padding: 24px 16px 48px`), ses entrées ne gardent que leur icône (le libellé, dans un `span.link-label` d'Apex, est caché visuellement mais reste lu) et son bas (la personne, les réglages) disparaît au profit d'un `e-menu` en `.ds-show-mobile`. Depuis la 0.2, Empreinte ne livre plus de coque (`ECoque`, `ENav`… ont été retirés) : chaque application écrit la sienne. Une route qui porte `data: { fitsWindow: true }` (Akari) tient dans la fenêtre au-dessus de 1100px : la coque prend la hauteur de l'écran (32rem au moins) et la passe à la page par `.outlet` (classe `fits-window` sur `.shell`), moins ses marges et sa note ; l'hôte du composant de la page la reçoit en colonne flexible (`:host { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0 }`).
 
