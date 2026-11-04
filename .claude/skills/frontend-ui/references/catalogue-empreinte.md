@@ -169,7 +169,7 @@ Hôte : `e-corne`, `e-corne--s` / `e-corne--l`, `e-corne--sans-rabat`, et `aria-
 
 ```html
 <section eSurface eCorne="l" aria-labelledby="t-brouillon">…</section>
-<a eSurface [eCorne]="actif ? 's' : null" courant="page" routerLink="/matrice">…</a>
+<a eSurface [eCorne]="actif ? 's' : null" courant="page" routerLink="/">…</a>
 ```
 
 ### 2.3 `bouton` : `EBouton`
@@ -598,11 +598,6 @@ Structure de la coque d'Apex (entrées V1 : Objectifs, Matrice) :
           ><span class="link-label">Objectifs</span></a
         >
       </li>
-      <li>
-        <a eLienNav class="link" icone="matrice" routerLink="/matrice" routerLinkActive ariaCurrentWhenActive="page"
-          ><span class="link-label">Matrice</span></a
-        >
-      </li>
     </ul>
     <div class="nav-bottom"><!-- la personne et ses réglages --></div>
     <div class="ds-show-mobile ds-push-right"><!-- les réglages, sous 760px --></div>
@@ -816,7 +811,7 @@ provideIcones({ etape: ['M4 18h16', 'M8 18V10h8v8'] })
 
 Sorties obtenues en exécutant les fonctions installées.
 
-**`legendeProgression(progression: Progression, options?: OptionsLegende): string`** — commence toujours par ce qui est fait. `Progression = { faits: number; aFaire: number }`. `OptionsLegende = { unite?: NomUnite | Unite; accompli?: string }` (`accompli` par défaut « étape accomplie »).
+**`legendeProgression(progression: Progression, options?: OptionsLegende): string`** — commence toujours par ce qui est fait. `Progression = { faits: number; aFaire: number }`. `OptionsLegende = { unite?: NomUnite | Unite; accompli?: string }` (`accompli` n'a pas de valeur par défaut : compter ne prouve rien, seule l'application sait si c'est vrai).
 
 | Appel | Résultat |
 | --- | --- |
@@ -854,7 +849,7 @@ Sorties obtenues en exécutant les fonctions installées.
 
 **`compter(n: number, singulier: string, pluriel = singulier + 's'): string`** — 0 et 1 au singulier : `compter(0, 'tâche')` → « 0 tâche », `compter(3, 'tâche')` → « 3 tâches », `compter(2, 'pas', 'pas')` → « 2 pas ». Donner le pluriel des mots invariables (`pas`), sinon « pass ».
 
-**`motsAEviter(texte: string): { mot: string; plutot: string }[]`** et **`LEXIQUE`** (`{ motif: RegExp; mot; plutot }[]`). Les mots surveillés : échec, raté, manqué, en retard, perdu, supprimer, il te reste, pourcentage (`\d+\s*%`), point d'exclamation, ne lâche rien. Résultats vérifiés :
+**`motsAEviter(texte: string): { mot: string; plutot: string }[]`** et **`LEXIQUE`** (`{ motif: RegExp; mot; plutot }[]`). Les mots surveillés : échec, raté, manqué, en retard, perdu, supprimer, il te reste, pourcentage (`\d+\s*%`), point d'exclamation, ne lâche rien, et tout ce qui donne un ordre (prochain pas, pas suivant, premier pas, étape suivante, première étape, étape 3). Résultats vérifiés :
 
 | Texte | Détecté |
 | --- | --- |
@@ -905,7 +900,7 @@ Toutes sont réellement présentes dans les feuilles embarquées des paquets ins
 | Bouton | `e-btn`, `e-btn--sceau`, `e-btn--trait`, `e-btn--nu`, `e-btn--petit`, `e-btn--icone` | `EBouton` (et les boutons internes d'`ECarteObjectif`, `ETache`, `EMenu`, `EFiltres`, `EFeuille`) | `EBouton` |
 | Étiquette | `e-etiquette`, `e-etiquette--ciel`, `--aube`, `--soleil`, `--fjord` | `EEtiquette` | `EEtiquette` |
 | Carte | `e-carte`, `e-carte--marquee`, `e-carte__entete`, `e-carte__pied`, `e-carte__meta`, `e-carte__raison` | `ECarte`, `ECarteObjectif` (hôte et gabarit) ; sous-classes à la main dans une carte | `ECarte`, `ECarteObjectif` |
-| Pas | `e-progression`, `e-pas`, `e-pas__case` (`data-etat="fait"` / `"en-cours"`), `e-pas__legende` | `EPas` | `EPas` |
+| Pas | `e-progression`, `e-pas`, `e-pas__case` (`data-etat="fait"` sur une case faite), `e-pas__legende` | `EPas` | `EPas` |
 | Sceau | `e-sceau`, `e-sceau__repere`, `e-sceau__chiffre`, `e-sceau--grand`, `e-sceau--empreinte`, `e-sceau--pose`, `e-traits`, `e-traits__trait` (`data-etat="a-venir"`), `e-traits--pose`, `e-traits__trait--neuf` | `ESceau`, `EEmpreinte`, `ETraits` | `ESceau`, `EEmpreinte`, `ETraits` |
 | Case | `e-case` | `ECase`, `ETache` (case interne) | porteur case (`ECase`), porteur liste, `ETache` |
 | Tâche | `e-liste`, `e-tache`, `e-tache--faite`, `e-tache--attend`, `e-tache__texte`, `e-tache__titre`, `e-tache__meta`, `e-tache__actions` | `EListe`, `ETache` | porteur liste (`EListe`), `ETache` |
@@ -921,8 +916,8 @@ Toutes sont réellement présentes dans les feuilles embarquées des paquets ins
 | Fil d'Ariane | `e-fil-ariane` | `EFilAriane` | porteur navigation |
 | Feuille | `e-feuille`, `e-feuille__entete`, `e-feuille__titre`, `e-feuille__titre--manifeste`, `e-feuille__fermer`, `e-feuille__corps`, `e-feuille__actions`, `e-feuille-fond`, `e-feuille-panneau` | `EFeuille`, `EFeuilleActions`, `Feuilles` (fond et panneau CDK) | `EFeuille` |
 | Carnet | `e-carnet-cadre`, `e-carnet`, `e-pli`, `e-pli--ouvert`, `e-pli__entete`, `e-pli__dos`, `e-pli__marque`, `e-pli__marque--sceau`, `e-pli__marque--pause`, `e-pli__titre`, `e-pli__date`, `e-pli__contenu`, `e-pli__feuille` | `ECarnet`, `EPli` | `ECarnet` |
-| Matrice | `e-matrice-hote`, `e-matrice`, `e-matrice__axe`, `e-matrice__axe--ligne`, `e-matrice__axe--haut`, `e-matrice__axe--bas`, `e-matrice__grille`, `e-quadrant`, `e-quadrant__titre`, `e-quadrant__compte`, `e-quadrant__liste`, `e-quadrant__liste--puces`, `e-quadrant__element`, `e-quadrant__element--arrive` (`e-quadrant--survol` existe mais n'est jamais posée) | `EMatrice` | `EMatrice` |
-| Arête | `e-arete-hote`, `e-arete` (et, sous `.e-arete` dans le SVG : `colonne`, `branche`, `branche--faite`, `branche--a-venir`, `borne`, `borne--faite`, `borne--a-venir`, `tete`, `tete-repere`, `tete-texte`, `nom`, `etat`, `etape`, `etape-cible`, `etape--neuve`) | `EArete` | `EArete` |
+| Matrice | `e-matrice-hote`, `e-matrice`, `e-matrice__axe`, `e-matrice__axe--ligne`, `e-matrice__axe--haut`, `e-matrice__axe--bas`, `e-matrice__grille`, `e-quadrant`, `e-quadrant__titre`, `e-quadrant__compte`, `e-quadrant__liste`, `e-quadrant__liste--puces`, `e-quadrant__element` | `EMatrice` | `EMatrice` |
+| Arête | `e-arete-hote`, `e-arete` (et, sous `.e-arete` dans le SVG : `colonne`, `branche`, `branche--faite`, `borne`, `borne--faite`, `tete`, `tete-repere`, `tete-texte`, `nom`, `etat`, `etape`, `etape-cible`, `etape--neuve`) | `EArete` | `EArete` |
 
 ### 5.4 Quand écrire une classe du kit à la main
 
@@ -1087,11 +1082,11 @@ Relevé en comparant les maquettes `Objectifs`, `Arete`, `Matrice`, `Akari` au c
 | Toutes | Pas d'indicateur de chargement (bouton, zone), pas d'infobulle, pas de panneau latéral, pas de sélecteur de date | Texte d'état en `role="status"` ; `input[type=date][eSaisie]` ; feuilles centrées. |
 | Objectifs | `ECarteObjectif` ne suit pas la maquette (horizon, pourquoi, pas) | Composer avec `article[eCarte]` (§ 2.5). |
 | Objectifs | Pas de repli générique (`<details>` « Accomplis ») ; `ECarnet` n'est pas un accordéon générique | `details.accomplished` natif (`objectives.css`, fait), ou demande d'ajout à Empreinte. |
-| Arête | Rendu d'`EArete` différent de la maquette : bornes carrées au lieu d'empreintes pour les étapes faites, pas d'étiquette encadrée avec corne pour l'étape ouverte, pas de légende (Faite / À faire), troncatures (18 / 22 / 2×15 caractères), `choisir` sans identifiant | Utiliser `EArete` tel quel ; légende avec `<e-empreinte [taille]="20" decorative />` pour « Faite », les deux autres repères demandent une classe dans `objective-page.css` ; passer un nom d'objectif court. |
+| Arête | Rendu d'`EArete` différent de la maquette : bornes carrées au lieu d'empreintes pour les étapes faites, pas d'étiquette encadrée avec corne pour l'étape ouverte, pas de légende (Faite / À faire), troncatures (18 / 22 / 2×15 caractères), `choisir` sans identifiant | Utiliser `EArete` tel quel ; la légende pose une case d'`e-pas` pour « Faite » et une pour « À faire » (`objective-page.html`) ; passer un nom d'objectif court. |
 | Matrice (attend l'API) | Compte de quadrant non personnalisable (« Important · urgent · 4 pas aujourd'hui » impossible, seulement « 4 pas ») ; titres `h3` figés | Accepter « N pas ». |
 | Matrice (attend l'API) | Sous 640px, les axes « Urgent / Pas urgent » restent au-dessus d'une grille passée sur une colonne (la maquette masque les axes) — lu dans la feuille, **non vérifié à l'écran** | À vérifier à 375px ; sinon demande de correction à Empreinte. |
 | Matrice (attend l'API) | Pas de ligne « case + titre + objectif » sans le padding de `li[eTache]` dans un quadrant | `ul[eListe nue] > li[eTache]` (padding en plus), ou `input[eCase]` + `label` dans une grille `.ds-check` (fait, et gardé dans `layout.css` pour son retour). |
 | Akari | ~~Pas de composant « réplique »~~ | Réglé en 0.3.0 : `e-conversation`, `ol[eFil]`, `li[eReplique]` (§ 2.10 bis). |
-| Akari (nouvel objectif) | `EArete` n'a pas de variante brouillon : la tête est toujours un sceau, comptée au gardien → avec le bouton `sceau` « Je m'y engage », deux sceaux | Ne pas afficher l'aperçu d'arête dans le brouillon (la maquette le masque déjà sur mobile) et garder une simple liste des étapes, sans numéro ; ou demande d'ajout à Empreinte. |
+| Akari (nouvel objectif) | `EArete` n'a pas de variante brouillon : la tête est toujours un sceau, comptée au gardien → avec le bouton `sceau` « Je m'y engage », deux sceaux | Ne pas afficher l'aperçu d'arête dans le brouillon (la maquette le masque déjà sur mobile) : l'écran n'a pas d'étapes, Akari les propose une fois l'objectif créé. Ou demande d'ajout à Empreinte. |
 | Akari | ~~Aucun style pour le HTML Markdown rendu~~ | Réglé en 0.3.0 : la prose d'une réplique (§ 2.10 bis) ; `.ds-prose` et `.ds-link` ont quitté Apex. |
 | Voix (toutes) | `motsAEviter` rate les mots accentués et ne connaît pas « erreur » ni les emoji (§ 8.6) | Motifs complémentaires dans le test de voix d'Apex. |

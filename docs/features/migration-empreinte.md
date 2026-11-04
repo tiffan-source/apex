@@ -36,7 +36,7 @@ Redirections : `/objective/:id` → `/objectifs/:id` ; `/matrice`, `/matrix` et 
 
 **Ce qui sort de l'interface**, par décision du périmètre V1 : l'écran Focus du jour (le quadrant « Maintenant » de la matrice devait jouer ce rôle ; la matrice attend l'API, § 4), les cartes de statistiques du tableau de bord, les toasts.
 
-**Ce qui attend le back-end** (aucun cas d'usage n'existe) : laisser filer ou supprimer un objectif, une étape ou un pas ; la pause et la reprise ; la déconnexion ; les domaines de vie ; les échéances des pas ; les empreintes et les paliers. Les maquettes qui les montrent sont suivies sans ces éléments.
+**Ce qui attend le back-end** (aucun cas d'usage n'existe) : laisser filer un objectif, une étape ou un pas ; la pause et la reprise ; la déconnexion ; les domaines de vie ; les échéances des pas ; les empreintes et les paliers. Les maquettes qui les montrent sont suivies sans ces éléments.
 
 ## 4. Le vocabulaire et les données
 
@@ -120,7 +120,7 @@ Le client n'a plus ni domaine ni infrastructure : il appelle l'API d'Apex Brain 
 - **Les codes d'erreur** : chaque refus de l'API porte un code stable ; `SessionStore` garde ce code et `translateAuthError` choisit sa phrase d'après lui, sans plus lire les messages anglais de Supabase.
 - **Le workflow d'Akari** tourne dans le serveur : une panne ramène le tour au repos avec `lastError` (plus de « Akari réfléchit… » sans fin), sans inspecteur Stately.
 - **Les longueurs** : l'API borne un nom à 200 caractères, une description ou un pourquoi à 5 000 (`TEXT_MAX_LENGTH`, `api.models.ts`), un message à Akari à 4 000. Les formulaires s'arrêtent avant (`limitText`, `sheet-validation.ts` ; `[formField]` pose `maxlength`), et e-champ dit « C'est un peu long : … caractères au plus. » pour un texte écrit avant cette limite. La zone de réponse d'Akari ne borne pas encore son message : l'API le refuse, et la note le dit.
-- **Encore à faire côté client** : la déconnexion (`POST /v1/auth/logout`) et retirer une échéance (`dueDate: null`) existent dans l'API mais attendent leur geste dans l'interface. Laisser filer ou supprimer (objectif, étape, pas), la pause et la reprise, les domaines de vie, les échéances des pas, les empreintes et les paliers attendent encore leurs cas d'usage (§ 3).
+- **Encore à faire côté client** : la déconnexion (`POST /v1/auth/logout`), retirer une échéance (`dueDate: null`) et supprimer un objectif, une étape ou un pas (`DELETE`) existent dans l'API mais attendent leur geste dans l'interface. Laisser filer (objectif, étape, pas), la pause et la reprise, les domaines de vie, les échéances des pas, les empreintes et les paliers attendent encore leurs cas d'usage (§ 3).
 - **Plus aucune règle métier dans le client** (2 novembre 2026) : fait ou non fait vient de l'API (`done`) ; le quadrant d'un pas est retiré du client. Il attend le champ d'Apex Brain (§ 4 ; `docs/technical/data-flow.md`, « What the client does not compute ») : d'ici là, la matrice est retirée de la navigation. Le déplacement d'un pas vers un quadrant, lui, ne revient pas (§ 4).
 
 ### Empreinte, en amont (à proposer dans le dépôt `empreinte-studio/empreinte`)

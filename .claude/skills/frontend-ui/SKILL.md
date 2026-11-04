@@ -46,7 +46,7 @@ Pour chaque besoin visuel, descendre l'échelle et s'arrêter au premier niveau 
 
 ## 4. Les règles du brand book, écran par écran
 
-- **Un seul sceau visible à la fois** : bouton `sceau`, `<e-sceau>` ou tête d'`<e-arete>`, coque et feuilles comprises. Il dit l'engagement principal de l'écran (« Nouvel objectif », « Je m'y engage »), jamais une action destructive. L'écran de l'arête a déjà son sceau (la tête) : aucun bouton `sceau` dessus, ni dans une feuille ouverte par-dessus ; de même pour Akari sur un objectif, dont l'arête est affichée à droite. À l'inverse, sur le nouvel objectif, « Je m'y engage » est le sceau : pas d'`<e-arete>` dans le brouillon, mais une simple liste des étapes, sans numéro (catalogue § 9). En développement, le `GardienSceau` écrit un avertissement dans la console dès qu'il y en a deux (une fois par session). `<e-empreinte>` et la marque ne comptent pas.
+- **Un seul sceau visible à la fois** : bouton `sceau`, `<e-sceau>` ou tête d'`<e-arete>`, coque et feuilles comprises. Il dit l'engagement principal de l'écran (« Nouvel objectif », « Je m'y engage »), jamais une action destructive. L'écran de l'arête a déjà son sceau (la tête) : aucun bouton `sceau` dessus, ni dans une feuille ouverte par-dessus ; de même pour Akari sur un objectif, dont l'arête est affichée à droite. À l'inverse, sur le nouvel objectif, « Je m'y engage » est le sceau : pas d'`<e-arete>` dans le brouillon, qui n'a pas encore d'étapes : Akari les propose une fois l'objectif créé (catalogue § 9). En développement, le `GardienSceau` écrit un avertissement dans la console dès qu'il y en a deux (une fois par session). `<e-empreinte>` et la marque ne comptent pas.
 - **Une corne par groupe** (une par liste, une par colonne), seulement sur ce qui compte maintenant : le quadrant « Maintenant », l'entrée de navigation courante, le filtre actif. Toujours avec `aria-current` : `eCorne` le pose, `ECarte[marquee]` aussi. `eCorne` va avec `eSurface` sur le même élément. Jamais en décoration.
 - **Les lumières** (`ciel`, `aube`, `soleil`, `fjord`) disent un domaine de vie, en petites touches (étiquette, filtre) ; une seule peut couvrir une surface. **Jamais un état** : ni un quadrant, ni une étape, ni une erreur. Les domaines attendent le back-end : en V1, pas de lumière, `<e-etiquette>` reste neutre.
 - **Aucun ordre** : étapes et pas sont indépendants. Ni numéro, ni étape « en cours », ni « prochain pas », ni « à venir » : une étape est faite ou à faire, et c'est l'API qui le dit (`done`). Le client l'affiche et compte, il ne décide de rien : aucune étape ne s'ouvre d'elle-même, aucun pas n'est mis en avant.
@@ -206,9 +206,6 @@ La conversation avec Akari (le composant d'Empreinte, voir le piège sur la conv
   <section class="ds-panel ds-gap-5" eSurface eCorne="l" aria-labelledby="titre-brouillon">
     <p class="repere ds-muted">Brouillon · pas encore enregistré</p>
     <h2 class="objectif" id="titre-brouillon">{{ brouillon().titre }}</h2>
-    <ul class="ds-divided">
-      <li class="stage"><span class="corps">Portfolio</span><span class="detail ds-muted">4 pas</span></li>
-    </ul>
     <div class="ds-actions"><button eBouton="sceau" type="button" (click)="engager()">Je m'y engage</button></div>
   </section>
 </div>
