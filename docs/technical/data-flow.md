@@ -82,12 +82,17 @@ The clients are complete applications with their own architecture and data flow.
 -   the mappers (`chore/mapper/`) turn the HTTP contract into View Models.
 
 
-Rules still in the client
--------------------------
+What the client does not compute
+--------------------------------
 
-The API does not expose these yet, so the web client still derives them from what `GET /v1/objectives` returns. Each one should move to the server (a computed field or a use case), where the mobile application can share it:
+The web client holds no business rule. It does not decide whether a stage is done or in progress, which step comes next, whether an objective is « accomplished », nor in which Eisenhower quadrant a step falls or what levels a step gets when it is moved to a quadrant. These are Apex Brain's rules (the decisions are written in `docs/features/migration-empreinte.md`, § 4), shared with the mobile application.
 
--   the Eisenhower quadrant of a step (threshold 3 on importance and urgency, `quadrantOf`) and the levels a step gets when it is moved to a quadrant (`levelsForQuadrant`), in `chore/mapper/matrix.mapper.ts`. The quadrant in `TaskOutput` and a `MoveTaskToQuadrant` use case would replace them;
--   the progress of an objective and of its stages — a stage done, the stage in progress, the next step, an objective « accomplished » (`isStageDone`, `stageStates`, `nextTaskOf`, `isAccomplished`), in `chore/mapper/objective-view.mapper.ts`.
+The API does not return them yet, so the screens do not show them (removed from the client on 2 November 2026):
 
-No other business rule belongs in the client: a new one goes into the API first.
+-   the arête draws every stage the same way, with its number of steps under its name, and opens on the first stage;
+-   the objective cards show the objective, its horizon, its « why » and how many stages and steps it holds — no progress, no next step, no « Accomplis » list;
+-   the matrix screen is withdrawn (`/matrice`, `/matrix` and `/focus` lead home), and so is « move to a quadrant ».
+
+To bring them back, the API returns them first — computed fields in `GET /v1/objectives` (the state of a stage, the next step, an objective accomplished, the quadrant of a step) and a `MoveTaskToQuadrant` use case — then the client maps and displays them. Never compute them in the client.
+
+What stays in the client is presentation and form values, not rules: the names of the five importance and urgency levels (`IMPORTANCE_OPTIONS`, `URGENCY_OPTIONS`) and the levels pre-selected in the « Ajouter un pas » sheet (`NEW_TASK_LEVELS`, which the person changes), all in `chore/constants/task.constante.ts`. The client sends the levels; which quadrant they put a step in is the API's answer.

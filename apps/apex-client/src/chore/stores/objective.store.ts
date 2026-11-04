@@ -12,7 +12,6 @@ import { withUpdateTaskDone } from "./features/with-update-task-done";
 import { withEditObjective } from "./features/with-edit-objective";
 import { withTaskEdit } from "./features/with-task-edit";
 import { withObjectiveViews } from "./features/with-objective-views";
-import { withMoveTaskToQuadrant } from "./features/with-move-task-to-quadrant";
 
 export type ObjectiveState = {
   objectives: ObjectiveViewModel[];
@@ -41,7 +40,6 @@ export const ObjectiveStore = signalStore(
   withUpdateTaskDone(),
   withTaskEdit(),
   withObjectiveViews(),
-  withMoveTaskToQuadrant(),
   withHooks((store, session = inject(SessionStore)) =>({
     onInit() {
       // Les objectifs de la personne connectée (l'API la reconnaît à son jeton), rechargés quand elle change.

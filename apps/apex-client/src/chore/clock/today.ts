@@ -2,7 +2,7 @@ import { DestroyRef, NgZone, inject, signal, type Signal } from '@angular/core';
 import { toDateInputValue } from '../mapper/date-input.mapper';
 
 /*
- * Le jour du repère des écrans (« Lundi 19 octobre » : Objectifs, la matrice). Un seul format, une seule
+ * Le jour du repère des écrans (« Lundi 19 octobre » : Objectifs). Un seul format, une seule
  * horloge : le repère change à minuit, même si l'onglet reste ouvert.
  */
 

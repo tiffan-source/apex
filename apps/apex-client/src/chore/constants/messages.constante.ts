@@ -1,5 +1,4 @@
 import { motsAEviter } from '@empreinte-studio/angular/core';
-import { TITRES_QUADRANTS, type Quadrant } from '@empreinte-studio/angular/matrice';
 
 /*
  * Les phrases que les stores disent à la personne, dans la voix d'Empreinte : tutoiement,
@@ -21,11 +20,6 @@ export const SUCCESS_ANNOUNCEMENTS = {
   taskUndone: 'Ce pas est de nouveau à faire.',
 } as const;
 
-/** L'annonce d'un pas déplacé dans la matrice : « Ce pas passe dans « À planifier ». » */
-export function taskMovedAnnouncement(quadrant: Quadrant): string {
-  return `Ce pas passe dans « ${TITRES_QUADRANTS[quadrant]} ».`;
-}
-
 /** Les signalements : ce qui n'a pas marché, et quoi faire. */
 export const FAILURE_REPORTS = {
   createObjective: "Je n'ai pas pu enregistrer cet objectif. Vérifie ta connexion, puis réessaie.",
@@ -34,7 +28,6 @@ export const FAILURE_REPORTS = {
   addTask: "Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.",
   editTask: "Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.",
   toggleTask: "Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.",
-  moveTask: "Je n'ai pas pu déplacer ce pas. Vérifie ta connexion, puis réessaie.",
   loadObjectives: "Je n'ai pas pu charger tes objectifs. Vérifie ta connexion, puis recharge la page.",
   objectiveNotFound: 'Je ne retrouve plus cet objectif. Recharge la page, puis réessaie.',
   taskNotFound: 'Je ne retrouve plus ce pas. Recharge la page, puis réessaie.',

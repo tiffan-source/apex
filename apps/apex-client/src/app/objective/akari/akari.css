@@ -22,7 +22,7 @@
 }
 
 /* Une étape de la liste : son numéro dans une colonne étroite (28px), le nom,
-   le compte de pas à droite ; l'état passe sous le nom. */
+   le compte de pas à droite ; l'horizon passe sous le nom. */
 .stage {
   display: grid;
   grid-template-columns: var(--ds-space-7) minmax(0, 1fr) auto;
