@@ -18,7 +18,7 @@
     <div class="ds-panels ds-cols-7-6 panels">
       <!-- La conversation d'Empreinte : le fil (qui défile seul et suit ses dernières répliques), ce que fait
            Akari, la zone de réponse. Les messages sont rendus en Markdown assaini ; l'invitation et la demande
-           d'accord sont des répliques avec leurs boutons. -->
+           d'accord sont des répliques avec leurs boutons ; le journal du tour en cours, une réplique sans bouton. -->
       <e-conversation
         class="conversation"
         libelle="Conversation avec Akari"
@@ -32,7 +32,13 @@
         (action)="act($event)"
       >
         <ng-template [eRepliqueContenu]="replies()" let-reply>
-          @if (reply.markdown) {
+          @if (reply.journal) {
+            <ol class="journal">
+              @for (line of reply.journal; track $index) {
+                <li class="detail ds-muted">{{ line }}</li>
+              }
+            </ol>
+          } @else if (reply.markdown) {
             <div [innerHTML]="reply.texte | markdown"></div>
           } @else {
             <p>{{ reply.texte }}</p>

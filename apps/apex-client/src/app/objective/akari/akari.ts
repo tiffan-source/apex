@@ -44,13 +44,16 @@ export type AkariInvitation = {
 };
 
 /**
- * Une réplique du fil d'Akari : un message de la conversation, l'invitation d'Akari ou sa demande d'accord.
- * Un message est rendu en Markdown assaini ; les phrases de l'écran restent du texte.
+ * Une réplique du fil d'Akari : un message de la conversation, ce qu'Akari a déjà fait pendant ce tour,
+ * son invitation ou sa demande d'accord. Un message est rendu en Markdown assaini ; les phrases de l'écran
+ * restent du texte.
  */
 export type AkariReply = Replique & {
   readonly markdown: boolean;
   /** L'invitation qu'accepte son bouton. */
   readonly invitation?: AkariInvitation;
+  /** Les lignes du journal du tour en cours. */
+  readonly journal?: readonly string[];
 };
 
 /** Une seule colonne (akari.css) : la conversation suit l'en-tête de la page. */
@@ -58,6 +61,7 @@ const STACKED_LAYOUT = '(max-width: 1100px)';
 
 /** Les répliques que l'écran ajoute après les messages, et les boutons de la demande d'accord. */
 export const INVITATION_REPLY_ID = 'akari-invitation';
+export const JOURNAL_REPLY_ID = 'akari-journal';
 export const PERMISSION_REPLY_ID = 'akari-demande';
 export const ACCEPT_ACTION = 'accepter';
 export const DECLINE_ACTION = 'pas-maintenant';
@@ -246,9 +250,9 @@ export class Akari {
   });
 
   /**
-   * Le fil : les messages de la conversation, puis l'invitation d'Akari ou sa demande d'accord, avec leurs
-   * boutons. Le message que la personne vient d'envoyer garde son id temporaire jusqu'à son enregistrement :
-   * il s'écrit en encre douce jusque-là.
+   * Le fil : les messages de la conversation, puis l'invitation d'Akari, le journal du tour en cours et sa
+   * demande d'accord, avec leurs boutons. Le message que la personne vient d'envoyer garde son id temporaire
+   * jusqu'à son enregistrement : il s'écrit en encre douce jusque-là.
    */
   protected readonly replies = computed<AkariReply[]>(() => {
     const replies: AkariReply[] = this.chat.orderLatestMessages().map((message) => ({
@@ -267,6 +271,16 @@ export class Akari {
         markdown: false,
         invitation,
         actions: [{ id: ACCEPT_ACTION, libelle: invitation.action }],
+      });
+    }
+    const journal = this.chat.journal();
+    if (journal.length) {
+      replies.push({
+        id: JOURNAL_REPLY_ID,
+        auteur: 'assistant',
+        texte: journal.join(' '),
+        markdown: false,
+        journal,
       });
     }
     if (this.chat.isAwaitingPermission()) {
