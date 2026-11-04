@@ -3,8 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { ChatStore } from '../../app/objective/akari/chat.store';
 import { AssistantApi } from '../api/assistant.api';
 import { ApiError } from '../api/api-error';
-import type { ToolCall, WorkflowState } from '../api/api.models';
-import { AKARI_WRITE_MAX_POLLS, AKARI_WRITE_POLL_INTERVAL, AkariWritesStore, isExecutingTool } from './akari-writes.store';
+import type { ToolCall, WorkflowActivityStep, WorkflowState } from '../api/api.models';
+import { AKARI_WRITE_MAX_POLLS, AKARI_WRITE_POLL_INTERVAL, AkariWritesStore, isWriting } from './akari-writes.store';
 import { AnnoncesStore } from './annonces.store';
 import { ObjectiveStore } from './objective.store';
 import { SessionStore } from './session.store';
@@ -14,16 +14,16 @@ import { SessionStore } from './session.store';
  * accepté est exécuté sur le serveur, même si l'écran Akari (et son ChatStore) est parti entre-temps.
  */
 
-const READY = 'Ready For New Message';
-const EXECUTING = { ExecutingAllTool: 'ExecutingTool' };
-const ASKING = { ExecutingAllTool: 'WaitingForUserPermission' };
+const READY = null;
+const EXECUTING = 'writing';
+const ASKING = 'awaiting-permission';
 const STAGE_CALL: ToolCall = { id: 'call-1', name: 'createSubObjective', arguments: { parentObjectiveId: 'semi', title: 'Portfolio' } };
 const TASK_CALL: ToolCall = { id: 'call-2', name: 'createTask', arguments: { objectiveId: 'portfolio', title: 'Trois projets' } };
 
-const state = (value: WorkflowState['value'], overrides: Partial<WorkflowState> = {}): WorkflowState => ({
+const state = (step: WorkflowActivityStep | null, overrides: Partial<WorkflowState> = {}): WorkflowState => ({
   objectiveId: 'semi',
-  value,
-  status: value === READY ? 'ready' : 'processing',
+  status: step === READY ? 'ready' : 'processing',
+  activity: step === READY ? null : { step, elapsedMs: 0, round: 1, done: [] },
   pendingToolCall: null,
   lastRegisteredMessage: null,
   lastError: null,
@@ -82,13 +82,18 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-describe('isExecutingTool', () => {
-  it('ne reconnaît que l’exécution d’un outil', () => {
-    expect(isExecutingTool(EXECUTING)).toBe(true);
-    expect(isExecutingTool(ASKING)).toBe(false);
-    expect(isExecutingTool({ ExecutingAllTool: 'PreparingNextTool' })).toBe(false);
-    expect(isExecutingTool('SendingCallResultToAI')).toBe(false);
-    expect(isExecutingTool(undefined)).toBe(false);
+describe('isWriting', () => {
+  it('ne reconnaît que l’écriture de ce que la personne a acceptée', () => {
+    expect(isWriting(state(EXECUTING))).toBe(true);
+    expect(isWriting(state(ASKING))).toBe(false);
+    expect(isWriting(state('reading'))).toBe(false);
+    expect(isWriting(state('reviewing'))).toBe(false);
+    expect(isWriting(state(READY))).toBe(false);
+  });
+
+  it('attend encore un tour qui ne dit pas ce qu’il fait', () => {
+    expect(isWriting(state(READY, { status: 'processing' }))).toBe(true);
+    expect(isWriting(state(READY, { status: 'awaiting-permission' }))).toBe(false);
   });
 });
 
@@ -100,7 +105,7 @@ describe('AkariWritesStore', () => {
     await tick(3 * AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).not.toHaveBeenCalled();
 
-    setState(state('SendingCallResultToAI'));
+    setState(state('reviewing'));
     await tick(AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
 
@@ -110,7 +115,7 @@ describe('AkariWritesStore', () => {
 
   it('recharge tout de suite quand l’outil avait déjà tourné à la réponse de l’API', async () => {
     const { store, assistant, objectives } = setup();
-    store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.resolve(state('SendingCallResultToAI')) });
+    store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.resolve(state('reviewing')) });
     await tick();
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
     expect(assistant.state).not.toHaveBeenCalled();
@@ -118,7 +123,7 @@ describe('AkariWritesStore', () => {
 
   it('une panne passagère pendant l’écriture : l’état est relu jusqu’à ce que le serveur réponde, puis l’arête se remplit', async () => {
     const { store, assistant, objectives, setState } = setup();
-    setState(state('SendingCallResultToAI'));
+    setState(state('reviewing'));
     assistant.state
       .mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 0, 'Http failure response'))
       .mockRejectedValueOnce(new ApiError('UNKNOWN_ERROR', 503, 'Service unavailable'))
@@ -157,7 +162,7 @@ describe('AkariWritesStore', () => {
 
   it('un accord resté sans réponse claire a pu arriver : l’état est relu, puis l’arête est rechargée', async () => {
     const { store, assistant, objectives, setState } = setup();
-    setState(state('SendingCallResultToAI'));
+    setState(state('reviewing'));
     store.reloadAfterWrite({ objectiveId: 'semi', answered: Promise.reject(new ApiError('NETWORK_ERROR', 0, 'Http failure response')) });
     await tick(AKARI_WRITE_POLL_INTERVAL);
     expect(assistant.state).toHaveBeenCalledTimes(1);
@@ -196,7 +201,7 @@ describe('AkariWritesStore', () => {
     chat.respondToPermission(true);
     expect(assistant.respondToPermission).toHaveBeenLastCalledWith('semi', true, 'call-2');
     await tick();
-    setState(state('SendingCallResultToAI'));
+    setState(state('reviewing'));
     await tick(AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(2);
 
@@ -216,7 +221,7 @@ describe('AkariWritesStore', () => {
     leave(); // « Voir l'arête », ou l'accueil : ChatStore part avec l'écran, avant même la réponse de l'API
 
     await tick();
-    setState(state('SendingCallResultToAI'));
+    setState(state('reviewing'));
     await tick(AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);
   });

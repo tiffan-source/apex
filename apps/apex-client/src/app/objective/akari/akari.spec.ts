@@ -8,9 +8,10 @@ import { SessionStore } from '../../../chore/stores/session.store';
 import type { ObjectiveViewModel, TaskViewModel } from '../../../chore/models/objective.viewmodel';
 import { rootObjectiveOptions, toObjectiveDetail } from '../../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../../chore/constants/messages.constante';
-import { Akari, objectiveInvitation, permissionPrompt, stageInvitation } from './akari';
+import { Akari, JOURNAL_REPLY_ID, objectiveInvitation, permissionPrompt, stageInvitation } from './akari';
 import { UNTITLED_STAGE } from '../stage-labels';
-import { AKARI_REPLIED, AKARI_REPORTS, AKARI_STATUS, ChatStore } from './chat.store';
+import { AKARI_JOURNAL, AKARI_STATUS, AKARI_STILL_THINKING, AKARI_TAKING_LONGER, akariStatusLine } from './activity.mapper';
+import { AKARI_REPLIED, AKARI_REPORTS, ChatStore } from './chat.store';
 import type { MessageViewModel, PermissionRequestViewModel } from './chat.models';
 
 /*
@@ -50,7 +51,8 @@ function fakeChat() {
     canSendMessage: signal(true),
     isAwaitingPermission: signal(false),
     permissionRequest: signal<PermissionRequestViewModel | null>(null),
-    processingStatus: signal<string>(AKARI_STATUS.SendingPromptToAI),
+    processingStatus: signal<string>(AKARI_STATUS.thinking),
+    journal: signal<string[]>([]),
     clearMessages: vi.fn(),
     loadChatHistory: vi.fn(),
     initWorkflow: vi.fn(),
@@ -467,9 +469,42 @@ describe('Akari : la ligne d’état et la zone de réponse', () => {
 
     chat.isStreaming.set(true);
     chat.canSendMessage.set(false);
-    chat.processingStatus.set(AKARI_STATUS.ExecutingAllTool);
+    chat.processingStatus.set(AKARI_STATUS.reading);
     await refresh(fixture);
     expect(text(statusLine(root))).toBe('Akari regarde ton objectif…');
+  });
+
+  it('dit au-dessus de la ligne d’état ce qu’Akari a déjà fait, dans sa colonne, le temps du tour', async () => {
+    const { fixture, chat, root } = await setup({ history: HISTORY });
+    expect(root.querySelector('.journal')).toBeNull();
+
+    chat.isStreaming.set(true);
+    chat.canSendMessage.set(false);
+    chat.journal.set(["J'ai noté ton message.", "J'ai regardé ton objectif."]);
+    await refresh(fixture);
+
+    const lines = [...root.querySelectorAll('ol.journal > li')].map((line) => text(line));
+    expect(lines).toEqual(["J'ai noté ton message.", "J'ai regardé ton objectif."]);
+    expect(root.querySelector('.journal')?.closest('li.e-replique')?.classList).toContain('e-replique--assistant');
+    expect(root.querySelector('.journal')?.closest('.e-replique__prose')).not.toBeNull();
+
+    chat.journal.set([]);
+    chat.isStreaming.set(false);
+    await refresh(fixture);
+    expect(root.querySelector('.journal')).toBeNull();
+  });
+
+  it('pose le journal avant la demande d’accord, qui attend sa réponse en dernier', async () => {
+    const { fixture, chat, root } = await setup({ history: HISTORY });
+    chat.journal.set(["J'ai vérifié s'il me fallait ton accord."]);
+    chat.isAwaitingPermission.set(true);
+    chat.permissionRequest.set({ kind: 'stage', title: 'Portfolio', parentId: 'semi' });
+    await refresh(fixture);
+
+    const last = [...root.querySelectorAll('.e-conversation li.e-replique')].slice(-2).map((reply) => text(reply));
+    expect(last[0]).toContain("J'ai vérifié s'il me fallait ton accord.");
+    expect(last[1]).toContain("Je te propose d'ajouter l'étape « Portfolio ». On l'ajoute ?");
+    expect(JOURNAL_REPLY_ID).toBe('akari-journal');
   });
 
   it('a un libellé accessible et un bouton « Envoyer »', async () => {
@@ -744,6 +779,10 @@ describe('Akari : la voix', () => {
     permissionPrompt({ kind: 'other' }),
     UNTITLED_STAGE,
     ...Object.values(AKARI_STATUS),
+    ...Object.values(AKARI_JOURNAL),
+    akariStatusLine({ step: 'reviewing', elapsedMs: 0, round: 3, done: [] }),
+    AKARI_STILL_THINKING,
+    AKARI_TAKING_LONGER,
     ...Object.values(AKARI_REPORTS),
     AKARI_REPLIED,
   ];
@@ -759,6 +798,7 @@ describe('Akari : la voix', () => {
       { etape: 'endurance', history: HISTORY },
       { history: HISTORY, configure: (c) => { c.isAwaitingPermission.set(true); c.permissionRequest.set({ kind: 'task', title: 'Courir 10 km', objectiveId: 'endurance' }); } },
       { history: HISTORY, configure: (c) => { c.isStreaming.set(true); c.canSendMessage.set(false); } },
+      { history: HISTORY, configure: (c) => { c.isStreaming.set(true); c.canSendMessage.set(false); c.journal.set(Object.values(AKARI_JOURNAL)); } },
       { configure: (c) => { c.isLoading.set(true); c.historyLoaded.set(false); } },
       { configure: (_, store) => { store.objectives.set([]); store.objectivesLoaded.set(false); } },
       { configure: (_, store) => { store.objectives.set([]); store.objectivesLoaded.set(false); store.error.set('chargement non abouti'); } },
