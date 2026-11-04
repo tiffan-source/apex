@@ -85,14 +85,12 @@ The clients are complete applications with their own architecture and data flow.
 What the client does not compute
 --------------------------------
 
-The web client holds no business rule. It does not decide whether a stage is done or in progress, which step comes next, whether an objective is « accomplished », nor in which Eisenhower quadrant a step falls. These are Apex Brain's rules (the decisions are written in `docs/features/migration-empreinte.md`, § 4), shared with the mobile application.
+The web client holds no business rule. It does not decide whether a stage is done, whether an objective is « accomplished », nor in which Eisenhower quadrant a step falls. These are Apex Brain's rules (the decisions are written in `docs/features/migration-empreinte.md`, § 4), shared with the mobile application.
 
-The API does not return them yet, so the screens do not show them (removed from the client on 2 November 2026):
+Whether a stage or an objective is done, the API says so (`done` in `GET /v1/objectives`), the client displays it and counts it, and reads the objectives again after a write that can change it (`loadObjectives`, after checking, adding or moving a step). That re-read keeps trying while the failure is transient: the shell's note comes with the fourth retry and goes as soon as the server answers. The words « étape accomplie » follow `done` too, never the count of steps. Stages and steps have no order: they are independent, the client numbers none and picks none.
 
--   the arête draws every stage the same way, with its number of steps under its name, and opens on the first stage;
--   the objective cards show the objective, its horizon, its « why » and how many stages and steps it holds — no progress, no next step, no « Accomplis » list;
--   the matrix screen is withdrawn (`/matrice`, `/matrix` and `/focus` lead home). When it returns, a step does not move from it: it changes quadrant when its importance or urgency is edited on its objective.
+The API does not return the quadrant of a step yet, so the screens do not show it (removed from the client on 2 November 2026): the matrix screen is withdrawn (`/matrice`, `/matrix` and `/focus` lead home). When it returns, a step does not move from it: it changes quadrant when its importance or urgency is edited on its objective.
 
-To bring them back, the API returns them first — computed fields in `GET /v1/objectives` (the state of a stage, the next step, an objective accomplished, the quadrant of a step) — then the client maps and displays them. Never compute them in the client.
+To bring it back, the API returns it first — a computed field in `GET /v1/objectives` — then the client maps and displays it. Never compute it in the client.
 
 What stays in the client is presentation and form values, not rules: the names of the five importance and urgency levels (`IMPORTANCE_OPTIONS`, `URGENCY_OPTIONS`) and the levels pre-selected in the « Ajouter un pas » sheet (`NEW_TASK_LEVELS`, which the person changes), all in `chore/constants/task.constante.ts`. The client sends the levels; which quadrant they put a step in is the API's answer.

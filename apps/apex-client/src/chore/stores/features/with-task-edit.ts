@@ -25,7 +25,7 @@ export type EditTaskInput = {
 
 export function withTaskEdit() {
   return signalStoreFeature(
-    { state: type<ObjectiveState & RequestStatusState>() },
+    { state: type<ObjectiveState & RequestStatusState>(), methods: type<{ loadObjectives: () => unknown }>() },
     withMethods((
       store,
       objectivesApi = inject(ObjectivesApi),
@@ -100,6 +100,8 @@ export function withTaskEdit() {
                     }
                     patchState(store, { requestStatus: 'fulfilled' });
                     annonces.annoncer(SUCCESS_ANNOUNCEMENTS.taskSaved);
+                    // Un pas déplacé peut changer ce qui est fait : c'est l'API qui le dit.
+                    store.loadObjectives();
                   },
                   error: (error) => {
                     console.error(error);

@@ -22,31 +22,32 @@ import { Feuilles } from '@empreinte-studio/angular/feuille';
 import { EIcone } from '@empreinte-studio/angular/icone';
 import { EFilAriane } from '@empreinte-studio/angular/navigation';
 import { ENote, ENoteActions } from '@empreinte-studio/angular/note';
+import { EPas } from '@empreinte-studio/angular/pas';
 import { EListe, ETache, ETacheActions } from '@empreinte-studio/angular/tache';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { stageIdFromArete } from '../../chore/mapper/objective-view.mapper';
 import { CRUMB_TITLE_MAX, shortTitle } from '../../chore/mapper/title.mapper';
 import { isTemporaryId } from '../../chore/stores/utils/map-optimistique-id';
+import { WriteQueue } from '../../chore/stores/utils/write-queue';
 import type { StageTaskViewModel, StageViewModel } from '../../chore/models/objective-detail.viewmodel';
 import { AddStageSheet, type AddStageSheetData } from './sheets/add-stage-sheet';
 import { AddTaskSheet, type AddTaskSheetData } from './sheets/add-task-sheet';
 import { EditObjectiveSheet, type EditObjectiveSheetData } from './sheets/edit-objective-sheet';
 import { EditStageSheet, type EditStageSheetData } from './sheets/edit-stage-sheet';
 import { EditTaskSheet, type EditTaskSheetData } from './sheets/edit-task-sheet';
-import { stageName } from './stage-labels';
+import { stageAccomplishment, stageName, stageStateLabel } from './stage-labels';
 
-/** Ce que l'étape ouverte suit : l'objectif, ses étapes et celle ouverte par défaut. */
+/** Ce que l'étape ouverte suit : l'objectif et ses étapes. */
 type OpenStageSource = {
   objectiveId: string;
   stageIds: readonly string[];
-  defaultStageId: string | null;
 };
 
 /**
  * L'écran d'un objectif : l'arête (route /objectifs/:id, maquette « Arete »).
- * À gauche l'arête de ses étapes, dont la tête est le sceau de l'écran ; à droite l'étape choisie
- * et ses pas. Les modifications passent par des feuilles, ouvertes avec l'injecteur de l'écran pour
+ * À gauche l'arête de ses étapes, dont la tête est le sceau de l'écran ; à droite l'étape que la personne
+ * choisit, et ses pas : aucun ordre entre les étapes, l'écran n'en ouvre aucune de lui-même. Les modifications passent par des feuilles, ouvertes avec l'injecteur de l'écran pour
  * atteindre ObjectiveStore (fourni par la coque) ; toutes les actions du store sont optimistes.
  */
 @Component({
@@ -60,6 +61,7 @@ type OpenStageSource = {
     EListe,
     ENote,
     ENoteActions,
+    EPas,
     ETache,
     ETacheActions,
   ],
@@ -73,11 +75,14 @@ export class ObjectivePage {
 
   protected readonly store = inject(ObjectiveStore);
   private readonly annonces = inject(AnnoncesStore);
+  private readonly writes = inject(WriteQueue);
   private readonly feuilles = inject(Feuilles);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
 
+  protected readonly stageStateLabel = stageStateLabel;
+  protected readonly stageAccomplishment = stageAccomplishment;
   /** La coque affiche un signalement (une note d'Akari) : l'écran n'en pose pas une seconde. */
   protected readonly hasReport = this.annonces.aUnSignalement;
   protected readonly stageName = stageName;
@@ -109,22 +114,19 @@ export class ObjectivePage {
   protected readonly stageCount = computed(() => compter(this.detail()?.stages.length ?? 0, 'étape'));
 
   /**
-   * L'id de l'étape ouverte à droite de l'arête : d'abord la première. Elle reste ouverte tant qu'elle
-   * existe : cocher un pas ne fait ni sauter le panneau, ni perdre le focus de la case. Elle revient à la
-   * première étape sur un autre objectif, et quand son id temporaire est remplacé à l'enregistrement.
+   * L'id de l'étape ouverte à droite de l'arête, celle que la personne a choisie ; null tant qu'elle n'en a
+   * choisi aucune. Elle reste ouverte tant qu'elle existe, même une fois faite, et quand son id temporaire est
+   * remplacé à l'enregistrement. Sur un autre objectif, plus rien n'est ouvert.
    */
   private readonly openStageId = linkedSignal<OpenStageSource, string | null>({
     source: () => {
       const detail = this.detail();
-      return {
-        objectiveId: this.id(),
-        stageIds: detail?.stages.map((stage) => stage.id) ?? [],
-        defaultStageId: detail?.defaultStageId ?? null,
-      };
+      return { objectiveId: this.id(), stageIds: detail?.stages.map((stage) => stage.id) ?? [] };
     },
     computation: (source, previous) => {
-      const kept = previous?.source.objectiveId === source.objectiveId ? previous.value : null;
-      return kept !== null && source.stageIds.includes(kept) ? kept : source.defaultStageId;
+      if (!previous?.value || previous.source.objectiveId !== source.objectiveId) return null;
+      const kept = this.writes.resolve(previous.value);
+      return source.stageIds.includes(kept) ? kept : null;
     },
   });
 
@@ -149,11 +151,23 @@ export class ObjectivePage {
 
   /** Une arête a été choisie : son étape s'ouvre à droite, et les lecteurs d'écran l'entendent. */
   protected chooseStage(etape: EtapeArete): void {
-    const id = stageIdFromArete(etape);
-    const stage = this.detail()?.stages.find((item) => item.id === id);
+    const stages = this.detail()?.stages ?? [];
+    const id = stageIdFromArete(etape) ?? this.foldedDoneStageId(stages);
+    const stage = stages.find((item) => item.id === id);
     if (!stage) return;
     this.openStageId.set(stage.id);
-    this.annonces.annoncer(`Étape ${stage.index} : ${stageName(stage.title)}`);
+    this.annonces.annoncer(`${stageName(stage.title)} · ${stageStateLabel(stage.done)}`);
+  }
+
+  /**
+   * Au-delà de 8 étapes, Empreinte replie les étapes faites dans une arête « Faites » sans id. Chaque choix
+   * de cette arête ouvre une autre étape faite, à tour de rôle : toutes restent atteignables.
+   */
+  private foldedDoneStageId(stages: readonly StageViewModel[]): string | null {
+    const done = stages.filter((stage) => stage.done);
+    if (done.length === 0) return null;
+    const open = done.findIndex((stage) => stage.id === this.openStageId());
+    return done[open > 0 ? open - 1 : done.length - 1].id;
   }
 
   /** Cocher ou décocher un pas : le store le change tout de suite, et revient en arrière s'il n'est pas enregistré. */
@@ -206,9 +220,9 @@ export class ObjectivePage {
   }
 
   /**
-   * Le bouton qui a ouvert la feuille peut avoir disparu (la première étape ajoutée depuis la note d'Akari,
-   * un pas rangé dans une autre étape) : le focus tomberait alors sur la page entière. Il va sur le titre
-   * de l'étape ouverte, sinon sur celui de l'objectif.
+   * Le bouton qui a ouvert la feuille peut avoir disparu (une étape ajoutée depuis la note d'Akari, un pas
+   * rangé dans une autre étape) : le focus tomberait alors sur la page entière. Il va sur le titre de l'étape
+   * ouverte, sinon sur celui de l'objectif.
    */
   private recoverFocus(): void {
     const active = this.document.activeElement;

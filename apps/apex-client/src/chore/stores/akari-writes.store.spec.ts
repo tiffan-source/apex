@@ -192,7 +192,7 @@ describe('AkariWritesStore', () => {
     await tick();
     expect(objectives.loadObjectives).not.toHaveBeenCalled();
 
-    // L'étape est écrite ; Akari demande déjà le pas suivant : le tour n'est pas fini, l'arête se remplit.
+    // L'étape est écrite ; Akari demande déjà un autre pas : le tour n'est pas fini, l'arête se remplit.
     setState(asking(TASK_CALL));
     await tick(AKARI_WRITE_POLL_INTERVAL);
     expect(objectives.loadObjectives).toHaveBeenCalledTimes(1);

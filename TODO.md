@@ -26,9 +26,10 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [x] Les longueurs de l'API (200 caractères pour un nom, 5 000 pour une description ou un pourquoi) arrêtent la saisie dans les formulaires
 - [] Déconnexion : `POST /v1/auth/logout` existe, il manque le geste dans l'interface
 - [] Retirer une échéance : l'API accepte `dueDate: null`, les feuilles « Modifier » l'interdisent encore
-- [] Cas d'usage manquants : laisser filer ou supprimer (objectif, étape, pas)
+- [] Supprimer un objectif, une étape ou un pas : l'API le permet (`DELETE /v1/objectives/:id`, `DELETE /v1/tasks/:id`), le geste manque à l'interface
+- [] Cas d'usage manquant : laisser filer (objectif, étape, pas)
 - [x] Plus aucune règle métier dans le client : progression (états d'étape, prochain pas, objectif accompli), quadrant d'un pas et déplacement vers un quadrant retirés
-- [] Apex Brain : rendre la progression (état de chaque étape, prochain pas, objectif accompli) et le quadrant de chaque pas dans `GET /v1/objectives` ; puis les réafficher (cartes, arête, Akari, liste « Accomplis », matrice)
+- [] Apex Brain : rendre le quadrant de chaque pas dans `GET /v1/objectives` ; puis réafficher la matrice et le quadrant des pas
 - [] Akari : remplacer l'interrogation chaque seconde par un flux (SSE) côté API
 
 ### Empreinte, en amont (dépôt `empreinte-studio/empreinte`)
@@ -38,7 +39,7 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [] `ELienNav` ne pose la corne que pour `aria-current="page"`
 - [] `e-menu` sans état choisi
 - [] `e-matrice` : axes faux sous 640px, compte non personnalisable, titres figés
-- [] `e-arete` : pas d'état neutre (sans progression, Apex dessine toutes les étapes « à venir », et le résumé lu aux lecteurs d'écran les compte ainsi), pas de brouillon, pas de légende, noms tronqués, pas d'id dans `choisir`, étape choisie non marquée
+- [] `e-arete` : pas de brouillon, pas de légende (Apex compose avec des cases d'`e-pas`), noms tronqués, pas d'id dans `choisir`, étape choisie non marquée
 - [] `e-filtres` : pas de nom accessible par option (le libellé coupé est le seul nom du bouton)
 - [x] Un style « prose » pour le Markdown, dans les répliques (0.3.0)
 - [] `e-conversation` : dire aux lecteurs d'écran les répliques d'Akari qui arrivent (le fil n'est pas une région annoncée : seuls la ligne d'état et, dans Apex, la demande d'accord sont dites)

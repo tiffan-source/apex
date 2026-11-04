@@ -46,11 +46,12 @@ Pour chaque besoin visuel, descendre l'échelle et s'arrêter au premier niveau 
 
 ## 4. Les règles du brand book, écran par écran
 
-- **Un seul sceau visible à la fois** : bouton `sceau`, `<e-sceau>` ou tête d'`<e-arete>`, coque et feuilles comprises. Il dit l'engagement principal de l'écran (« Nouvel objectif », « Je m'y engage »), jamais une action destructive. L'écran de l'arête a déjà son sceau (la tête) : aucun bouton `sceau` dessus, ni dans une feuille ouverte par-dessus ; de même pour Akari sur un objectif, dont l'arête est affichée à droite. À l'inverse, sur le nouvel objectif, « Je m'y engage » est le sceau : pas d'`<e-arete>` dans le brouillon, mais la liste numérotée des étapes (catalogue § 9). En développement, le `GardienSceau` écrit un avertissement dans la console dès qu'il y en a deux (une fois par session). `<e-empreinte>` et la marque ne comptent pas.
-- **Une corne par groupe** (une par liste, une par colonne), seulement sur ce qui compte maintenant : l'étape en cours, le quadrant « Maintenant », l'entrée de navigation courante, le filtre actif. Toujours avec `aria-current` : `eCorne` le pose, `ECarte[marquee]` aussi. `eCorne` va avec `eSurface` sur le même élément. Jamais en décoration.
+- **Un seul sceau visible à la fois** : bouton `sceau`, `<e-sceau>` ou tête d'`<e-arete>`, coque et feuilles comprises. Il dit l'engagement principal de l'écran (« Nouvel objectif », « Je m'y engage »), jamais une action destructive. L'écran de l'arête a déjà son sceau (la tête) : aucun bouton `sceau` dessus, ni dans une feuille ouverte par-dessus ; de même pour Akari sur un objectif, dont l'arête est affichée à droite. À l'inverse, sur le nouvel objectif, « Je m'y engage » est le sceau : pas d'`<e-arete>` dans le brouillon, qui n'a pas encore d'étapes : Akari les propose une fois l'objectif créé (catalogue § 9). En développement, le `GardienSceau` écrit un avertissement dans la console dès qu'il y en a deux (une fois par session). `<e-empreinte>` et la marque ne comptent pas.
+- **Une corne par groupe** (une par liste, une par colonne), seulement sur ce qui compte maintenant : le quadrant « Maintenant », l'entrée de navigation courante, le filtre actif. Toujours avec `aria-current` : `eCorne` le pose, `ECarte[marquee]` aussi. `eCorne` va avec `eSurface` sur le même élément. Jamais en décoration.
 - **Les lumières** (`ciel`, `aube`, `soleil`, `fjord`) disent un domaine de vie, en petites touches (étiquette, filtre) ; une seule peut couvrir une surface. **Jamais un état** : ni un quadrant, ni une étape, ni une erreur. Les domaines attendent le back-end : en V1, pas de lumière, `<e-etiquette>` reste neutre.
+- **Aucun ordre** : étapes et pas sont indépendants. Ni numéro, ni étape « en cours », ni « prochain pas », ni « à venir » : une étape est faite ou à faire, et c'est l'API qui le dit (`done`). Le client l'affiche et compte, il ne décide de rien : aucune étape ne s'ouvre d'elle-même, aucun pas n'est mis en avant.
 - **L'échec n'existe pas** : aucune erreur en rouge (le `sceau` n'est jamais une erreur), aucun pourcentage, aucun compte à rebours, aucun « en retard ». Une erreur s'écrit en encre avec la solution (`e-champ [erreur]`, ou `AnnoncesStore.signaler`). La progression se lit par ce qui est fait (`<e-pas>`, `legendeProgression`). On « laisse filer », on ne supprime pas.
-- **Aucune règle métier dans un écran** : la progression (étape faite ou en cours, prochain pas, objectif accompli) et le quadrant d'un pas viennent de l'API (Apex Brain). Tant qu'elle ne les rend pas, l'écran ne les montre pas, et ne les calcule jamais (`docs/technical/data-flow.md`). Les exemples du § 6 qui les montrent servent pour le jour où l'API les rendra.
+- **Aucune règle métier dans un écran** : fait ou non fait, pour une étape ou un objectif, vient de l'API (`done`), comme le quadrant d'un pas, qu'elle ne rend pas encore. Ce qu'elle ne rend pas, l'écran ne le montre pas, et ne le calcule jamais (`docs/technical/data-flow.md`). Les exemples du § 6 qui montrent la matrice servent pour le jour où l'API rendra ce quadrant.
 - **Rien ne surgit** : pas de toast. Une réussite s'annonce aux lecteurs d'écran (`AnnoncesStore.annoncer`), un souci s'affiche dans la page, dans la note d'Akari que pose la coque (`AnnoncesStore.signaler`) ; cahier § 7, `apps/apex-client/src/chore/stores/annonces.store.ts`.
 - **Focus** : l'anneau d'encre carré de `base.css` d'Empreinte, sur tout. Ne jamais le masquer. Tout élément cliquable est un `<button>`, un `<a>` ou un contrôle natif ; une ligne cliquable contient un vrai bouton.
 - **Cibles** : 44px (36px en `petit`), données par `eBouton`. Une case `eCase` fait 20px : la relier à un `<label for>`, qui offre la cible.
@@ -68,7 +69,7 @@ Pour chaque besoin visuel, descendre l'échelle et s'arrêter au premier niveau 
   | En retard | T'attend depuis mardi (`formaterAttente`) |
   | Tâche manquée | On la replace ? |
   | Supprimer l'objectif | Laisser filer |
-  | Il te reste 43 % | 4 pas faits · 3 à venir (`legendeProgression`) |
+  | Il te reste 43 % | 4 pas faits · 3 à faire (`legendeProgression`) |
   | Une erreur est survenue | Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie. |
   | Bravo ! | Empreinte posée. |
 
@@ -90,11 +91,12 @@ Les écrans V1 sont sous `apps/apex-client/src/app/` : `shell/` (coque et naviga
 | Page | tous les écrans | Le gabarit d'un écran affiché dans la coque a une seule racine, `div.ds-page` : la coque gère déjà les marges et la largeur ; `.ds-page` ramène l'écart entre sections à 32px, comme les maquettes. La connexion, hors de la coque, part de `main.screen` (`auuthentication-page.css`). |
 | En-tête de page | `app/objectives/` | `header.ds-page-header` > (`div.ds-stack.ds-gap-2` > `p.repere.ds-muted` + `h1.manifeste.ds-break` + `p.detail.ds-muted`) + l'action |
 | Fil d'Ariane | `app/objective/` | `header.ds-stack.ds-gap-5` > `nav[eFilAriane]` + `div.ds-page-header` |
-| Cartes d'objectifs | `app/objectives/` | `div.ds-panels.ds-cols-2.cards` > `article[eCarte]` (`div.ds-stack.ds-grow` > horizon, titre, pourquoi ; `p.detail` : ce que l'objectif porte, « 3 étapes · 12 pas » ; pied `div.ds-row.ds-justify-end.ds-rule-top` > lien « Ouvrir »). `.cards` (`objectives.css`) : un seul filet entre deux cartes, qui dessinent déjà le leur. La progression (`e-pas`), le prochain pas et la liste repliée « Accomplis » reviendront avec les champs de l'API. |
-| Arête et étape | `app/objective/` | `div.ds-panels.ds-cols-2-1` > `section.ds-panel` (`.ds-title-row`, `div.ds-scroll-x.arete` > `e-arete`) + `section.ds-panel.panel-flush` (en-tête d'étape, `ul[eListe][nue]` > `li[eTache]`, `.ds-actions`) ; `.arete` et `.panel-flush` dans `objective-page.css` |
+| Cartes d'objectifs | `app/objectives/` | `div.ds-panels.ds-cols-2.cards` > `article[eCarte]` (`div.ds-stack.ds-grow` > horizon, titre, pourquoi ; `e-pas` ; pied `div.ds-row.ds-wrap.ds-justify-end.ds-rule-top` > lien « Ouvrir »). `.cards` (`objectives.css`) : un seul filet entre deux cartes, qui dessinent déjà le leur. |
+| Bloc replié « Accomplis » | `app/objectives/` | `details.accomplished` (`objectives.css`) > `summary` (chevron, `span.section`, compte) + `ul.ds-divided`. |
+| Arête et étape | `app/objective/` | `div.ds-panels.ds-cols-2-1` > `section.ds-panel` (`.ds-title-row`, `div.ds-scroll-x.arete` > `e-arete`) + `section.ds-panel.panel-flush` (l'étape choisie : en-tête, `ul[eListe][nue]` > `li[eTache]`, `.ds-actions` ; sans étape choisie, une ligne qui invite à en choisir une) ; `.arete` et `.panel-flush` dans `objective-page.css` |
 | Feuille (modifier un pas, une étape, l'objectif) | `app/objective/` | `Feuilles.ouvrir(Composant, { donnees, cdk: { injector } })` ; dans le composant ouvert, `e-feuille[titre]` > `form.ds-stack` + `div[eFeuilleActions]`. Catalogue § 2.17. |
 | Formulaire | partout | `form.ds-stack` > `e-champ[libelle]` > `input[eSaisie]`, `textarea[eSaisie][tailleAuto]`, `e-selection`, `input[type=date][eSaisie]` ; erreur par `[erreur]` du champ ; `facultatif` plutôt qu'un astérisque. |
-| Conversation et brouillon | `app/objective/akari/`, nouvel objectif | Akari : `div.ds-page.akari` > `div.ds-panels.ds-cols-7-6.panels` > `e-conversation.conversation` (`[repliques]`, `[statut]`, `[pret]`, `[personne]`, `(envoyer)`, `(action)`, `ng-template[eRepliqueContenu]` pour le Markdown) + `section.ds-panel.stages` ; hauteur et retrait dans `akari.css`. Nouvel objectif : `section.ds-panel` > `ol[eFil]` > `li[eReplique]` (Akari) et `li[eReplique][auteur="personne"][qui]` (les champs) + `section.ds-panel[eSurface][eCorne="l"]` (brouillon, `ol.ds-divided` > `li.stage`, bouton `sceau`) |
+| Conversation et brouillon | `app/objective/akari/`, nouvel objectif | Akari : `div.ds-page.akari` > `div.ds-panels.ds-cols-7-6.panels` > `e-conversation.conversation` (`[repliques]`, `[statut]`, `[pret]`, `[personne]`, `(envoyer)`, `(action)`, `ng-template[eRepliqueContenu]` pour le Markdown) + `section.ds-panel.stages` ; hauteur et retrait dans `akari.css`. Nouvel objectif : `section.ds-panel` > `ol[eFil]` > `li[eReplique]` (Akari) et `li[eReplique][auteur="personne"][qui]` (les champs) + `section.ds-panel[eSurface][eCorne="l"]` (brouillon, bouton `sceau`) |
 | Matrice (retirée, attend l'API) | historique git, `app/matrix/` au commit `6d448c7` (sans déplacement) | `header.ds-stack.ds-gap-5` > titre + `e-filtres` ; `e-matrice` gère sa grille ; dans `ng-template[eMatriceElement]`, `div.ds-check.task` (case, label, détail) |
 | Connexion | `app/auth/` | `main.screen` > `form[eSurface].ds-panel.form` > `e-marque` + `h1.objectif` + `e-champ`s + `button[eBouton="sceau"]` |
 | Rangée d'actions | partout | `div.ds-actions` (`.ds-justify-end` pour l'aligner à droite) > `button[eBouton="trait"][petit]` + `button[eBouton="nu"][petit]` |
@@ -122,18 +124,9 @@ En-tête de page et grille de cartes :
           <p class="voix ds-muted">« {{ o.pourquoi }} »</p>
         }
         <div class="ds-push-down">
-          <e-pas [faits]="o.etapesFaites" [enCours]="o.aUneEtapeEnCours" [aVenir]="o.etapesAVenir"
-                 unite="etape" [nomEnCours]="o.nomEtapeEnCours" />
+          <e-pas [faits]="o.etapesFaites" [aFaire]="o.etapesAFaire" unite="etape" />
         </div>
-        <div class="ds-row ds-wrap ds-between ds-rule-top">
-          @if (o.prochainPas; as pas) {
-            <div class="ds-check ds-grow">
-              <input type="checkbox" eCase [id]="'pas-' + pas.id" [checked]="pas.fait"
-                     (change)="basculer(pas.id, $any($event.target).checked)" />
-              <label class="corps" [for]="'pas-' + pas.id">{{ pas.titre }}</label>
-              <span class="detail ds-muted">Prochain pas · {{ o.nomEtapeEnCours }}</span>
-            </div>
-          }
+        <div class="ds-row ds-wrap ds-justify-end ds-rule-top">
           <a eBouton="trait" petit [routerLink]="['/objectifs', o.id]">Ouvrir</a>
         </div>
       </article>
@@ -142,7 +135,7 @@ En-tête de page et grille de cartes :
 </div>
 ```
 
-L'arête et l'étape en cours (pas de bouton `sceau` : la tête de l'arête en est un) :
+L'arête et l'étape choisie (pas de bouton `sceau` : la tête de l'arête en est un) :
 
 ```html
 <div class="ds-panels ds-cols-2-1">
@@ -154,9 +147,9 @@ L'arête et l'étape en cours (pas de bouton `sceau` : la tête de l'arête en e
   </section>
   <section class="ds-panel panel-flush" aria-labelledby="titre-etape">
     <div class="ds-stack ds-gap-2">
-      <p class="repere ds-muted">Étape 3 · en cours</p>
+      <p class="repere ds-muted">Étape · à faire</p>
       <h2 class="objectif" id="titre-etape">{{ etape().titre }}</h2>
-      <e-pas [faits]="etape().faits" [enCours]="etape().enCours" [aVenir]="etape().aVenir" />
+      <e-pas [faits]="etape().faits" [aFaire]="etape().aFaire" />
     </div>
     <ul eListe nue>
       @for (pas of etape().pas; track pas.id) {
@@ -213,12 +206,6 @@ La conversation avec Akari (le composant d'Empreinte, voir le piège sur la conv
   <section class="ds-panel ds-gap-5" eSurface eCorne="l" aria-labelledby="titre-brouillon">
     <p class="repere ds-muted">Brouillon · pas encore enregistré</p>
     <h2 class="objectif" id="titre-brouillon">{{ brouillon().titre }}</h2>
-    <ol class="ds-divided">
-      <li class="stage">
-        <span class="objectif">1</span><span class="corps">Portfolio</span>
-        <span class="detail ds-muted">4 pas</span><span class="detail ds-muted">Commence cette semaine</span>
-      </li>
-    </ol>
     <div class="ds-actions"><button eBouton="sceau" type="button" (click)="engager()">Je m'y engage</button></div>
   </section>
 </div>

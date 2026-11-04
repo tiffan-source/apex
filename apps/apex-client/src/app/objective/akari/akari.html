@@ -56,25 +56,21 @@
         </div>
 
         <!-- L'arête prend la largeur de la colonne (ses noms restent lisibles sur ordinateur). Masquée sur
-             mobile, comme l'aperçu de la maquette : la liste des étapes suit. Les lecteurs d'écran passent par
-             cette liste, qui dit tout : l'arête, dessinée sans état, résumerait ses étapes comme « à venir ». -->
-        <div class="ds-hide-mobile" aria-hidden="true">
+             mobile, comme l'aperçu de la maquette : la liste des étapes suit. -->
+        <div class="ds-hide-mobile">
           <e-arete [objectif]="d.objective.title" [etapes]="d.aretes" />
         </div>
 
         @if (stageRows().length) {
-          <ol class="ds-divided" aria-label="Les étapes">
+          <ul class="ds-divided" aria-label="Les étapes">
             @for (stage of stageRows(); track stage.id) {
               <li class="stage">
-                <span class="objectif">{{ stage.index }}</span>
                 <span class="corps ds-break">{{ stage.title }}</span>
                 <span class="detail ds-muted ds-nowrap">{{ stage.taskCount }}</span>
-                @if (stage.horizon) {
-                  <span class="detail ds-muted">{{ stage.horizon }}</span>
-                }
+                <span class="detail ds-muted">{{ stage.state }}</span>
               </li>
             }
-          </ol>
+          </ul>
         } @else {
           <p class="corps ds-muted">Aucune étape pour l'instant. Akari peut t'en proposer.</p>
         }

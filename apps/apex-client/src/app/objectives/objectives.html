@@ -16,7 +16,7 @@
     <div class="ds-panels ds-cols-2 cards">
       @for (card of cards(); track card.id) {
         <article eCarte [attr.aria-labelledby]="'objectif-' + card.id">
-          <!-- Grandit pour pousser le pied en bas de la carte. -->
+          <!-- Grandit pour pousser la progression en bas de la carte. -->
           <div class="ds-stack ds-grow">
             @if (card.horizon) {
               <p class="detail ds-muted">{{ card.horizon }}</p>
@@ -27,14 +27,16 @@
             }
           </div>
 
-          <!-- Ce que l'objectif porte, sans progression : l'API ne la rend pas encore. -->
-          @if (card.contents) {
-            <p class="detail ds-muted">{{ card.contents }}</p>
+          @let progress = card.progress;
+          @if (progress.kind === 'cases') {
+            <e-pas [faits]="progress.done" [aFaire]="progress.toDo" [unite]="progress.unit" [legende]="progress.legend" />
+          } @else if (progress.kind === 'legend') {
+            <p class="detail ds-muted ds-break">{{ progress.text }}</p>
           } @else {
-            <p class="detail ds-muted">Aucune étape pour l'instant. Pose la première quand tu veux.</p>
+            <p class="detail ds-muted">Aucune étape pour l'instant. Ajoutes-en quand tu veux.</p>
           }
 
-          <div class="ds-row ds-justify-end ds-rule-top">
+          <div class="ds-row ds-wrap ds-justify-end ds-rule-top">
             @if (card.openable) {
               <a
                 eBouton="trait"
@@ -64,5 +66,32 @@
   } @else if (loadFailed() && !hasReport()) {
     <!-- La note de la coque a été lue (« Compris ») : l'écran dit encore quoi faire. -->
     <p class="corps ds-measure">Tes objectifs ne sont pas chargés. Vérifie ta connexion, puis recharge la page.</p>
+  }
+
+  @if (accomplished().length > 0) {
+    <details
+      #accomplishedDetails
+      class="accomplished"
+      [open]="accomplishedOpen()"
+      (toggle)="accomplishedOpen.set(accomplishedDetails.open)"
+    >
+      <summary id="accomplis-resume">
+        <e-icone [nom]="accomplishedOpen() ? 'chevron-bas' : 'chevron-droite'" />
+        <span class="section">Accomplis</span>
+        <span class="detail ds-muted">{{ accomplished().length }}</span>
+      </summary>
+      <ul class="ds-divided">
+        @for (objective of accomplished(); track objective.id) {
+          <li class="ds-row ds-gap-4">
+            <e-empreinte class="ds-no-shrink" decorative />
+            <div class="ds-stack ds-gap-0-5 ds-grow">
+              <p class="corps ds-break" [id]="'accompli-' + objective.id">{{ objective.title }}</p>
+              <p class="detail ds-muted">Accompli</p>
+            </div>
+            <a eBouton="trait" petit [routerLink]="['/objectifs', objective.id]" [attr.aria-describedby]="'accompli-' + objective.id">Ouvrir</a>
+          </li>
+        }
+      </ul>
+    </details>
   }
 </div>

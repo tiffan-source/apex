@@ -1,10 +1,11 @@
 import type { EtapeArete } from '@empreinte-studio/angular/arete';
+import type { TaskCountViewModel } from './objective-card.viewmodel';
 
 /*
  * La vue détaillée d'un objectif pour l'écran de l'arête (cahier de migration, § 4).
  * Trois niveaux : l'objectif, ses étapes (sous-objectifs directs), leurs pas (tâches).
- * Les sous-objectifs plus profonds ne sont pas montrés : leurs pas sont rangés dans leur étape.
- * Rien n'y est calculé au-delà de ce que l'API rend : ni état d'étape, ni progression, ni quadrant.
+ * Les sous-objectifs plus profonds ne sont pas montrés : leurs pas comptent dans leur étape.
+ * Étapes et pas sont indépendants : aucun ordre entre eux, l'écran n'en choisit aucun.
  */
 
 /** Un pas dans l'arête. */
@@ -18,6 +19,12 @@ export type StageTaskViewModel = {
   objectiveId: string;
 };
 
+/** Ce qu'une étape compte, prêt pour e-pas : faits, à faire. */
+export type StageTaskProgressViewModel = {
+  done: number;
+  toDo: number;
+};
+
 /** Une étape d'un objectif. */
 export type StageViewModel = {
   id: string;
@@ -27,11 +34,12 @@ export type StageViewModel = {
   dueDate: string;
   /** « Jusqu'en mai », ou vide sans échéance. */
   horizon: string;
-  /** La place de l'étape, de 1 à n : « Étape 3 ». */
-  index: number;
-  /** Ses pas, y compris ceux de ses sous-objectifs plus profonds, dans l'ordre de chargement. */
+  /** Faite ou à faire, tel que l'API le dit. */
+  done: boolean;
+  /** Ses pas, y compris ceux de ses sous-objectifs plus profonds. */
   tasks: StageTaskViewModel[];
-  /** « 3 pas », ou « Aucun pas pour l'instant ». */
+  progress: StageTaskProgressViewModel;
+  /** « 4 pas faits · 3 à faire » (legendeProgression d'Empreinte), ou « Aucun pas pour l'instant ». */
   detail: string;
 };
 
@@ -51,14 +59,10 @@ export type ObjectiveDetailViewModel = {
     /** « Jusqu'en mai », « Jusqu'en mai 2027 », ou vide. */
     horizon: string;
   };
-  /** Les étapes, dans l'ordre de chargement. */
   stages: StageViewModel[];
   /** Les pas posés directement sur l'objectif, à ranger dans une étape. */
   tasksWithoutStage: StageTaskViewModel[];
-  /** Les étapes pour <e-arete [etapes]>, dans le même ordre que stages ; une étape sans nom y est « Étape sans nom ». */
+  /** Les étapes pour <e-arete [etapes]> ; une étape sans nom y est « Étape sans nom ». */
   aretes: AreteStageViewModel[];
-  /** L'étape ouverte par défaut : la première, ou null (aucune étape). */
-  defaultStageId: string | null;
-  /** Le nombre de pas de l'objectif et de toutes ses étapes. */
-  taskCount: number;
+  taskCount: TaskCountViewModel;
 };

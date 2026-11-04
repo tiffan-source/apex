@@ -1,9 +1,22 @@
 /*
- * La carte d'un objectif sur l'écran Objectifs (cahier de migration, § 4). Elle montre ce que l'API rend :
- * l'objectif, son horizon, son pourquoi, et ce qu'il porte (ses étapes, ses pas). Sa progression (étapes
- * faites, prochain pas, objectif accompli) relève d'Apex Brain : le client ne la calcule pas, et la carte
- * ne la montre pas tant que l'API ne la rend pas.
+ * La carte d'un objectif sur l'écran Objectifs (cahier de migration, § 4).
+ * La progression se lit par étapes : ce qui est fait, ce qui est à faire, sans ordre entre elles.
  */
+
+/** La progression d'un objectif par étapes, prête pour e-pas (unite="etape"). */
+export type StageProgressViewModel = {
+  /** Les étapes faites. */
+  done: number;
+  /** Les étapes à faire. */
+  toDo: number;
+};
+
+/** Les pas d'un objectif (et de toutes ses étapes) : faits sur le total. */
+export type TaskCountViewModel = {
+  done: number;
+  total: number;
+};
+
 export type ObjectiveCardViewModel = {
   id: string;
   title: string;
@@ -11,8 +24,10 @@ export type ObjectiveCardViewModel = {
   why: string;
   /** « Jusqu'en mai », « Jusqu'en mai 2027 », ou vide sans échéance. */
   horizon: string;
+  stageProgress: StageProgressViewModel;
   /** Le nombre d'étapes (sous-objectifs directs). */
   stageCount: number;
-  /** Le nombre de pas de l'objectif et de toutes ses étapes. */
-  taskCount: number;
+  taskCount: TaskCountViewModel;
+  /** L'objectif est fait, d'après l'API. */
+  accomplished: boolean;
 };

@@ -98,7 +98,7 @@ describe('voiceIssues', () => {
   });
 
   it('laisse passer la voix d’Empreinte', () => {
-    expect(voiceIssues('4 pas faits · 3 à venir')).toEqual([]);
+    expect(voiceIssues('4 pas faits · 3 à faire')).toEqual([]);
     expect(voiceIssues('Un pas de plus.')).toEqual([]);
     expect(voiceIssues('Laisser filer cet objectif.')).toEqual([]);
     expect(voiceIssues('Je ne retrouve plus ce pas. Recharge la page, puis réessaie.')).toEqual([]);

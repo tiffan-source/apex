@@ -8,6 +8,21 @@ import { UNTITLED_STAGE } from '../../chore/mapper/objective-view.mapper';
  */
 export { UNTITLED_STAGE, stageName } from '../../chore/mapper/objective-view.mapper';
 
+/** Ce que l'API dit d'une étape, dans son repère : « Étape · à faire ». */
+export function stageStateLabel(done: boolean): string {
+  return done ? 'faite' : 'à faire';
+}
+
+/** Ce que l'API dit d'une étape, seul sur sa ligne (la liste des étapes d'Akari) : « À faire ». */
+export function stageStateTitle(done: boolean): string {
+  return done ? 'Faite' : 'À faire';
+}
+
+/** Ce que la légende d'une étape ajoute à son compte de pas, quand l'API dit qu'elle est faite. */
+export function stageAccomplishment(done: boolean): string | undefined {
+  return done ? 'étape accomplie' : undefined;
+}
+
 /** Les étapes d'un objectif pour e-selection, sans option vide. */
 export function namedStageOptions(options: readonly OptionSelection<string>[]): OptionSelection<string>[] {
   return options.map((option) => (option.libelle.trim() ? option : { ...option, libelle: UNTITLED_STAGE }));

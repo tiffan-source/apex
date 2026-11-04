@@ -47,6 +47,7 @@ export function withCreateSubObjective() {
               description: "",
               dueDate: "",
               parentId: objectiveId,
+              done: false,
             };
 
             patchState(store, { objectives: [...store.objectives(), newSubObjective] });

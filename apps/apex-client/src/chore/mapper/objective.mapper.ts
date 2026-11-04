@@ -30,7 +30,8 @@ export class ObjectiveMapper {
       why: objective.why ?? "",
       dueDate: toIsoDueDate(objective.dueDate),
       description: objective.description ?? "",
-      parentId: objective.parentObjective
+      parentId: objective.parentObjective,
+      done: objective.done,
     };
   }
 
