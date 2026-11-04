@@ -15,7 +15,7 @@ export const toObjectivePage: RedirectFunction = ({ params, queryParams, fragmen
  */
 export const routes: Routes = [
   // Les anciennes adresses. La matrice (et l'écran Focus avant elle) attend que l'API rende le quadrant d'un
-  // pas et sache l'y déplacer : ses adresses mènent à l'accueil.
+  // pas : ses adresses mènent à l'accueil.
   { path: 'objective/:id', pathMatch: 'full', redirectTo: toObjectivePage },
   { path: 'matrice', pathMatch: 'full', redirectTo: '/' },
   { path: 'matrix', pathMatch: 'full', redirectTo: '/' },

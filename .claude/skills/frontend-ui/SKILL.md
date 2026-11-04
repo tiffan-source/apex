@@ -95,7 +95,7 @@ Les écrans V1 sont sous `apps/apex-client/src/app/` : `shell/` (coque et naviga
 | Feuille (modifier un pas, une étape, l'objectif) | `app/objective/` | `Feuilles.ouvrir(Composant, { donnees, cdk: { injector } })` ; dans le composant ouvert, `e-feuille[titre]` > `form.ds-stack` + `div[eFeuilleActions]`. Catalogue § 2.17. |
 | Formulaire | partout | `form.ds-stack` > `e-champ[libelle]` > `input[eSaisie]`, `textarea[eSaisie][tailleAuto]`, `e-selection`, `input[type=date][eSaisie]` ; erreur par `[erreur]` du champ ; `facultatif` plutôt qu'un astérisque. |
 | Conversation et brouillon | `app/objective/akari/`, nouvel objectif | Akari : `div.ds-page.akari` > `div.ds-panels.ds-cols-7-6.panels` > `e-conversation.conversation` (`[repliques]`, `[statut]`, `[pret]`, `[personne]`, `(envoyer)`, `(action)`, `ng-template[eRepliqueContenu]` pour le Markdown) + `section.ds-panel.stages` ; hauteur et retrait dans `akari.css`. Nouvel objectif : `section.ds-panel` > `ol[eFil]` > `li[eReplique]` (Akari) et `li[eReplique][auteur="personne"][qui]` (les champs) + `section.ds-panel[eSurface][eCorne="l"]` (brouillon, `ol.ds-divided` > `li.stage`, bouton `sceau`) |
-| Matrice (retirée, attend l'API) | historique git, `app/matrix/` | `header.ds-stack.ds-gap-5` > titre + `e-filtres` ; `e-matrice` gère sa grille ; dans `ng-template[eMatriceElement]`, `div.ds-row.task` > `.ds-check` (case, label, détail) + `e-menu` « Déplacer vers… » |
+| Matrice (retirée, attend l'API) | historique git, `app/matrix/` au commit `6d448c7` (sans déplacement) | `header.ds-stack.ds-gap-5` > titre + `e-filtres` ; `e-matrice` gère sa grille ; dans `ng-template[eMatriceElement]`, `div.ds-check.task` (case, label, détail) |
 | Connexion | `app/auth/` | `main.screen` > `form[eSurface].ds-panel.form` > `e-marque` + `h1.objectif` + `e-champ`s + `button[eBouton="sceau"]` |
 | Rangée d'actions | partout | `div.ds-actions` (`.ds-justify-end` pour l'aligner à droite) > `button[eBouton="trait"][petit]` + `button[eBouton="nu"][petit]` |
 | Réussite, souci | stores (`chore/stores/annonces.store.ts`) | `annoncer(texte)` pour une réussite ; `signaler(texte)` pour un souci, que la coque affiche dans `aside[eNote]` avec un bouton « Compris » (`compris()`) ; phrases tirées de `chore/constants/messages.constante.ts` |
@@ -238,16 +238,12 @@ Connexion et matrice :
   </form>
 </main>
 
-<e-matrice [quadrants]="quadrants()" [piste]="parId" [unite]="unitePas" (deplacement)="deplacer($event)">
-  <ng-template [eMatriceElement]="quadrants()" let-pas let-quadrant="quadrant">
-    <div class="ds-row ds-items-start task">
-      <div class="ds-check ds-grow">
-        <input type="checkbox" eCase [id]="'m-' + pas.id" [checked]="pas.done" (change)="basculer(pas.id, $any($event.target).checked)" />
-        <label class="corps" [for]="'m-' + pas.id">{{ pas.title }}</label>
-        <span class="detail ds-muted">{{ pas.objectiveTitle }}</span>
-      </div>
-      <e-menu libelle="Déplacer vers…" icone="deplacer" petit [entrees]="cibles"
-              (choix)="deplacer({ element: pas, de: quadrant, vers: $event, index: 0 })" />
+<e-matrice [quadrants]="quadrants()" [piste]="parId" [unite]="unitePas">
+  <ng-template [eMatriceElement]="quadrants()" let-pas>
+    <div class="ds-check task">
+      <input type="checkbox" eCase [id]="'m-' + pas.id" [checked]="pas.done" (change)="basculer(pas.id, $any($event.target).checked)" />
+      <label class="corps" [for]="'m-' + pas.id">{{ pas.title }}</label>
+      <span class="detail ds-muted">{{ pas.objectiveTitle }}</span>
     </div>
   </ng-template>
 </e-matrice>
@@ -265,7 +261,7 @@ Les pièges vérifiés des composants sont au catalogue § 8. Les plus fréquent
 - **Feuilles.** Le composant ouvert hérite de l'injecteur racine : passer `cdk: { injector: inject(Injector) }` pour atteindre les stores fournis par la coque. `e-feuille` exige un `titre` (le focus y va).
 - **Formulaires.** `e-selection` prend des options `{ valeur, libelle }` ; `input[type=date][eSaisie]` porte une chaîne `aaaa-mm-jj`, pas une `Date` ; avec `formControlName`, le message d'erreur passe par `e-champ [erreur]` (il n'est automatique qu'avec Signal Forms).
 - **Navigation.** L'entrée `/` demande `[routerLinkActiveOptions]="{ exact: true }"` (ou, comme la coque, une lecture du routeur) ; sous 760px, le bas de la navigation disparaît : les réglages restent dans un `e-menu` en `.ds-show-mobile`.
-- **`e-matrice`.** Passer `[piste]` (sinon la liste est recréée à chaque mise à jour du store) et une `unite` déclarée `as const` dans la classe ; le glisser-déposer ne se fait pas au clavier, d'où l'`e-menu` « Déplacer vers… ».
+- **`e-matrice`.** Passer `[piste]` (sinon la liste est recréée à chaque mise à jour du store) et une `unite` déclarée `as const` dans la classe. On ne déplace rien depuis la matrice : un pas suit son importance et son urgence, modifiées sur son objectif (« Modifier le pas »).
 - **`e-menu`** : `icone` est un nom d'icône (chaîne), alors que sur `eBouton` c'est un booléen ; une entrée se désactive avec `desactive`, une option d'`e-selection` avec `desactivee`.
 - **Utilitaires `.ds-*`.** `.ds-hide-mobile` et `.ds-show-mobile` se posent sur un élément simple, jamais sur l'hôte d'un composant Empreinte ; `.ds-span-2` seulement dans `.ds-cols-3`. À spécificité égale, la classe déclarée le plus bas dans `styles/layout.css` l'emporte ; une classe de la feuille d'un composant (encapsulée) l'emporte sur un utilitaire `.ds-*`.
 
