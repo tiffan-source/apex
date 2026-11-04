@@ -1,6 +1,6 @@
 # Catalogue : les composants Empreinte pour Apex
 
-Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.4.0** et **`@empreinte-studio/tokens` 0.4.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11) ; la 0.3.2 retire le glisser-déposer de la matrice (§ 2.19) ; la 0.4 retire toute notion d'ordre : une étape est faite ou à faire, un pas aussi (§ 2.6, § 2.20, § 4). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
+Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.5.0** et **`@empreinte-studio/tokens` 0.5.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11) ; la 0.3.2 retire le glisser-déposer de la matrice (§ 2.19) ; la 0.4 retire toute notion d'ordre : une étape est faite ou à faire, un pas aussi (§ 2.6, § 2.20, § 4) ; la 0.5 reprend ce qu'Apex écrivait à la main : la carte d'objectif et son horizon (§ 2.5), le journal (§ 2.10 bis), le Markdown (§ 2.10 ter), le lien d'évitement (§ 2.16), l'initiale (§ 2.16 bis), le repli (§ 2.18 bis), la légende de l'arête (§ 2.20). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
 
 Le cahier de la migration (`docs/features/migration-empreinte.md`) fixe le périmètre, le vocabulaire et les règles d'écran ; ce catalogue dit **avec quoi** les construire.
 
@@ -205,7 +205,7 @@ Hôte : `e-etiquette`, `e-etiquette--ciel|aube|soleil|fjord`. `align-self: flex-
 <e-etiquette>Endurance</e-etiquette>
 ```
 
-### 2.5 `carte` : `ECarte`, `ECarteObjectif`, `ECarteAction`
+### 2.5 `carte` : `ECarte`, `ECarteObjectif`, `ECarteAction`, `ECarteProgression`
 
 **`article[eCarte]`, `section[eCarte]`, `div[eCarte]`, `li[eCarte]`** — un panneau carré sans ombre ni arrondi.
 
@@ -221,33 +221,34 @@ Hôte : `e-carte e-surface`. Mise en page intégrée : colonne flex, `gap: --pas
 | --- | --- | --- | --- |
 | `titre` | `string` | requis | Titre en `.objectif`. |
 | `niveau` | nombre | `2` | `3` → `h3`, `4` → `h4`, toute autre valeur → `h2`. |
+| `idTitre` | `string \| undefined` | — | L'`id` du titre, pour y relier la carte (`aria-labelledby`) ou son action (`aria-describedby`). |
+| `horizon` | `string \| null \| undefined` | — | Au-dessus du nom, en `detail` : « Jusqu'en mai ». |
+| `pourquoi` | `string \| null \| undefined` | — | Sous le nom, en `voix`, entre « » (la carte pose les guillemets et les insécables). |
 | `domaine` | `string \| undefined` | — | `e-etiquette` dans l'en-tête. |
 | `lumiere` | `Lumiere \| null` | `null` | Lumière de l'étiquette. |
 | `contexte` | `string \| undefined` | — | Texte `detail` à droite de l'étiquette. L'en-tête n'existe que si `domaine` ou `contexte`. |
-| `meta` | `string` | `''` | Ligne du pied (`p.e-carte__meta.detail`, rendue même vide). |
+| `meta` | `string` | `''` | Ligne du pied (`p.e-carte__meta.detail`). Sans elle, l'action va seule à la fin. |
+| `filet` | bool | `false` | Un filet `trame` au-dessus du pied. |
 | `marquee` | bool | `false` | Comme `ECarte`. |
 | `faits`, `aFaire` | nombre, nombre | `0`, `0` | Transmis à l'`e-pas` intégré. |
 | `unite` | `'pas' \| 'etape' \| 'tache' \| 'empreinte'` | `'pas'` | Idem (pas d'objet `Unite` ici, contrairement à `e-pas`). |
 | `accompli` | `string \| undefined` | `undefined` | Idem. |
+| `legende` | `string \| undefined` | `undefined` | Idem : remplace la légende calculée et le nom accessible. |
 | `libelleAction` | `string` | `'Ouvrir'` | Libellé du bouton `trait petit` du pied. |
 
-Sortie : `ouvrir: void` (clic sur le bouton du pied). Contenu : le contenu par défaut se place **entre le titre et l'`e-pas`** (par exemple `<p class="voix e-carte__raison">« … »</p>`) ; un élément `[eCarteAction]` remplace le bouton du pied (par exemple un lien). Ordre fixe : en-tête, titre, contenu, `e-pas`, pied (meta + action).
+Sortie : `ouvrir: void` (clic sur le bouton du pied). Contenu : le contenu par défaut se place **entre le titre et l'`e-pas`** (par exemple `<p class="voix e-carte__raison">« … »</p>`) ; un élément `[eCarteAction]` remplace le bouton du pied (par exemple un lien). Ordre fixe : en-tête, horizon, titre, pourquoi (ces trois-là grandissent, pour que deux cartes voisines alignent leurs pas et leurs pieds), contenu, `e-pas` ou `[eCarteProgression]`, pied (meta + action).
 
 **`[eCarteAction]`** : directive marqueur, sans entrée.
 
-L'ordre d'`ECarteObjectif` ne correspond pas à la maquette `Objectifs` (horizon en tête, sans étiquette de domaine) : la carte d'objectif d'Apex se compose avec `article[eCarte]`.
+**`[eCarteProgression]`** : directive marqueur, sans entrée : posée sur un élément, elle remplace l'`e-pas` intégré (une légende seule, une invitation à poser une étape, ou un `e-pas` réglé par l'écran).
+
+La carte d'objectif d'Apex est un `article[eCarteObjectif]` (`objectives.html`) :
 
 ```html
-<article eCarte [attr.aria-labelledby]="'objectif-' + o.id">
-  <p class="detail e-carte__meta">{{ o.horizon }}</p>                      <!-- « Jusqu'en mai » -->
-  <h2 class="objectif" [id]="'objectif-' + o.id">{{ o.titre }}</h2>
-  @if (o.pourquoi) {
-    <p class="voix e-carte__raison">« {{ o.pourquoi }} »</p>
-  }
-  <e-pas [faits]="o.etapesFaites" [aFaire]="o.etapesAFaire" unite="etape" />
-  <div class="e-carte__pied">
-    <a eBouton="trait" petit [routerLink]="['/objectifs', o.id]">Ouvrir</a>
-  </div>
+<article eCarteObjectif filet [titre]="card.title" [idTitre]="'objectif-' + card.id" [horizon]="card.horizon"
+         [pourquoi]="card.why" [attr.aria-labelledby]="'objectif-' + card.id">
+  <e-pas eCarteProgression [faits]="progress.done" [aFaire]="progress.toDo" [unite]="progress.unit" [legende]="progress.legend" />
+  <a eCarteAction eBouton="trait" petit [routerLink]="['/objectifs', card.id]" [attr.aria-describedby]="'objectif-' + card.id">Ouvrir</a>
 </article>
 ```
 
@@ -386,7 +387,7 @@ Hôte : `e-note`, `e-note--large`, `aria-label`. Rendu : `p.e-note__qui` (signat
 </aside>
 ```
 
-### 2.10 bis `conversation` : `EConversation`, `EReplique`, `EFil`, `ERepliqueActions`, `ERepliqueContenu`
+### 2.10 bis `conversation` : `EConversation`, `EReplique`, `EFil`, `EJournal`, `ERepliqueActions`, `ERepliqueContenu`
 
 **`<e-conversation>`** — la conversation avec Akari, d'après la maquette `Akari` : le fil des répliques (la signature dans une colonne de 96px, Akari en `voix` avec son losange, la personne en `corps`, sans bulle), la ligne d'état et la zone de réponse. Présentationnelle : elle annonce `(envoyer)` et `(action)`, l'écran décide.
 
@@ -411,14 +412,20 @@ Mise en page : l'hôte est une colonne flexible sans marge ni fond ; l'écran r�
 
 **`ol[eFil]`, `ul[eFil]`** (`EFil`) — un fil sans défilement ni zone de réponse (les questions d'Akari au-dessus des champs du nouvel objectif). Hôte : `e-fil` (liste nue, répliques espacées de 28px, conteneur de requête).
 
+**`ol[eJournal]`, `ul[eJournal]`** (`EJournal`) — entrée `lignes` (`readonly string[]`, requise). Ce qui vient de se passer pendant un tour d'Akari, une ligne par évènement, en `detail` et en encre douce, au-dessus de la ligne d'état. La liste n'est pas annoncée : la ligne d'état l'est. Dans une réplique, elle reste sans puces ni retrait.
+
 **`li[eReplique]`** (`EReplique`, `exportAs: 'eReplique'`) — entrées `auteur` (`'assistant'` par défaut), `qui` (par défaut le nom de la conversation qui l'accueille, sinon « Akari » ou « Toi »), `enAttente` (bool). Rendu : `p.e-replique__qui`, `div.e-replique__texte[id]` (le contenu projeté ; `idTexte` est public), puis l'élément `[eRepliqueActions]` (`e-replique__actions`, sous la phrase). Hôte : `e-replique`, `e-replique--assistant` | `--personne`, `--en-attente`. Les blocs posés directement dans une réplique (`p`, listes, titres) perdent les marges du navigateur ; un texte riche posé à la main va dans `div.e-replique__prose`. Dans une `e-conversation`, un `li[eReplique]` projeté se place après les répliques et reprend les noms de la conversation ; sous un `@if`, une seule racine par bloc (un bloc à plusieurs racines ne va pas dans l'emplacement des répliques).
 
 ```html
 <e-conversation class="conversation" [repliques]="repliques()" [statut]="statut()" [pret]="pret()"
                 [personne]="prenom()" (envoyer)="envoyer($event)" (action)="choisir($event)">
-  <ng-template [eRepliqueContenu]="repliques()" let-r><div [innerHTML]="r.texte | markdown"></div></ng-template>
+  <ng-template [eRepliqueContenu]="repliques()" let-r><div [innerHTML]="r.texte | eMarkdown"></div></ng-template>
 </e-conversation>
 ```
+
+### 2.10 ter `prose` : `EMarkdown`, `rendreMarkdown`
+
+**`texte | eMarkdown`** (`EMarkdown`) — le Markdown d'une réplique, rendu par `marked` puis assaini par DOMPurify, à insérer par `[innerHTML]` dans `.e-replique__prose` (une réplique d'`e-conversation` y est déjà). Un titre devient un paragraphe en gras (la page a déjà son titre) ; pas d'italique ; un retour à la ligne simple est gardé ; ni style, ni classe, ni identifiant venus du texte ; rien ne se charge tout seul (une image devient un lien, les médias écrits en HTML sont retirés). **`rendreMarkdown(texte)`** rend la même chaîne HTML assainie, hors d'un gabarit.
 
 ### 2.11 `champ` : `EChamp`, `ESaisie`, `ETailleAuto`, `ecrireErreur`
 
@@ -576,13 +583,14 @@ Vues qui sont des routes (liens, sans rôle d'onglet) : **`nav[eVues]`** (`e-ong
 </div>
 ```
 
-### 2.16 `navigation` : `ELienNav`, `EMarque`, `EFilAriane`
+### 2.16 `navigation` : `ELienNav`, `EMarque`, `EFilAriane`, `ELienEvitement`
 
 | Sélecteur | Entrées | Hôte | Rôle |
 | --- | --- | --- | --- |
 | `a[eLienNav]` | `icone: string \| null` (défaut `null`) | `e-nav__lien` | Lien 44px avec `e-icone` 20px, puis le contenu projeté dans `span.e-nav__libelle`. L'entrée qui porte `aria-current="page"` devient un panneau éclairé avec corne `s`. |
 | `e-marque`, `a[eMarque]` | — | `e-marque` | Petit sceau à corne (non compté par le gardien) + nom en `sens` 26/32 semi-gras, 44px. |
 | `nav[eFilAriane]` | `libelle: string` (défaut « Fil d'Ariane ») | `e-fil-ariane`, `aria-label` | Fil d'Ariane : `ol > li`, séparateurs « / » dessinés, liens soulignés `encre-douce`, page courante `[aria-current=page]` en encre. |
+| `a[eLienEvitement]` | — | `e-lien-evitement` | Le lien d'évitement, premier élément de la page : hors de l'écran tant qu'il n'a pas le focus, puis en haut à gauche sur un panneau. L'application dit où il mène et y pose le focus (`shell.html`). |
 
 **La coque est celle d'Apex**, dans `app/shell/shell.html` et `shell.css` : une grille de deux colonnes, la navigation (232px, à hauteur d'écran, qui reste à l'écran quand la page défile, un filet `trame` à droite) et la page (`padding: 48px 56px 72px`, contenu centré de 1120px au plus, sections espacées de 40px). Sous 760px, une seule colonne : la navigation devient un bandeau au-dessus de la page (`padding: 24px 16px 48px`), ses entrées ne gardent que leur icône (le libellé, dans un `span.link-label` d'Apex, est caché visuellement mais reste lu) et son bas (la personne, les réglages) disparaît au profit d'un `e-menu` en `.ds-show-mobile`. Depuis la 0.2, Empreinte ne livre plus de coque (`ECoque`, `ENav`… ont été retirés) : chaque application écrit la sienne. Une route qui porte `data: { fitsWindow: true }` (Akari) tient dans la fenêtre au-dessus de 1100px : la coque prend la hauteur de l'écran (32rem au moins) et la passe à la page par `.outlet` (classe `fits-window` sur `.shell`), moins ses marges et sa note ; l'hôte du composant de la page la reçoit en colonne flexible (`:host { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0 }`).
 
@@ -689,11 +697,25 @@ modifier(pas: TaskViewModel) {
 
 Une feuille ouverte par-dessus un écran qui a déjà son sceau (la tête de l'arête, par exemple) ne doit pas porter de bouton `sceau` : le gardien compte tout ce qui est affiché.
 
+### 2.16 bis `initiale` : `EInitiale`
+
+**`<e-initiale [nom]>`** — l'initiale d'une personne, dans un carré de `pas-8` sur le fond `creux`, en `voix`. `nom` (`string`, requis) : son nom ou son adresse ; la lettre vient de `initiale()` (§ 4). Décorative (`aria-hidden`) : le nom s'écrit à côté. Sans nom, elle est masquée (`hidden`).
+
 ### 2.18 `carnet` : `ECarnet`, `EPli` (hors V1)
 
 **`<e-carnet>`** (directive hôte Aria `AccordionGroup`) : `ouvert` (`model<unknown>`, `null` = replié, `[(ouvert)]`), `libelle` (`aria-label` de la liste). Hôte `e-carnet-cadre` (conteneur de requête) ; rend un `ol.e-carnet` : plis horizontaux (dos verticaux de 64px), verticaux sous 720px de large.
 
 **`li[ePli]`** : `valeur` (`unknown`, requis), `titre` (`string`, requis), `date` (`string`, `''`), `marque` (`'sceau' \| 'pause' \| null`), `libelle` (nom accessible du dos), `niveau` (nombre, `3`, `aria-level` de l'en-tête). Un seul pli ouvert ; le pli ouvert porte la corne. Pensé pour l'historique des décisions : ce n'est pas un accordéon générique.
+
+### 2.18 bis `repli` : `ERepli`
+
+**`details[eRepli]`** — un titre qui déplie ce qu'il cache, entre deux filets `trame`. Posé sur `details` : le clavier et l'annonce de l'état restent natifs. `titre` (`string`, requis) ; `detail` (`string \| number`, un compte ou un résumé, à côté du titre, en encre douce) ; `ouvert` (`model<boolean>`, `false`, `[(ouvert)]`). Le résumé (`summary.e-repli__resume`, chevron, titre, détail) fait 48px de haut ; le contenu se projette dessous.
+
+```html
+<details eRepli titre="Accomplis" [detail]="accomplis().length" [(ouvert)]="ouvert">
+  <ul class="ds-divided">…</ul>
+</details>
+```
 
 ### 2.19 `matrice` : `EMatrice`, `EMatriceElement`, `QUADRANTS`, `TITRES_QUADRANTS`
 
@@ -731,7 +753,7 @@ protected readonly unitePas = ['pas', 'pas'] as const;   // un tableau littéral
 </e-matrice>
 ```
 
-### 2.20 `arete` : `EArete`, `etapesAffichees`, `detailEtape`, `resumeArete`, `lignesTete`, `MAXIMUM_ARETES`
+### 2.20 `arete` : `EArete`, `ELegendeArete`, `etapesAffichees`, `detailEtape`, `resumeArete`, `lignesTete`, `MAXIMUM_ARETES`
 
 **`<e-arete>`** — le diagramme d'Ishikawa : la tête (l'objectif) dans un sceau à corne, une colonne d'encre, une arête à 45° par étape, alternativement au-dessus et au-dessous. Les étapes sont indépendantes : leur place sur la colonne ne dit aucun ordre.
 
@@ -745,6 +767,8 @@ protected readonly unitePas = ['pas', 'pas'] as const;   // un tableau littéral
 Sortie : `choisir: EtapeArete` — **l'objet passé dans `etapes`** (pas d'identifiant). Pour retrouver l'étape, passer des objets enrichis (`EtapeArete & { id: string }`) et comparer par référence ; l'arête repliée « Faites » (au-delà de 8 étapes) est un objet créé par le composant, sans `id`.
 
 Rendu : `svg.e-arete` (viewBox de hauteur 300, largeur selon le nombre d'arêtes, `max-width: 720px`, `width: 100%`) avec `role="img"` (ou `group` si interactive) et un `<title>` résumé : « Arête de l'objectif « X » : 6 étapes, 2 faites, 4 à faire » (`resumeArete`). Par étape : branche (faite : `encre` en `trait-net` ; à faire : `trame-forte`), borne carrée de 8px (faite : pleine ; à faire : vide `trame-forte`), nom tronqué à 18 caractères, détail tronqué à 22 (par défaut « Faite » ou « À faire », `detailEtape`). Une nouvelle étape se trace en s'animant. **La tête est un sceau, enregistrée au `GardienSceau`.**
+
+**`ul[eLegendeArete]`** (`ELegendeArete`) — la légende : une case d'`e-pas` muette pour « Faite », une pour « À faire », en `detail` et en encre douce. Entrée `libelle` (par défaut « Légende de l'arête », son `aria-label`).
 
 **`etapesAffichees(etapes)`** : au-delà de `MAXIMUM_ARETES` (8) étapes et s'il y en a au moins une faite, les faites se replient dans `{ nom: 'Faites', faite: true, detail: '<n> étapes' }`, en tête de liste. Vérifié : 3 faites + 6 autres donnent `Faites (3 étapes)` + les 6.
 
@@ -824,6 +848,8 @@ Sorties obtenues en exécutant les fonctions installées.
 | `{ faits: 0, aFaire: 3 }, { unite: 'etape' }` | « 3 étapes à faire » |
 | `{ faits: 3, aFaire: 0 }, { unite: 'etape', accompli: 'objectif accompli' }` | « 3 étapes faites · objectif accompli » |
 
+**`initiale(nom: string): string`** — la première lettre, en capitale, sans couper un caractère hors du plan de base : « élodie » donne « É », un nom vide donne une chaîne vide.
+
 **`descriptionProgression(progression, unite = 'pas'): string`** — le nom accessible (`aria-label` d'`e-pas`).
 
 | Appel | Résultat |
@@ -899,7 +925,7 @@ Toutes sont réellement présentes dans les feuilles embarquées des paquets ins
 | Surface | `e-surface`, `e-surface--marquee`, `e-corne`, `e-corne--s`, `e-corne--l`, `e-corne--sans-rabat` | `ESurface`, `ECorne` ; `e-surface` aussi par `ECarte`, `ECarteObjectif`, `EListe` (sauf `nue`), `EMatrice` (quadrants), `EPli` (feuille du pli) ; `e-corne` par `ECarte[marquee]`, `EMatrice` (courant), `EPli` | porteur surface (`ESurface`, `ECorne`), porteur liste (`EListe`), `ECarte`, `ECarteObjectif`, `ECarnet`, `EMatrice` |
 | Bouton | `e-btn`, `e-btn--sceau`, `e-btn--trait`, `e-btn--nu`, `e-btn--petit`, `e-btn--icone` | `EBouton` (et les boutons internes d'`ECarteObjectif`, `ETache`, `EMenu`, `EFiltres`, `EFeuille`) | `EBouton` |
 | Étiquette | `e-etiquette`, `e-etiquette--ciel`, `--aube`, `--soleil`, `--fjord` | `EEtiquette` | `EEtiquette` |
-| Carte | `e-carte`, `e-carte--marquee`, `e-carte__entete`, `e-carte__pied`, `e-carte__meta`, `e-carte__raison` | `ECarte`, `ECarteObjectif` (hôte et gabarit) ; sous-classes à la main dans une carte | `ECarte`, `ECarteObjectif` |
+| Carte | `e-carte`, `e-carte--marquee`, `e-carte__entete`, `e-carte__textes`, `e-carte__pied`, `e-carte__pied--fin`, `e-carte__pied--filet`, `e-carte__meta`, `e-carte__raison` | `ECarte`, `ECarteObjectif` (hôte et gabarit) ; sous-classes à la main dans une carte | `ECarte`, `ECarteObjectif` |
 | Pas | `e-progression`, `e-pas`, `e-pas__case` (`data-etat="fait"` sur une case faite), `e-pas__legende` | `EPas` | `EPas` |
 | Sceau | `e-sceau`, `e-sceau__repere`, `e-sceau__chiffre`, `e-sceau--grand`, `e-sceau--empreinte`, `e-sceau--pose`, `e-traits`, `e-traits__trait` (`data-etat="a-venir"`), `e-traits--pose`, `e-traits__trait--neuf` | `ESceau`, `EEmpreinte`, `ETraits` | `ESceau`, `EEmpreinte`, `ETraits` |
 | Case | `e-case` | `ECase`, `ETache` (case interne) | porteur case (`ECase`), porteur liste, `ETache` |
@@ -914,6 +940,11 @@ Toutes sont réellement présentes dans les feuilles embarquées des paquets ins
 | Entrée de navigation | `e-nav__lien`, `e-nav__libelle` | `ELienNav` | `ELienNav` |
 | Marque | `e-marque`, `e-marque__sceau`, `e-marque__nom` | `EMarque` | `EMarque`, porteur navigation |
 | Fil d'Ariane | `e-fil-ariane` | `EFilAriane` | porteur navigation |
+| Lien d'évitement | `e-lien-evitement` | `ELienEvitement` | porteur navigation |
+| Initiale | `e-initiale` | `EInitiale` | `EInitiale` |
+| Repli | `e-repli`, `e-repli__resume`, `e-repli__detail` | `ERepli` | `ERepli` |
+| Journal | `e-journal` | `EJournal` | `EJournal`, porteur conversation |
+| Légende de l'arête | `e-legende-arete` | `ELegendeArete` | `ELegendeArete`, `EArete` |
 | Feuille | `e-feuille`, `e-feuille__entete`, `e-feuille__titre`, `e-feuille__titre--manifeste`, `e-feuille__fermer`, `e-feuille__corps`, `e-feuille__actions`, `e-feuille-fond`, `e-feuille-panneau` | `EFeuille`, `EFeuilleActions`, `Feuilles` (fond et panneau CDK) | `EFeuille` |
 | Carnet | `e-carnet-cadre`, `e-carnet`, `e-pli`, `e-pli--ouvert`, `e-pli__entete`, `e-pli__dos`, `e-pli__marque`, `e-pli__marque--sceau`, `e-pli__marque--pause`, `e-pli__titre`, `e-pli__date`, `e-pli__contenu`, `e-pli__feuille` | `ECarnet`, `EPli` | `ECarnet` |
 | Matrice | `e-matrice-hote`, `e-matrice`, `e-matrice__axe`, `e-matrice__axe--ligne`, `e-matrice__axe--haut`, `e-matrice__axe--bas`, `e-matrice__grille`, `e-quadrant`, `e-quadrant__titre`, `e-quadrant__compte`, `e-quadrant__liste`, `e-quadrant__liste--puces`, `e-quadrant__element` | `EMatrice` | `EMatrice` |
@@ -926,7 +957,7 @@ Règle : **le composant ou la directive d'abord**. Une classe `e-*` écrite à l
 | Classe à la main | Où | Pourquoi c'est sûr |
 | --- | --- | --- |
 | `e-carte__entete`, `e-carte__pied`, `e-carte__meta`, `e-carte__raison` | à l'intérieur d'un `[eCarte]` / `[eCarteObjectif]` | La carte qui les contient porte leur feuille tant qu'elle est affichée. |
-| `e-masque` | n'importe où (libellé pour lecteurs d'écran, comme le `<label>` de la zone de réponse à Akari) | `base.css`, toujours chargé. Il reste masqué même au focus : un lien d'évitement a besoin d'une classe d'Apex qui le révèle (`.skip-link`, `shell.css`). |
+| `e-masque` | n'importe où (libellé pour lecteurs d'écran, comme le `<label>` de la zone de réponse à Akari) | `base.css`, toujours chargé. Il reste masqué même au focus : un lien d'évitement s'écrit `a[eLienEvitement]` (§ 2.16). |
 
 Cas **à ne pas faire**, parce qu'un composant existe ou que la feuille peut manquer :
 
@@ -1045,7 +1076,7 @@ Inventaire des usages actuels sous `apps/apex-client/src/app` : 24 `<p-button>`,
 11. **`[attend]` avec une date future** affiche « Pour aujourd'hui » et les actions : ne passer une `Date` que si elle est passée. Les échéances des pas attendent le back-end (cahier § 3).
 12. **`e-pas [legende]=""`** masque la légende **et** vide le nom accessible (`role="img"` sans nom). Pour masquer seulement la légende visible, il n'y a pas d'option.
 13. **`e-pas`** au-delà de 12 cases : avertissement console, rien n'est coupé.
-14. **`ECarteObjectif`** : ordre de rendu figé (en-tête, titre, contenu, pas, pied) ; `accompli` n'a pas de valeur par défaut, comme celui d'`e-pas` : seule l'application sait si c'est vrai ; le pied rend un `<p>` même si `meta` est vide.
+14. **`ECarteObjectif`** : ordre de rendu figé (en-tête, titre, contenu, pas, pied) ; `accompli` n'a pas de valeur par défaut, comme celui d'`e-pas` : seule l'application sait si c'est vrai  ; sans `meta`, le pied ne rend que l'action, à la fin.
 15. **`EEmpreinte [pose]`** ne joue qu'au premier rendu : pour poser une empreinte quand une étape s'achève, faire apparaître l'élément à ce moment-là (`@if`). `ESceau` rejoue quand `palier` augmente.
 16. **`EArete`** : `choisir` émet l'objet d'étape, sans identifiant ; noms tronqués à 18 caractères, détails à 22, tête à 2 lignes de 15 caractères (« Courir un / semi-marathon… ») ; au-delà de 8 étapes, les faites se replient en une arête « Faites » synthétique ; la tête est toujours un sceau. Aucune légende n'est dessinée.
 17. **`EMatrice`** : `piste` par défaut = identité (la liste est recréée si le store renvoie de nouveaux objets) ; `unite` attend un tuple (`as const` dans la classe, pas de tableau littéral dans le gabarit) ; titres en `h3` figés ; le compte n'écrit que « N unité ».
@@ -1078,11 +1109,11 @@ Relevé en comparant les maquettes `Objectifs`, `Arete`, `Matrice`, `Akari` au c
 | Maquette | Manque | Contournement possible |
 | --- | --- | --- |
 | Toutes | Aucune classe utilitaire de couleur (`encre-douce`) ni de remise à zéro des marges | Utilitaires `.ds-*` d'Apex (`.ds-muted`, conteneurs). |
-| Toutes (coque) | Pas d'avatar ni d'initiale (bas de navigation « L · Léa ») ; le bas de la navigation est masqué sous 760px | Initiale en `.initial` (`shell.css`, fond creux de la maquette) ; réglages dans un `e-menu` en `.ds-show-mobile`. À proposer à Empreinte : un composant d'initiale. |
+| Toutes (coque) | ~~Pas d'initiale~~ ; le bas de la navigation est masqué sous 760px | Réglé en 0.5.0 : `e-initiale` (§ 2.16 bis). Réglages dans un `e-menu` en `.ds-show-mobile`. |
 | Toutes | Pas d'indicateur de chargement (bouton, zone), pas d'infobulle, pas de panneau latéral, pas de sélecteur de date | Texte d'état en `role="status"` ; `input[type=date][eSaisie]` ; feuilles centrées. |
-| Objectifs | `ECarteObjectif` ne suit pas la maquette (horizon, pourquoi, pas) | Composer avec `article[eCarte]` (§ 2.5). |
-| Objectifs | Pas de repli générique (`<details>` « Accomplis ») ; `ECarnet` n'est pas un accordéon générique | `details.accomplished` natif (`objectives.css`, fait), ou demande d'ajout à Empreinte. |
-| Arête | Rendu d'`EArete` différent de la maquette : bornes carrées au lieu d'empreintes pour les étapes faites, pas d'étiquette encadrée avec corne pour l'étape ouverte, pas de légende (Faite / À faire), troncatures (18 / 22 / 2×15 caractères), `choisir` sans identifiant | Utiliser `EArete` tel quel ; la légende pose une case d'`e-pas` pour « Faite » et une pour « À faire » (`objective-page.html`) ; passer un nom d'objectif court. |
+| Objectifs | ~~`ECarteObjectif` ne suit pas la maquette (horizon, pourquoi, pas)~~ | Réglé en 0.5.0 : `horizon`, `pourquoi`, `filet`, `[eCarteProgression]` (§ 2.5). |
+| Objectifs | ~~Pas de repli générique~~ | Réglé en 0.5.0 : `details[eRepli]` (§ 2.18 bis). |
+| Arête | Rendu d'`EArete` différent de la maquette : bornes carrées au lieu d'empreintes pour les étapes faites, pas d'étiquette encadrée avec corne pour l'étape ouverte, troncatures (18 / 22 / 2×15 caractères), `choisir` sans identifiant | Utiliser `EArete` tel quel ; la légende est `ul[eLegendeArete]` (0.5.0, § 2.20) ; passer un nom d'objectif court. |
 | Matrice (attend l'API) | Compte de quadrant non personnalisable (« Important · urgent · 4 pas aujourd'hui » impossible, seulement « 4 pas ») ; titres `h3` figés | Accepter « N pas ». |
 | Matrice (attend l'API) | Sous 640px, les axes « Urgent / Pas urgent » restent au-dessus d'une grille passée sur une colonne (la maquette masque les axes) — lu dans la feuille, **non vérifié à l'écran** | À vérifier à 375px ; sinon demande de correction à Empreinte. |
 | Matrice (attend l'API) | Pas de ligne « case + titre + objectif » sans le padding de `li[eTache]` dans un quadrant | `ul[eListe nue] > li[eTache]` (padding en plus), ou `input[eCase]` + `label` dans une grille `.ds-check` (fait, et gardé dans `layout.css` pour son retour). |

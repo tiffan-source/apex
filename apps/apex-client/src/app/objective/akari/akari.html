@@ -33,13 +33,9 @@
       >
         <ng-template [eRepliqueContenu]="replies()" let-reply>
           @if (reply.journal) {
-            <ol class="journal">
-              @for (line of reply.journal; track $index) {
-                <li class="detail ds-muted">{{ line }}</li>
-              }
-            </ol>
+            <ol eJournal [lignes]="reply.journal"></ol>
           } @else if (reply.markdown) {
-            <div [innerHTML]="reply.texte | markdown"></div>
+            <div [innerHTML]="reply.texte | eMarkdown"></div>
           } @else {
             <p>{{ reply.texte }}</p>
           }

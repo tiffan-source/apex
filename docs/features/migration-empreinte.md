@@ -127,11 +127,11 @@ Le client n'a plus ni domaine ni infrastructure : il appelle l'API d'Apex Brain 
 
 - **Voix** : `motsAEviter` rate les mots qui commencent ou finissent par une lettre accentuée (« échec », « raté », « manqué », « supprimé » : son `\b` ne voit pas la frontière) et ne connaît ni « erreur » ni les emoji (Apex complète avec `voiceIssues`) ; `formaterAttente` ne sait pas dire une date future (elle donne « Pour aujourd'hui »).
 - **Akari** : réglé en 0.3.0. Les répliques sont des `li[eReplique]` (dans `e-conversation` ou un `ol[eFil]`), plus des `aside[eNote]` : plus de régions « complementary » en double, et la seule note de l'écran est celle de la coque.
-- **Navigation** : `ELienNav` ne pose la corne que pour `aria-current="page"` (pas pour `"true"`, la section courante) ; `e-menu` ne marque pas l'entrée choisie (ni `menuitemradio` ni `aria-checked` : Apex écrit « · choisi ») ; pas de composant d'initiale (Apex : `.initial`, `shell.css`).
+- **Navigation** : `ELienNav` ne pose la corne que pour `aria-current="page"` (pas pour `"true"`, la section courante) ; `e-menu` ne marque pas l'entrée choisie (ni `menuitemradio` ni `aria-checked` : Apex écrit « · choisi »).
 - **`e-matrice`** (pour le retour de la matrice, § 3) : sous 640px, les axes restent au-dessus d'une grille passée sur une colonne et deviennent faux ; le compte d'un quadrant n'est pas personnalisable et ses titres sont figés en `h3`.
-- **`e-arete`** : pas de variante brouillon (la tête est toujours un sceau), pas de légende (Apex compose avec des cases d'`e-pas`), noms tronqués (18 / 22 / 2 × 15 caractères), pas d'identifiant dans `choisir` pour l'arête repliée « Faites », l'étape choisie n'est pas marquée, bornes carrées au lieu d'empreintes.
+- **`e-arete`** : pas de variante brouillon (la tête est toujours un sceau), noms tronqués (18 / 22 / 2 × 15 caractères), pas d'identifiant dans `choisir` pour l'arête repliée « Faites », l'étape choisie n'est pas marquée, bornes carrées au lieu d'empreintes.
 - **`e-filtres`** (le filtre par objectif de la matrice, § 3) : pas de nom accessible par option (`OptionFiltre` n'a que `valeur`, `libelle`, `lumiere`) ; le libellé, coupé pour tenir sur un téléphone, est le seul nom du bouton. Apex gardait des libellés différents (`distinctShortTitles`, « Préparer le… 2027 », parti avec la matrice : à reprendre dans l'historique Git) ; un `libelleComplet` (ou `aria-label`) par option rendrait le titre entier aux lecteurs d'écran.
-- **Contenu** : la prose du Markdown rendu est réglée en 0.3.0, dans les répliques (`.ds-prose` a quitté Apex) ; pas de repli générique `details` (Apex : `details.accomplished`, `objectives.css`).
+- **Contenu** : la prose du Markdown rendu est réglée en 0.3.0, dans les répliques (`.ds-prose` a quitté Apex).
 
 ### Client, à reprendre
 

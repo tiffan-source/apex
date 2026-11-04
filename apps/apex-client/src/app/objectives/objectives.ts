@@ -2,12 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import {
   EBouton,
-  ECarte,
+  ECarteAction,
+  ECarteObjectif,
+  ECarteProgression,
   EEmpreinte,
   EIcone,
   ENote,
   ENoteActions,
   EPas,
+  ERepli,
   compter,
   legendeProgression,
 } from '@empreinte-studio/angular';
@@ -75,7 +78,19 @@ export function cardProgress(card: ObjectiveCardViewModel): CardProgress {
  */
 @Component({
   selector: 'app-objectives',
-  imports: [RouterLink, EBouton, ECarte, EEmpreinte, EIcone, ENote, ENoteActions, EPas],
+  imports: [
+    RouterLink,
+    EBouton,
+    ECarteAction,
+    ECarteObjectif,
+    ECarteProgression,
+    EEmpreinte,
+    EIcone,
+    ENote,
+    ENoteActions,
+    EPas,
+    ERepli,
+  ],
   templateUrl: './objectives.html',
   styleUrl: './objectives.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
