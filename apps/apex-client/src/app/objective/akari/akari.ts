@@ -21,6 +21,8 @@ import {
   EConversation,
   EFilAriane,
   EIcone,
+  EJournal,
+  EMarkdown,
   ERepliqueContenu,
   type Replique,
   compter,
@@ -32,7 +34,6 @@ import { SessionStore } from '../../../chore/stores/session.store';
 import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
 import { ChatStore } from './chat.store';
 import { PermissionRequestViewModel } from './chat.models';
-import { MarkdownPipe } from './markdown.pipe';
 import { stageStateTitle, stageName } from '../stage-labels';
 import { firstName } from '../../../chore/mapper/person.mapper';
 
@@ -121,7 +122,7 @@ export function permissionPrompt(
  */
 @Component({
   selector: 'app-akari',
-  imports: [RouterLink, EArete, EBouton, EConversation, EFilAriane, EIcone, ERepliqueContenu, MarkdownPipe],
+  imports: [RouterLink, EArete, EBouton, EConversation, EFilAriane, EIcone, EJournal, EMarkdown, ERepliqueContenu],
   templateUrl: './akari.html',
   styleUrl: './akari.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

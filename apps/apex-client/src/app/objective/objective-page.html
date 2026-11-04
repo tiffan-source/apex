@@ -38,11 +38,7 @@
         <section class="ds-panel ds-gap-6" aria-labelledby="titre-arete">
           <div class="ds-title-row">
             <h2 class="section" id="titre-arete">L'arête · {{ stageCount() }}</h2>
-            <!-- Les cases d'e-pas tiennent lieu de légende en attendant celle d'e-arete (catalogue § 9). -->
-            <ul class="ds-list-bare ds-row ds-wrap ds-gap-4 detail ds-muted" aria-label="Légende de l'arête">
-              <li class="ds-row ds-gap-2"><e-pas aria-hidden="true" [faits]="1" legende="" />Faite</li>
-              <li class="ds-row ds-gap-2"><e-pas aria-hidden="true" [aFaire]="1" legende="" />À faire</li>
-            </ul>
+            <ul eLegendeArete></ul>
           </div>
           <div class="ds-scroll-x arete">
             <!-- La tête de l'arête est le sceau de l'écran : aucun bouton sceau ailleurs. -->

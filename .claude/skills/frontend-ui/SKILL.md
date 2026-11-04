@@ -91,8 +91,8 @@ Les écrans V1 sont sous `apps/apex-client/src/app/` : `shell/` (coque et naviga
 | Page | tous les écrans | Le gabarit d'un écran affiché dans la coque a une seule racine, `div.ds-page` : la coque gère déjà les marges et la largeur ; `.ds-page` ramène l'écart entre sections à 32px, comme les maquettes. La connexion, hors de la coque, part de `main.screen` (`auuthentication-page.css`). |
 | En-tête de page | `app/objectives/` | `header.ds-page-header` > (`div.ds-stack.ds-gap-2` > `p.repere.ds-muted` + `h1.manifeste.ds-break` + `p.detail.ds-muted`) + l'action |
 | Fil d'Ariane | `app/objective/` | `header.ds-stack.ds-gap-5` > `nav[eFilAriane]` + `div.ds-page-header` |
-| Cartes d'objectifs | `app/objectives/` | `div.ds-panels.ds-cols-2.cards` > `article[eCarte]` (`div.ds-stack.ds-grow` > horizon, titre, pourquoi ; `e-pas` ; pied `div.ds-row.ds-wrap.ds-justify-end.ds-rule-top` > lien « Ouvrir »). `.cards` (`objectives.css`) : un seul filet entre deux cartes, qui dessinent déjà le leur. |
-| Bloc replié « Accomplis » | `app/objectives/` | `details.accomplished` (`objectives.css`) > `summary` (chevron, `span.section`, compte) + `ul.ds-divided`. |
+| Cartes d'objectifs | `app/objectives/` | `div.ds-panels.ds-cols-2.cards` > `article[eCarteObjectif][filet]` (`titre`, `horizon`, `pourquoi` ; `e-pas[eCarteProgression]` ou une légende ; `a[eCarteAction]` « Ouvrir »). `.cards` (`objectives.css`) : un seul filet entre deux cartes, qui dessinent déjà le leur. |
+| Bloc replié « Accomplis » | `app/objectives/` | `details[eRepli]` (`titre`, `[detail]`, `[(ouvert)]`) > `ul.ds-divided`. |
 | Arête et étape | `app/objective/` | `div.ds-panels.ds-cols-2-1` > `section.ds-panel` (`.ds-title-row`, `div.ds-scroll-x.arete` > `e-arete`) + `section.ds-panel.panel-flush` (l'étape choisie : en-tête, `ul[eListe][nue]` > `li[eTache]`, `.ds-actions` ; sans étape choisie, une ligne qui invite à en choisir une) ; `.arete` et `.panel-flush` dans `objective-page.css` |
 | Feuille (modifier un pas, une étape, l'objectif) | `app/objective/` | `Feuilles.ouvrir(Composant, { donnees, cdk: { injector } })` ; dans le composant ouvert, `e-feuille[titre]` > `form.ds-stack` + `div[eFeuilleActions]`. Catalogue § 2.17. |
 | Formulaire | partout | `form.ds-stack` > `e-champ[libelle]` > `input[eSaisie]`, `textarea[eSaisie][tailleAuto]`, `e-selection`, `input[type=date][eSaisie]` ; erreur par `[erreur]` du champ ; `facultatif` plutôt qu'un astérisque. |
@@ -117,18 +117,19 @@ En-tête de page et grille de cartes :
 
   <div class="ds-panels ds-cols-2">
     @for (o of objectifs(); track o.id) {
-      <article class="ds-panel" [attr.aria-labelledby]="'objectif-' + o.id">
-        <p class="detail ds-muted">{{ o.horizon }}</p>
-        <h2 class="objectif ds-break" [id]="'objectif-' + o.id">{{ o.titre }}</h2>
-        @if (o.pourquoi) {
-          <p class="voix ds-muted">« {{ o.pourquoi }} »</p>
-        }
-        <div class="ds-push-down">
-          <e-pas [faits]="o.etapesFaites" [aFaire]="o.etapesAFaire" unite="etape" />
-        </div>
-        <div class="ds-row ds-wrap ds-justify-end ds-rule-top">
-          <a eBouton="trait" petit [routerLink]="['/objectifs', o.id]">Ouvrir</a>
-        </div>
+      <article
+        eCarteObjectif
+        filet
+        [titre]="o.titre"
+        [idTitre]="'objectif-' + o.id"
+        [horizon]="o.horizon"
+        [pourquoi]="o.pourquoi"
+        [faits]="o.etapesFaites"
+        [aFaire]="o.etapesAFaire"
+        unite="etape"
+        [attr.aria-labelledby]="'objectif-' + o.id"
+      >
+        <a eCarteAction eBouton="trait" petit [routerLink]="['/objectifs', o.id]">Ouvrir</a>
       </article>
     }
   </div>
@@ -187,7 +188,7 @@ La conversation avec Akari (le composant d'Empreinte, voir le piège sur la conv
   <e-conversation class="conversation" [repliques]="repliques()" [statut]="statut()" [pret]="pret()"
                   [personne]="prenom()" indication="Réponds à Akari…" (envoyer)="envoyer($event)" (action)="choisir($event)">
     <ng-template [eRepliqueContenu]="repliques()" let-r>
-      @if (r.markdown) { <div [innerHTML]="r.texte | markdown"></div> } @else { <p>{{ r.texte }}</p> }
+      @if (r.markdown) { <div [innerHTML]="r.texte | eMarkdown"></div> } @else { <p>{{ r.texte }}</p> }
     </ng-template>
   </e-conversation>
   <section class="ds-panel ds-gap-6 stages" aria-labelledby="titre-arete">…</section>

@@ -21,13 +21,6 @@
   background: var(--panneau);
 }
 
-/* Ce qu'Akari a déjà fait pendant ce tour, dans la colonne de ses phrases, au-dessus de la ligne d'état : une
-   simple liste, sans les puces ni le retrait de la prose d'une réplique. */
-.journal {
-  padding: 0;
-  list-style: none;
-}
-
 /* Une étape de la liste : le nom, le compte de pas à droite ; l'état passe sous le nom. */
 .stage {
   display: grid;
