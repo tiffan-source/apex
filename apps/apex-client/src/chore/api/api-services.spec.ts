@@ -38,24 +38,30 @@ afterEach(() => {
 describe('api.config', () => {
   it('normalise l’adresse et ne reconnaît que les requêtes vers l’API', () => {
     expect(normalizeApiUrl(' https://apex-brain.test/// ')).toBe('https://apex-brain.test');
-    expect(isApiRequest('https://api.test/v1/objectives', API)).toBe(true);
+    expect(isApiRequest('https://api.test/v2/objectives', API)).toBe(true);
     expect(isApiRequest('https://api.test', API)).toBe(true);
-    expect(isApiRequest('https://api.test.ailleurs.test/v1', API)).toBe(false);
-    expect(isApiRequest('https://ailleurs.test/v1', API)).toBe(false);
+    expect(isApiRequest('https://api.test.ailleurs.test/v2', API)).toBe(false);
+    expect(isApiRequest('https://ailleurs.test/v2', API)).toBe(false);
   });
 });
 
 describe('ObjectivesApi', () => {
   it.each([
-    ['list', () => [], 'GET', '/v1/objectives', null],
-    ['create', () => [{ title: 'Guitare', dueDate: '2027-05-01T00:00:00.000Z' }], 'POST', '/v1/objectives', { title: 'Guitare', dueDate: '2027-05-01T00:00:00.000Z' }],
-    ['edit', () => ['semi', { title: 'Semi', dueDate: null }], 'PATCH', '/v1/objectives/semi', { title: 'Semi', dueDate: null }],
-    ['addSubObjective', () => ['semi', { title: 'Endurance' }], 'POST', '/v1/objectives/semi/sub-objectives', { title: 'Endurance' }],
-    ['addTask', () => ['endurance', { title: 'Courir', importance: 3, urgency: 2 }], 'POST', '/v1/objectives/endurance/tasks', { title: 'Courir', importance: 3, urgency: 2 }],
-    ['editTask', () => ['t1', { title: 'Courir', objectiveId: 'semi', importance: 4, urgency: 1 }], 'PATCH', '/v1/tasks/t1', { title: 'Courir', objectiveId: 'semi', importance: 4, urgency: 1 }],
-    ['setTaskDone', () => ['t1', true], 'PUT', '/v1/tasks/t1/done', { done: true }],
-    ['deleteObjective', () => ['endurance'], 'DELETE', '/v1/objectives/endurance', null],
-    ['deleteTask', () => ['t1'], 'DELETE', '/v1/tasks/t1', null],
+    ['objectiveTree', () => [], 'GET', '/v2/bff/objective-tree', null],
+    ['createObjective', () => [{ title: 'Guitare', dueDate: '2027-05-01T00:00:00.000Z' }], 'POST', '/v2/objectives', { title: 'Guitare', dueDate: '2027-05-01T00:00:00.000Z' }],
+    ['addSubObjective', () => ['semi', { title: 'Endurance' }], 'POST', '/v2/objectives/semi/sub-objectives', { title: 'Endurance' }],
+    ['addTaskToObjective', () => ['endurance', { title: 'Courir', importance: 3, urgency: 2 }], 'POST', '/v2/objectives/endurance/tasks', { title: 'Courir', importance: 3, urgency: 2 }],
+    ['renameObjective', () => ['semi', 'Semi'], 'PATCH', '/v2/objectives/semi/rename', { title: 'Semi' }],
+    ['clarifyObjective', () => ['semi', { why: '' }], 'PATCH', '/v2/objectives/semi/clarify', { why: '' }],
+    ['setObjectiveDeadline', () => ['semi', '2027-04-01T00:00:00.000Z'], 'PATCH', '/v2/objectives/semi/set-deadline', { dueDate: '2027-04-01T00:00:00.000Z' }],
+    ['removeObjectiveDeadline', () => ['semi'], 'PATCH', '/v2/objectives/semi/remove-deadline', {}],
+    ['deleteObjective', () => ['endurance'], 'DELETE', '/v2/objectives/endurance', null],
+    ['renameTask', () => ['t1', 'Courir'], 'PATCH', '/v2/tasks/t1/rename', { title: 'Courir' }],
+    ['reprioritizeTask', () => ['t1', 4, 1], 'PATCH', '/v2/tasks/t1/reprioritize', { importance: 4, urgency: 1 }],
+    ['moveTask', () => ['t1', 'semi'], 'PATCH', '/v2/tasks/t1/move', { objectiveId: 'semi' }],
+    ['completeTask', () => ['t1'], 'PATCH', '/v2/tasks/t1/complete', {}],
+    ['reopenTask', () => ['t1'], 'PATCH', '/v2/tasks/t1/reopen', {}],
+    ['deleteTask', () => ['t1'], 'DELETE', '/v2/tasks/t1', null],
   ] as const)('%s → %s %s', async (method, args, verb, path, body) => {
     const { httpMock, objectives } = setup();
     const call = (objectives[method] as (...values: unknown[]) => Promise<unknown>).apply(objectives, [...args()]);
@@ -70,7 +76,7 @@ describe('ObjectivesApi', () => {
   it('un effacement rend une réponse vide (204)', async () => {
     const { httpMock, objectives } = setup();
     const call = objectives.deleteTask('t1');
-    httpMock.expectOne(`${API}/v1/tasks/t1`).flush(null, { status: 204, statusText: 'No Content' });
+    httpMock.expectOne(`${API}/v2/tasks/t1`).flush(null, { status: 204, statusText: 'No Content' });
     await expect(call).resolves.toBeNull();
   });
 
@@ -78,23 +84,23 @@ describe('ObjectivesApi', () => {
     const { httpMock, objectives } = setup();
     const call = objectives.deleteObjective('semi');
     httpMock
-      .expectOne(`${API}/v1/objectives/semi`)
+      .expectOne(`${API}/v2/objectives/semi`)
       .flush({ error: { code: 'OBJECTIVE_NOT_FOUND', message: 'Objective with ID semi not found' } }, { status: 404, statusText: 'Not Found' });
     await expect(call).rejects.toMatchObject({ code: 'OBJECTIVE_NOT_FOUND', status: 404 });
   });
 
   it('encode les identifiants dans l’adresse', async () => {
     const { httpMock, objectives } = setup();
-    const call = objectives.setTaskDone('a/b?c', false);
-    httpMock.expectOne(`${API}/v1/tasks/a%2Fb%3Fc/done`).flush({ id: 'a/b?c', title: 'x', done: false });
+    const call = objectives.reopenTask('a/b?c');
+    httpMock.expectOne(`${API}/v2/tasks/a%2Fb%3Fc/reopen`).flush({ id: 'a/b?c', title: 'x', done: false });
     await call;
   });
 
   it('un refus de l’API devient une ApiError avec son code', async () => {
     const { httpMock, objectives } = setup();
-    const call = objectives.editTask('t1', { title: 'Courir', objectiveId: 'semi', importance: 4, urgency: 1 });
+    const call = objectives.renameTask('t1', 'Courir');
     httpMock
-      .expectOne(`${API}/v1/tasks/t1`)
+      .expectOne(`${API}/v2/tasks/t1/rename`)
       .flush({ error: { code: 'TASK_NOT_FOUND', message: 'Task with ID t1 not found' } }, { status: 404, statusText: 'Not Found' });
 
     const error = await call.catch((reason: unknown) => reason);
@@ -105,11 +111,11 @@ describe('ObjectivesApi', () => {
 
 describe('AssistantApi', () => {
   it.each([
-    ['conversation', () => ['semi'], 'GET', '/v1/objectives/semi/conversation', null],
-    ['state', () => ['semi'], 'GET', '/v1/objectives/semi/assistant', null],
-    ['sendMessage', () => ['semi', 'On commence ?'], 'POST', '/v1/objectives/semi/assistant/messages', { message: 'On commence ?' }],
-    ['respondToPermission', () => ['semi', true, 'call-1'], 'POST', '/v1/objectives/semi/assistant/permission', { granted: true, toolCallId: 'call-1' }],
-    ['respondToPermission', () => ['semi', false], 'POST', '/v1/objectives/semi/assistant/permission', { granted: false }],
+    ['conversation', () => ['semi'], 'GET', '/v2/objectives/semi/conversation', null],
+    ['state', () => ['semi'], 'GET', '/v2/objectives/semi/assistant', null],
+    ['sendMessage', () => ['semi', 'On commence ?'], 'POST', '/v2/objectives/semi/assistant/messages', { message: 'On commence ?' }],
+    ['respondToPermission', () => ['semi', true, 'call-1'], 'POST', '/v2/objectives/semi/assistant/permission', { granted: true, toolCallId: 'call-1' }],
+    ['respondToPermission', () => ['semi', false], 'POST', '/v2/objectives/semi/assistant/permission', { granted: false }],
   ] as const)('%s → %s %s', async (method, args, verb, path, body) => {
     const { httpMock, assistant } = setup();
     const call = (assistant[method] as (...values: unknown[]) => Promise<unknown>).apply(assistant, [...args()]);
@@ -124,8 +130,8 @@ describe('AssistantApi', () => {
 
 describe('AuthApi', () => {
   it.each([
-    ['login', 'POST', '/v1/auth/login'],
-    ['register', 'POST', '/v1/auth/register'],
+    ['login', 'POST', '/v2/auth/login'],
+    ['register', 'POST', '/v2/auth/register'],
   ] as const)('%s → %s %s', async (method, verb, path) => {
     const { httpMock, auth } = setup();
     const credentials = { email: 'lea@exemple.com', password: 'secret1' };
@@ -142,7 +148,7 @@ describe('AuthApi', () => {
     const { httpMock, auth } = setup();
     const call = auth.login({ email: 'lea@exemple.com', password: 'faux' });
     httpMock
-      .expectOne(`${API}/v1/auth/login`)
+      .expectOne(`${API}/v2/auth/login`)
       .flush({ error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' } }, { status: 401, statusText: 'Unauthorized' });
     await expect(call).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS', status: 401 });
   });

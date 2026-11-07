@@ -6,7 +6,7 @@ import { InjectionToken } from '@angular/core';
  */
 export const API_URL = new InjectionToken<string>('API_URL');
 
-/** L'adresse sans « / » final : les services y ajoutent leurs routes (« /v1/… »). */
+/** L'adresse sans « / » final : les services y ajoutent leurs routes (« /v2/… »). */
 export function normalizeApiUrl(url: string): string {
   return url.trim().replace(/\/+$/, '');
 }

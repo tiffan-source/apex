@@ -13,18 +13,18 @@ import type { ConversationResponse, WorkflowState } from './api.models';
 @Injectable({ providedIn: 'root' })
 export class AssistantApi {
   private readonly http = inject(HttpClient);
-  private readonly url = `${inject(API_URL)}/v1/objectives`;
+  private readonly url = `${inject(API_URL)}/v2/objectives`;
 
   private objective(objectiveId: string): string {
     return `${this.url}/${encodeURIComponent(objectiveId)}`;
   }
 
-  /** GET /v1/objectives/{objectiveId}/conversation : les messages, dans l'ordre chronologique. */
+  /** GET /v2/objectives/{objectiveId}/conversation : les messages, dans l'ordre chronologique. */
   conversation(objectiveId: string): Promise<ConversationResponse> {
     return request(this.http.get<ConversationResponse>(`${this.objective(objectiveId)}/conversation`));
   }
 
-  /** GET /v1/objectives/{objectiveId}/assistant : l'état du workflow (un tour interrompu reprend). */
+  /** GET /v2/objectives/{objectiveId}/assistant : l'état du workflow (un tour interrompu reprend). */
   state(objectiveId: string): Promise<WorkflowState> {
     return request(this.http.get<WorkflowState>(`${this.objective(objectiveId)}/assistant`));
   }

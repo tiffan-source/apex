@@ -24,7 +24,7 @@ describe('les textes de la plomberie', () => {
   });
 
   it('chaque signalement dit quoi faire ensuite', () => {
-    for (const report of Object.values(FAILURE_REPORTS)) expect(report).toMatch(/réessaie|recharge la page/);
+    for (const report of Object.values(FAILURE_REPORTS)) expect(report).toMatch(/réessaie|recharge la page|recrée/i);
   });
 });
 

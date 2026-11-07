@@ -3,7 +3,7 @@ import { patchState, signalStoreFeature, type, withMethods } from "@ngrx/signals
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
 import { ObjectiveMapper } from "../../mapper/objective.mapper";
 import { ObjectivesApi } from "../../api/objectives.api";
-import type { ObjectivesResponse } from "../../api/api.models";
+import type { ObjectiveTreeResponse } from "../../api/api.models";
 import { errorCodeOf, retryWhileTransient } from "../../api/api-error";
 import { Observable, Subject, defer, from, of, pipe, switchMap, takeUntil, tap } from "rxjs";
 import { tapResponse } from "@ngrx/operators";
@@ -28,16 +28,16 @@ export function withObjectiveQuery() {
       writes = inject(WriteQueue)
     ) => {
       /**
-       * Une lecture de l'API (GET /v1/objectives), dans la file d'écritures, qui ne rend que ce que l'écran peut
+       * Une lecture de l'API (GET /v2/bff/objective-tree), dans la file d'écritures, qui ne rend que ce que l'écran peut
        * montrer. Un geste fait après la mise en file d'un rechargement (cocher, modifier, déplacer un pas chargé)
        * a déjà changé l'écran, mais il n'est écrit qu'après la lecture : plus ancienne que lui, elle l'effacerait
        * de l'écran alors qu'il est enregistré. Elle est alors laissée de côté, et l'API relue après ces écritures.
        * Au premier chargement, rien n'est encore à l'écran : seules des créations ont pu être faites pendant la
        * lecture, et keepOptimistic les garde. La lecture vaut tout de suite, sans attendre leur écriture.
        */
-      const readAfterWrites = (): Observable<ObjectivesResponse> =>
+      const readAfterWrites = (): Observable<ObjectiveTreeResponse> =>
         defer(() => {
-          const read = writes.run(() => objectivesApi.list());
+          const read = writes.run(() => objectivesApi.objectiveTree());
           const mark = writes.enqueued;
           return from(read).pipe(
             switchMap((data) =>
@@ -47,13 +47,13 @@ export function withObjectiveQuery() {
         });
 
       /**
-       * Une relecture : l'écran montre déjà les objectifs, et c'est elle qui dit si une étape est faite après
-       * un pas coché. Elle continue tant que la panne est passagère : au bout de quelques essais, la personne
+       * Une relecture : l'écran montre déjà les objectifs (au chargement, quand l'issue d'une commande est
+       * inconnue, après ce qu'Akari écrit ; jamais après un geste accepté). Elle continue tant que la panne est passagère : au bout de quelques essais, la personne
        * apprend que le serveur ne répond pas ; la note s'en va dès qu'il répond.
        */
-      const rereadUntilAnswered = (): Observable<ObjectivesResponse> =>
+      const rereadUntilAnswered = (): Observable<ObjectiveTreeResponse> =>
         readAfterWrites().pipe(
-          retryWhileTransient<ObjectivesResponse>({
+          retryWhileTransient<ObjectiveTreeResponse>({
             onRetry: (retryCount) => {
               if (retryCount === RELOAD_RETRIES_BEFORE_REPORT) annonces.signaler(FAILURE_REPORTS.reloadObjectives);
             },
@@ -84,7 +84,7 @@ export function withObjectiveQuery() {
                   annonces.retirer(FAILURE_REPORTS.loadObjectives);
                   annonces.retirer(FAILURE_REPORTS.reloadObjectives);
                   patchState(store, {
-                    ...keepOptimistic(ObjectiveMapper.fromLoadToObjectiveViewModels(data), {
+                    ...keepOptimistic(ObjectiveMapper.fromObjectiveTree(data), {
                       objectives: store.objectives(),
                       tasks: store.tasks(),
                     }),

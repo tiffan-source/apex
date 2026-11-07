@@ -26,7 +26,7 @@ export type SignupInput = {
 
 /**
  * Le compte est créé, mais l'adresse e-mail doit être confirmée avant qu'une session s'ouvre
- * (POST /v1/auth/register rend `session: null`). Ce n'est pas un code de l'API : SessionStore le pose.
+ * (POST /v2/auth/register rend `session: null`). Ce n'est pas un code de l'API : SessionStore le pose.
  */
 export const EMAIL_CONFIRMATION_REQUIRED = 'EMAIL_CONFIRMATION_REQUIRED';
 

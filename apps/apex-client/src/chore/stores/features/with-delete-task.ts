@@ -5,7 +5,7 @@ import { inject } from "@angular/core";
 import { filter, from, map, mergeMap, pipe, tap } from "rxjs";
 import { ObjectiveState } from "../objective.store";
 import { ObjectivesApi } from "../../api/objectives.api";
-import { errorCodeOf } from "../../api/api-error";
+import { errorCodeOf, isUnknownOutcome } from "../../api/api-error";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";
 import { whenSignedIn } from "../utils/filter-auth-operation";
@@ -51,10 +51,8 @@ export function withDeleteTask() {
               return id;
             })).pipe(
               tapResponse({
-                next: (deleted) => {
-                  // Sans ce pas, son étape peut être faite : c'est l'API qui le dit.
-                  if (deleted !== null) store.loadObjectives();
-                },
+                // Effacé : l'écran l'a déjà retiré, rien à relire.
+                next: () => undefined,
                 error: (error) => {
                   console.error('Pas non effacé :', error);
                   // Il revient à sa place, sauf si son étape est partie entre-temps (il part avec elle, et c'est
@@ -74,9 +72,8 @@ export function withDeleteTask() {
                       })),
                     });
                   }
-                  // L'API dit ce qui est vrai : sa réponse a pu se perdre après l'effacement, un geste a pu être
-                  // refusé entre-temps.
-                  store.loadObjectives();
+                  // Sans réponse claire, l'API a pu l'effacer avant que sa réponse se perde : elle dit ce qui est vrai.
+                  if (isUnknownOutcome(error)) store.loadObjectives();
                 },
               })
             )

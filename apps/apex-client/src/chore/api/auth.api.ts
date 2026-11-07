@@ -12,14 +12,14 @@ import type { Credentials, RegisteredResponse, SignedInResponse } from './api.mo
 @Injectable({ providedIn: 'root' })
 export class AuthApi {
   private readonly http = inject(HttpClient);
-  private readonly url = `${inject(API_URL)}/v1/auth`;
+  private readonly url = `${inject(API_URL)}/v2/auth`;
 
-  /** POST /v1/auth/register : la session vaut null tant que l'adresse doit être confirmée. */
+  /** POST /v2/auth/register : la session vaut null tant que l'adresse doit être confirmée. */
   register(credentials: Credentials): Promise<RegisteredResponse> {
     return request(this.http.post<RegisteredResponse>(`${this.url}/register`, credentials));
   }
 
-  /** POST /v1/auth/login */
+  /** POST /v2/auth/login */
   login(credentials: Credentials): Promise<SignedInResponse> {
     return request(this.http.post<SignedInResponse>(`${this.url}/login`, credentials));
   }
