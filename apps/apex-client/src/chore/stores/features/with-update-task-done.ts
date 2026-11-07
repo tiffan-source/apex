@@ -12,6 +12,8 @@ import { WriteQueue } from "../utils/write-queue";
 import { replaceFieldsIfShown } from "../utils/command-fields";
 import { forgetTask } from "../utils/forget";
 import { SUCCESS_ANNOUNCEMENTS, failureReport } from "../../constants/messages.constante";
+import { SessionStore } from "../session.store";
+import { whenSignedIn } from "../utils/filter-auth-operation";
 
 export function withUpdateTaskDone() {
   return signalStoreFeature(
@@ -20,7 +22,8 @@ export function withUpdateTaskDone() {
       store,
       objectivesApi = inject(ObjectivesApi),
       annonces = inject(AnnoncesStore),
-      writes = inject(WriteQueue)
+      writes = inject(WriteQueue),
+      sessionStore = inject(SessionStore)
     )=>{
       /** Le pas montre `next` à la place de `shown`, sauf si un geste plus récent l'a déjà changé. */
       const replaceDone = (taskId: string, shown: boolean, next: boolean) =>
@@ -33,6 +36,8 @@ export function withUpdateTaskDone() {
        */
       const updateTaskDone = rxMethod<{ taskId: string; done: boolean }>(
           pipe(
+            // Sans session, rien ne change à l'écran et rien ne part (l'API le refuserait).
+            whenSignedIn(sessionStore.isAuthenticated),
             tap(({ taskId, done }) => replaceDone(taskId, !done, done)),
             mergeMap(({ taskId, done }) =>
               from(writes.run(async () => {

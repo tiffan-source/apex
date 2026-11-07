@@ -272,9 +272,12 @@ describe('ObjectiveStore', () => {
       t.store.createObjective({ title: 'Guitare' });
       t.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 3 } });
       t.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 4, urgency: 3, objectiveId: 'endurance' } });
+      t.store.updateTaskDone({ taskId: 't1', done: true });
       await settle();
 
       expect(t.api.createObjective).not.toHaveBeenCalled();
+      expect(t.api.completeTask).not.toHaveBeenCalled();
+      expect(t.store.tasks().find((item) => item.id === 't1')?.done).toBe(false);
       expect(t.api.addTaskToObjective).not.toHaveBeenCalled();
       expect(t.api.reprioritizeTask).not.toHaveBeenCalled();
       expect(temporaryIdsOf(t.store)).toEqual([]);
