@@ -85,9 +85,10 @@ export function failureReport(action: FailedAction, errorCode?: string): string 
 }
 
 /*
- * Le contrôle de la voix, pour les tests de l'application. motsAEviter() d'Empreinte ne suffit pas seul :
- * ses motifs commencent par \b, qui ne reconnaît pas une lettre accentuée en début de mot. « échec »,
- * « échoué », « raté », « manqué » ou « supprimé » lui échappent. Ces motifs-ci s'appuient sur les lettres Unicode.
+ * Le contrôle de la voix, pour les tests de l'application. motsAEviter() d'Empreinte ne suffit pas seul : il ne
+ * connaît ni « erreur », ni « succès », ni les emoji. Ces motifs-ci les ajoutent, et gardent ceux qui commencent
+ * par une lettre accentuée (« échec », « raté », « supprimé »), qu'Empreinte voit aussi depuis la 0.6.0. Ils
+ * s'appuient sur les lettres Unicode.
  */
 const OUTSIDE_THE_VOICE: readonly { word: string; pattern: RegExp }[] = [
   { word: 'échec', pattern: /(?<!\p{L})(échec|échou)/iu },

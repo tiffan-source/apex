@@ -80,9 +80,9 @@ describe('les niveaux d’importance et d’urgence', () => {
 });
 
 describe('voiceIssues', () => {
-  it('voit ce que motsAEviter() laisse passer (mots qui commencent par une lettre accentuée)', () => {
-    // Empreinte : \b ne reconnaît pas « é » en début de mot
-    expect(motsAEviter('Un échec.')).toEqual([]);
+  it('voit les mots qui commencent par une lettre accentuée', () => {
+    // Empreinte les voit aussi depuis la 0.6.0 ; voiceIssues() ne compte chaque mot qu'une fois.
+    expect(motsAEviter('Un échec.').map(({ mot }) => mot)).toEqual(['échec']);
     expect(voiceIssues('Un échec.')).toEqual(['échec']);
     expect(voiceIssues('La connexion a échoué.')).toEqual(['échec']);
     expect(voiceIssues('C’est raté.')).toEqual(['raté']);
