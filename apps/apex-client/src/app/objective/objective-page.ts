@@ -16,7 +16,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import type { ComponentType } from '@angular/cdk/portal';
 import { compter } from '@empreinte-studio/angular/core';
-import { EArete, type EtapeArete } from '@empreinte-studio/angular/arete';
+import { EArete, ELegendeArete, type EtapeArete } from '@empreinte-studio/angular/arete';
 import { EBouton } from '@empreinte-studio/angular/bouton';
 import { Feuilles } from '@empreinte-studio/angular/feuille';
 import { EIcone } from '@empreinte-studio/angular/icone';
@@ -58,6 +58,7 @@ type OpenStageSource = {
     EBouton,
     EFilAriane,
     EIcone,
+    ELegendeArete,
     EListe,
     ENote,
     ENoteActions,

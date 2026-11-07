@@ -23,8 +23,9 @@ import {
 import { filter } from 'rxjs';
 import { EBouton } from '@empreinte-studio/angular/bouton';
 import { type PreferenceTheme, Theme } from '@empreinte-studio/angular/core';
+import { EInitiale } from '@empreinte-studio/angular/initiale';
 import { type ElementMenu, EMenu } from '@empreinte-studio/angular/menu';
-import { ELienNav, EMarque } from '@empreinte-studio/angular/navigation';
+import { ELienEvitement, ELienNav, EMarque } from '@empreinte-studio/angular/navigation';
 import { ENote, ENoteActions } from '@empreinte-studio/angular/note';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
@@ -62,6 +63,8 @@ const PATHS_ONLY: Partial<IsActiveMatchOptions> = { queryParams: 'ignored', matr
   imports: [
     RouterOutlet,
     RouterLink,
+    EInitiale,
+    ELienEvitement,
     ELienNav,
     EMarque,
     EMenu,
@@ -120,9 +123,6 @@ export class Shell {
     const user = this.session.currentUser();
     return (user?.name ?? '').trim() || (user?.email ?? '').trim();
   });
-
-  /** La première lettre du nom, sinon de l'adresse. */
-  protected readonly initial = computed(() => ([...this.identity()][0] ?? '').toLocaleUpperCase('fr'));
 
   /** Les entrées du menu « Réglages » ; celle qui est retenue porte une coche et « · choisi ». */
   protected readonly settings = computed<ElementMenu<PreferenceTheme>[]>(() => {

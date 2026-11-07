@@ -476,22 +476,22 @@ describe('Akari : la ligne d’état et la zone de réponse', () => {
 
   it('dit au-dessus de la ligne d’état ce qu’Akari a déjà fait, dans sa colonne, le temps du tour', async () => {
     const { fixture, chat, root } = await setup({ history: HISTORY });
-    expect(root.querySelector('.journal')).toBeNull();
+    expect(root.querySelector('.e-journal')).toBeNull();
 
     chat.isStreaming.set(true);
     chat.canSendMessage.set(false);
     chat.journal.set(["J'ai noté ton message.", "J'ai regardé ton objectif."]);
     await refresh(fixture);
 
-    const lines = [...root.querySelectorAll('ol.journal > li')].map((line) => text(line));
+    const lines = [...root.querySelectorAll('ol.e-journal > li')].map((line) => text(line));
     expect(lines).toEqual(["J'ai noté ton message.", "J'ai regardé ton objectif."]);
-    expect(root.querySelector('.journal')?.closest('li.e-replique')?.classList).toContain('e-replique--assistant');
-    expect(root.querySelector('.journal')?.closest('.e-replique__prose')).not.toBeNull();
+    expect(root.querySelector('.e-journal')?.closest('li.e-replique')?.classList).toContain('e-replique--assistant');
+    expect(root.querySelector('.e-journal')?.closest('.e-replique__prose')).not.toBeNull();
 
     chat.journal.set([]);
     chat.isStreaming.set(false);
     await refresh(fixture);
-    expect(root.querySelector('.journal')).toBeNull();
+    expect(root.querySelector('.e-journal')).toBeNull();
   });
 
   it('pose le journal avant la demande d’accord, qui attend sa réponse en dernier', async () => {

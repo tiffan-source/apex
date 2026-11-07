@@ -39,11 +39,11 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 - [] `ELienNav` ne pose la corne que pour `aria-current="page"`
 - [] `e-menu` sans état choisi
 - [] `e-matrice` : axes faux sous 640px, compte non personnalisable, titres figés
-- [] `e-arete` : pas de brouillon, pas de légende (Apex compose avec des cases d'`e-pas`), noms tronqués, pas d'id dans `choisir`, étape choisie non marquée
+- [] `e-arete` : pas de brouillon, noms tronqués, pas d'id dans `choisir`, étape choisie non marquée
 - [] `e-filtres` : pas de nom accessible par option (le libellé coupé est le seul nom du bouton)
 - [x] Un style « prose » pour le Markdown, dans les répliques (0.3.0)
 - [] `e-conversation` : dire aux lecteurs d'écran les répliques d'Akari qui arrivent (le fil n'est pas une région annoncée : seuls la ligne d'état et, dans Apex, la demande d'accord sont dites)
-- [] Un repli générique (`details`), une initiale de la personne
+- [x] Un repli générique (`details[eRepli]`), une initiale de la personne (`e-initiale`), la légende de l'arête (`ul[eLegendeArete]`) (0.5.0)
 
 ### Client
 - [] Contrôle visuel de chaque écran dans le navigateur (Jour, Nuit, 375px, clavier, `GardienSceau`), avec une session sur Apex Brain (local ou hébergé)
