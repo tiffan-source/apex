@@ -17,4 +17,8 @@
     <button eBouton="trait" type="submit" form="feuille-objectif">Enregistrer</button>
     <button eBouton="nu" type="button" (click)="ref.close()">Annuler</button>
   </div>
+  <p eFeuillePied>
+    {{ erasure.exitQuestion }}
+    <button eBouton="nu" petit doux type="button" (click)="ref.close('erase')">{{ erasure.ask }}</button>
+  </p>
 </e-feuille>

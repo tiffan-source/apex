@@ -23,10 +23,42 @@
   padding-inline: var(--ds-panel-inset);
 }
 
+/* La trace d'un pas effacé prend sa place : son texte s'aligne sur la case
+   des autres pas, « Remettre » sur leur ×. */
+.panel-flush .e-trace {
+  padding-inline: var(--ds-panel-inset) calc(var(--ds-panel-inset) - var(--pas-2));
+}
+
 /* L'arête d'Empreinte prend 100 % de la largeur : sur mobile, elle
    rétrécirait jusqu'à rendre ses noms illisibles (à 375px, une arête de
    6 étapes tombait à environ 40 %, ses noms à 6px environ). Elle garde ici la
    largeur de la maquette Arête, et son conteneur .ds-scroll-x défile. */
 .arete > e-arete {
   min-width: 640px;
+}
+
+/* Effacer une étape (maquette « Effacer ») : le geste discret, sous les
+   actions de l'étape et un filet trame qui va d'un bord à l'autre du
+   panneau. Le mot doux s'aligne sur la marge du panneau. */
+.panel-flush > .stage-exit {
+  margin-inline: 0;
+  padding: var(--pas-2) var(--ds-panel-inset) 0;
+  box-shadow: inset 0 var(--trait-fin) 0 var(--trame);
+}
+
+.stage-exit > button {
+  padding-inline: 0;
+}
+
+/* Sa validation se déplie sur place, d'un bord à l'autre du panneau et
+   jusqu'à son pied : le creux et le filet d'encre viennent d'Empreinte. */
+.panel-flush > e-confirmation {
+  margin: var(--pas-2) 0 calc(-1 * var(--ds-panel-padding-block));
+  padding-inline: var(--ds-panel-inset);
+}
+
+@media (max-width: 760px) {
+  .panel-flush > e-confirmation {
+    margin-block-end: calc(-1 * var(--ds-panel-padding-block-mobile));
+  }
 }

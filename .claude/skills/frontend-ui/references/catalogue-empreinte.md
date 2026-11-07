@@ -1,6 +1,6 @@
 # Catalogue : les composants Empreinte pour Apex
 
-Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.5.0** et **`@empreinte-studio/tokens` 0.5.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11) ; la 0.3.2 retire le glisser-déposer de la matrice (§ 2.19) ; la 0.4 retire toute notion d'ordre : une étape est faite ou à faire, un pas aussi (§ 2.6, § 2.20, § 4) ; la 0.5 reprend ce qu'Apex écrivait à la main : la carte d'objectif et son horizon (§ 2.5), le journal (§ 2.10 bis), le Markdown (§ 2.10 ter), le lien d'évitement (§ 2.16), l'initiale (§ 2.16 bis), le repli (§ 2.18 bis), la légende de l'arête (§ 2.20). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
+Référence de tous les écrans d'Apex migrés vers Empreinte. Version couverte : **`@empreinte-studio/angular` 0.6.0** et **`@empreinte-studio/tokens` 0.6.0**, telles qu'installées dans `node_modules` (elles font foi en cas d'écart avec le dépôt). La 0.2 a retiré la coque de navigation (Apex écrit la sienne, § 2.16) ; la 0.3 ajoute la conversation (§ 2.10 bis) et corrige la zone qui grandit (§ 2.11) ; la 0.3.2 retire le glisser-déposer de la matrice (§ 2.19) ; la 0.4 retire toute notion d'ordre : une étape est faite ou à faire, un pas aussi (§ 2.6, § 2.20, § 4) ; la 0.5 reprend ce qu'Apex écrivait à la main : la carte d'objectif et son horizon (§ 2.5), le journal (§ 2.10 bis), le Markdown (§ 2.10 ter), le lien d'évitement (§ 2.16), l'initiale (§ 2.16 bis), le repli (§ 2.18 bis), la légende de l'arête (§ 2.20) ; la 0.6 apporte l'effacement en trois poids : le × d'une tâche (§ 2.9) et sa trace (§ 2.9 bis), la confirmation sur place, la réécriture d'un nom et la feuille de confirmation (§ 2.17 bis), le pied d'une feuille et la feuille d'alerte (§ 2.17), l'encre et le mot doux (§ 2.3), les pas sur le départ (§ 2.6), l'étape qui sort du plan (§ 2.20) et la voix de l'effacement (§ 4) ; `motsAEviter` voit aussi les mots accentués (§ 8.6). Chaque affirmation a été relevée dans `node_modules/@empreinte-studio/angular/types/*.d.ts` et `fesm2022/*.mjs` ; les sorties des fonctions de voix ont été obtenues en les exécutant.
 
 Le cahier de la migration (`docs/features/migration-empreinte.md`) fixe le périmètre, le vocabulaire et les règles d'écran ; ce catalogue dit **avec quoi** les construire.
 
@@ -25,7 +25,7 @@ import { EMatrice, EMatriceElement } from '@empreinte-studio/angular/matrice'; /
 
 ### 1.1 Dépendances
 
-`@empreinte-studio/angular` 0.4.0 demande en pair `@angular/aria`, `@angular/cdk`, `@angular/common`, `@angular/core`, `@angular/forms` en `^22.2.0` (installés en 22.2.3). Il dépend de `@empreinte-studio/noyau` et de `@empreinte-studio/tokens` 0.4.0 ; `tokens` dépend de `@fontsource/schibsted-grotesk` et `@fontsource/shippori-mincho` (présents dans `node_modules`). Aucune feuille du CDK n'est à charger : le CDK injecte lui-même les styles de l'overlay, du drag-drop et du text-field.
+`@empreinte-studio/angular` 0.6.0 demande en pair `@angular/aria`, `@angular/cdk`, `@angular/common`, `@angular/core`, `@angular/forms` en `^22.2.0` (installés en 22.2.3). Il dépend de `@empreinte-studio/noyau` et de `@empreinte-studio/tokens` 0.6.0 ; `tokens` dépend de `@fontsource/schibsted-grotesk` et `@fontsource/shippori-mincho` (présents dans `node_modules`). Aucune feuille du CDK n'est à charger : le CDK injecte lui-même les styles de l'overlay, du drag-drop et du text-field.
 
 ### 1.2 Les styles globaux
 
@@ -178,11 +178,12 @@ Hôte : `e-corne`, `e-corne--s` / `e-corne--l`, `e-corne--sans-rabat`, et `aria-
 
 | Entrée | Type | Défaut | Effet |
 | --- | --- | --- | --- |
-| `eBouton` (variante) | `'sceau' \| 'trait' \| 'nu' \| ''` | `'trait'` | `''` (attribut seul) = `trait`. `sceau` : l'engagement, un seul par écran, jamais destructif, corne `s` qui s'ouvre en `m` au survol. `trait` : les actions courantes. `nu` : sorties douces (« Plus tard », « Laisser filer »), texte souligné. |
+| `eBouton` (variante) | `'sceau' \| 'trait' \| 'nu' \| 'encre' \| ''` | `'trait'` | `''` (attribut seul) = `trait`. `sceau` : l'engagement, un seul par écran, jamais destructif, corne `s` qui s'ouvre en `m` au survol. `trait` : les actions courantes. `nu` : sorties douces (« Plus tard », « Laisser filer »), texte souligné. `encre` : l'encre pleine du geste sans retour (effacer pour de bon) ; elle ne vit que dans la confirmation qui le précède, jamais en rouge ni en sceau. |
 | `petit` | bool | `false` | 36px de haut au lieu de 44px. |
+| `doux` | bool | `false` | Le mot en `encre-douce` (l'encre revient au survol), pour un geste qu'on ne met pas en avant (« Effacer l'étape », se déconnecter). Seulement sur `nu` et `trait`. |
 | `icone` | bool | `false` | Bouton carré 44×44 (36×36 en petit) qui ne porte qu'une `e-icone` : **`aria-label` obligatoire**. |
 
-Hôte : `e-btn` + `e-btn--sceau|trait|nu`, `e-btn--petit`, `e-btn--icone`. Contenu projeté tel quel (texte et `<e-icone>`, espacés de `--pas-2`). Désactivé : attribut natif `disabled` (bouton) ou `aria-disabled="true"` (style seulement : un lien reste cliquable). Pas d'état de chargement. Pas de style de focus propre : c'est l'anneau global de `base.css`. Libellés de moins de 4 mots, qui commencent par un verbe ou disent l'intention.
+Hôte : `e-btn` + `e-btn--sceau|trait|nu|encre`, `e-btn--petit`, `e-btn--icone`, `e-btn--doux`. Contenu projeté tel quel (texte et `<e-icone>`, espacés de `--pas-2`). Désactivé : attribut natif `disabled` (bouton) ou `aria-disabled="true"` (style seulement : un lien reste cliquable). Pas d'état de chargement. Pas de style de focus propre : c'est l'anneau global de `base.css`. Libellés de moins de 4 mots, qui commencent par un verbe ou disent l'intention.
 
 ```html
 <a eBouton="sceau" routerLink="/objectifs/nouveau"><e-icone nom="plus" [taille]="18" />Nouvel objectif</a>
@@ -260,6 +261,7 @@ La carte d'objectif d'Apex est un `article[eCarteObjectif]` (`objectives.html`) 
 | --- | --- | --- | --- |
 | `faits` | nombre | `0` | Cases pleines (`encre`). |
 | `aFaire` | nombre | `0` | Cases à faire (`creux`, contour `trame-forte`). |
+| `sortants` | nombre | `0` | Le temps d'une confirmation : ce qui va partir, en cases à pointillés (`data-etat="sortant"`), compté à part (« … · 1 sur le départ »). |
 | `unite` | `'pas' \| 'etape' \| 'tache' \| 'empreinte' \| Unite` | `'pas'` | Ce qu'on compte dans la légende. |
 | `accompli` | `string \| undefined` | `undefined` | Ajouté à la légende quand tout est fait. Compter ne le prouve pas : Apex ne le passe que si l'API dit l'étape faite. |
 | `legende` | `string \| undefined` | `undefined` | Remplace la légende calculée **et** le nom accessible ; `''` les masque tous les deux. |
@@ -269,6 +271,7 @@ Hôte : `e-progression`. Rendu : `div.e-pas[role=img][aria-label=descriptionProg
 ```html
 <e-pas [faits]="4" [aFaire]="3" />               <!-- « 4 pas faits · 3 à faire » -->
 <e-pas [faits]="2" [aFaire]="4" unite="etape" /> <!-- « 2 étapes faites · 4 à faire » -->
+<e-pas [faits]="2" [aFaire]="3" [sortants]="1" unite="etape" /> <!-- « 2 étapes faites · 3 à faire · 1 sur le départ » -->
 ```
 
 ### 2.7 `sceau` : `ESceau`, `EEmpreinte`, `ETraits`
@@ -340,10 +343,13 @@ Hôte : `e-liste` (puces et marges retirées). Indispensable autour de `li[eTach
 | `attend` | `boolean \| Date \| null` | `false` | La date est passée : une `Date` remplace `meta` par `formaterAttente(date)` (tant que le pas n'est pas fait) ; `true` garde `meta`. Fait apparaître « Replacer » et « Laisser filer ». |
 | `libelleReplacer` | `string` | `'Replacer à demain'` | Libellé du bouton `trait petit`. |
 | `desactivee` | bool | `false` | Désactive la case. |
+| `effacable` | bool | `false` | Un × discret (`nu icone petit doux`) au bout de la ligne : la tâche part tout de suite, sans confirmation. |
+| `libelleEffacer` | `string \| undefined` | `libelleEffacer(titre)` | Le nom du × : « Effacer « Courir 8 km » ». |
+| `focaliser` | bool | `false` | Lu à l'apparition : pose le focus sur la case si personne ne l'a (la tâche remise à sa place par sa trace). |
 
-Sorties : `faitChange: boolean`, `replacer: void`, `laisserFiler: void`. Contenu : `[eTacheMeta]` est projeté **dans le `<p>` de la ligne de détail**, avant le texte de `meta` (donc un élément en ligne, comme une `e-etiquette`) ; `[eTacheActions]` **remplace** les actions par défaut, dans un bloc placé sous le texte (colonne 2 de la grille), pas à droite.
+Sorties : `faitChange: boolean`, `replacer: void`, `laisserFiler: void`, `effacer: void` (le ×). Contenu : `[eTacheMeta]` est projeté **dans le `<p>` de la ligne de détail**, avant le texte de `meta` (donc un élément en ligne, comme une `e-etiquette`) ; `[eTacheActions]` **remplace** les actions par défaut, dans un bloc placé sous le texte (colonne 2 de la grille), pas à droite.
 
-Hôte : `e-tache`, `e-tache--faite`, `e-tache--attend` (si `attend` et pas fait). Rendu : grille `20px 1fr`, `padding: --pas-4 --pas-6`, filet `trame` entre deux tâches ; `input.e-case` (sans la directive `ECase`, mêmes styles), `label.e-tache__titre`, `p.e-tache__meta`, `div.e-tache__actions`. Faite : titre en `encre-douce`, jamais barré. Cocher vibre « pas ».
+Hôte : `e-tache`, `e-tache--faite`, `e-tache--attend` (si `attend` et pas fait), `e-tache--effacable` (le × prend la colonne de droite, `button.e-tache__effacer`). Rendu : grille `20px 1fr`, `padding: --pas-4 --pas-6`, filet `trame` entre deux tâches ; `input.e-case` (sans la directive `ECase`, mêmes styles), `label.e-tache__titre`, `p.e-tache__meta`, `div.e-tache__actions`. Faite : titre en `encre-douce`, jamais barré. Cocher vibre « pas ».
 
 Clavier et souris : le titre est le `<label>` de la case, **cliquer le titre coche le pas**. Pour ouvrir ou modifier un pas, ajouter un bouton dans `eTacheActions`.
 
@@ -360,6 +366,35 @@ Clavier et souris : le titre est le `<label>` de la case, **cliquer le titre coc
         </button>
       </div>
     </li>
+  }
+</ul>
+```
+
+### 2.9 bis `trace` : `ETrace`
+
+**`li[eTrace]`, `div[eTrace]`** (exportAs `eTrace`) — la trace d'une petite chose qui vient d'être effacée : elle prend sa place, avec « Remettre », le temps de la rendre. Pas de compte à rebours : elle attend tant qu'on la survole ou qu'on y est au clavier.
+
+| Entrée | Type | Défaut | Effet |
+| --- | --- | --- | --- |
+| `titre` | `string \| undefined` | — | La phrase devient « « Courir 8 km » est effacé. » (`phraseTrace`) ; sans titre, « C'est effacé. ». |
+| `texte` | `string \| undefined` | — | La phrase entière, quand elle doit dire autre chose. |
+| `feminin` | bool | `false` | « … est effacée. » |
+| `libelleRemettre` | `string` | `'Remettre'` | Le bouton `nu petit`. |
+| `duree` | nombre (ms) | `DUREE_TRACE` (6000) | Hors survol et clavier ; `0` : la trace reste jusqu'à ce qu'on la remette ou qu'elle quitte l'écran. Lue à l'apparition. |
+| `focaliser` | bool | `true` | Pose le focus sur « Remettre » quand la trace remplace l'élément qui l'avait (le × cliqué) ; sinon la phrase est dite aux lecteurs d'écran. |
+
+Sorties : `remettre: void` (la chose revient : l'effacement ne se fera pas), `expiree: void` (l'effacement peut se faire). **`expiree` part une seule fois** : à la fin du délai, quand la trace est retirée de l'écran sans avoir été remise (une autre étape s'ouvre, on quitte la page), ou quand la page se cache (onglet changé, page fermée). Retirer la trace suffit donc à effacer tout de suite. Si le délai passe alors que le focus est sur « Remettre », il passe à la ligne voisine.
+
+Hôte : `e-trace` (fond `creux`, hauteur d'une tâche d'une ligne : la liste ne bouge pas), `p.e-trace__texte`, `button.e-trace__remettre`. La trace ne décide de rien : c'est l'application qui retire, remet et efface.
+
+```html
+<ul eListe nue>
+  @for (pas of etape.pas; track pas.id) {
+    @if (effaces().has(pas.id)) {
+      <li eTrace [titre]="pas.titre" (remettre)="remettre(pas.id)" (expiree)="effacerPourDeBon(pas.id)"></li>
+    } @else {
+      <li eTache [titre]="pas.titre" effacable [focaliser]="pas.id === remis()" (effacer)="effacer(pas.id)"></li>
+    }
   }
 </ul>
 ```
@@ -628,7 +663,7 @@ Structure de la coque d'Apex (entrées V1 : Objectifs, Matrice) :
 </nav>
 ```
 
-### 2.17 `feuille` : `Feuilles`, `EFeuille`, `EFeuilleActions`
+### 2.17 `feuille` : `Feuilles`, `EFeuille`, `EFeuilleActions`, `EFeuillePied`
 
 Une feuille est un dialogue modal (CDK Dialog), centré, qui se déplie depuis son pli haut. Pas de panneau latéral dans Empreinte.
 
@@ -641,11 +676,12 @@ interface OptionsFeuille<D> {
   donnees?: D;                          // injectées avec DIALOG_DATA
   sansFermetureExterieure?: boolean;    // Échap et clic sur le fond ne ferment plus (disableClose)
   libelle?: string;                     // aria-label, quand la feuille n'a pas d'e-feuille titrée
+  alerte?: boolean;                     // une feuille qui attend une réponse : role="alertdialog"
   cdk?: Partial<DialogConfig<D>>;       // réglages CDK ajoutés en dernier (écrasent les précédents)
 }
 ```
 
-Configuration passée au CDK : `data`, `panelClass: 'e-feuille-panneau'`, `backdropClass: 'e-feuille-fond'`, `ariaLabel`, `disableClose`, `autoFocus: 'first-heading'` (le focus va sur le titre `h2` de l'`e-feuille`), `restoreFocus: true`, puis `...options.cdk` (écraser `panelClass` fait perdre le style du panneau).
+Configuration passée au CDK : `data`, `panelClass: 'e-feuille-panneau'`, `backdropClass: 'e-feuille-fond'`, `role` (`'alertdialog'` avec `alerte`, sinon `'dialog'`), `ariaLabel`, `disableClose`, `autoFocus: 'first-heading'` (le focus va sur le titre `h2` de l'`e-feuille`), `restoreFocus: true`, puis `...options.cdk` (écraser `panelClass` fait perdre le style du panneau).
 
 Dans le composant ouvert, depuis `@angular/cdk/dialog` :
 
@@ -672,6 +708,12 @@ Rendu : en-tête (titre + fermer), `div.e-feuille__corps` (le contenu projeté, 
 
 **`[eFeuilleActions]`** : pose `e-feuille__actions` (rangée de boutons, masquée si vide).
 
+**`[eFeuillePied]`** : sous les actions et un filet `trame`, une sortie discrète qu'on ne met pas en avant (`e-feuille__pied`, texte en `detail` et encre douce, masqué si vide). C'est là que vit l'effacement d'un ensemble, jamais dans la liste :
+
+```html
+<p eFeuillePied>Cet objectif n'a plus sa place ? <button eBouton="nu" petit doux type="button" (click)="ref.close('erase')">Effacer l'objectif</button></p>
+```
+
 ```ts
 // Ouvrir
 private readonly feuilles = inject(Feuilles);
@@ -696,6 +738,57 @@ modifier(pas: TaskViewModel) {
 ```
 
 Une feuille ouverte par-dessus un écran qui a déjà son sceau (la tête de l'arête, par exemple) ne doit pas porter de bouton `sceau` : le gardien compte tout ce qui est affiché.
+
+### 2.17 bis `confirmation` : `EConfirmation`, `EReecriture`, `Confirmations`, `EFeuilleConfirmation`
+
+Effacer a trois poids : une petite chose part tout de suite (le × et la trace, § 2.9 et § 2.9 bis) ; une partie d'un plan part après une **validation sur place** ; un ensemble part quand on a **réécrit son nom**, dans une feuille d'alerte. Jamais de sceau ni de rouge : le geste est en `trait`, ou à l'`encre` quand il ne se rattrape pas.
+
+**`<e-confirmation>`** (exportAs `eConfirmation`) — la confirmation qui se déplie sous le geste qui l'a demandée (`role="group"`, nommée par sa question, décrite par son texte) : fond `creux`, filet d'encre en haut.
+
+| Entrée | Type | Défaut | Effet |
+| --- | --- | --- | --- |
+| `titre` | `string` | requis | La question, en titre (`role="heading"`, `tabindex="-1"`). |
+| `libelleConfirmer` | `string` | requis | Le geste, moins de 4 mots (« Effacer l'étape »). |
+| `libelleAnnuler` | `string` | requis | La sortie douce, en `nu` (« Garder l'étape »). |
+| `variante` | `'trait' \| 'encre'` | `'trait'` | `encre` pour un geste sans retour. |
+| `niveau` | nombre | `3` | Le niveau de titre de la question. |
+| `focaliser` | bool | `true` | Pose le focus sur la question à l'ouverture. |
+
+Sorties : `confirmer: void`, `annuler: void` (la sortie douce, ou Échap, sans refermer une feuille qui la porterait). Contenu projeté : ce que le geste emporte (`<p>`, un `<e-pas [sortants]>`…). À la fermeture, le focus retourne au geste qui l'avait ouverte **s'il est encore là** ; sinon (il est parti avec ce qu'il effaçait), c'est à l'application de le poser là où la suite se lit.
+
+**`<e-reecriture>`** — réécrire un nom pour confirmer un geste sans retour : le nom en grand, qui s'encre à mesure qu'on le réécrit, et un champ. Entrées : `attendu`, `libelle` (« Pour confirmer, écris son nom »), `aide` (« Majuscules et accents ne comptent pas. »), `annonce` (« Ça correspond. »), `messageDepasse` ; modèle `[(saisie)]` ; sortie `valider` (Entrée). La comparaison ignore la casse, les accents, les guillemets, les variantes typographiques et les caractères invisibles (`suivreReecriture`, § 4). Classes : `e-reecriture`, `e-reecriture__modele`, `e-reecriture__grave`.
+
+**`Confirmations`** (service racine) — `demander(options: OptionsConfirmation): DialogRef<ResultatConfirmation, EFeuilleConfirmation>` ouvre une feuille d'alerte (`Feuilles.ouvrir` avec `alerte: true`) ; `closed` émet `'confirmer'`, `'alternative'` ou `undefined` (gardé, Échap, Fermer, le fond).
+
+```ts
+interface OptionsConfirmation {
+  titre: string;                 // « Effacer cet objectif ? »
+  texte?: string;                // ce que le geste emporte ; il décrit le dialogue (aria-describedby)
+  apercu?: TemplateRef<unknown>; // un aperçu de ce qui part, sous le texte
+  libelleConfirmer: string;      // « Effacer l'objectif »
+  libelleAnnuler: string;        // « Garder l'objectif »
+  aReecrire?: string;            // le nom à réécrire ; un nom vide ne demande rien (nomAReecrire)
+  libelleReecriture?: string;
+  aideReecriture?: string;
+  sansRetour?: boolean;          // le bouton passe à l'encre ; vrai par défaut avec aReecrire
+  alternative?: AlternativeConfirmation; // { texte, libelle, qui? } : une issue plus douce, dans une note d'Akari
+  largeur?: number;              // 560 par défaut
+}
+```
+
+Le focus va sur la question, même quand il faut réécrire un nom : on lit d'abord ce que le geste emporte. Tant que le nom ne correspond pas, le bouton reste `aria-disabled` et ramène au champ. La feuille ne demande pas d'injecteur : elle n'atteint aucun store. **Dans Apex, pas d'`alternative` « Laisser filer » tant qu'Apex Brain n'a pas ce cas d'usage** (cahier § 3) : la maquette la montre, l'écran la suit sans elle.
+
+```ts
+this.confirmations
+  .demander({
+    titre: 'Effacer cet objectif ?',
+    texte: 'Ses 6 étapes, ses 21 pas dont 9 faits et ta conversation avec Akari partent avec lui. Ça ne se récupère pas.',
+    libelleConfirmer: "Effacer l'objectif",
+    libelleAnnuler: "Garder l'objectif",
+    aReecrire: objectif.titre,
+  })
+  .closed.subscribe((choix) => choix === 'confirmer' && this.effacer());
+```
 
 ### 2.16 bis `initiale` : `EInitiale`
 
@@ -760,15 +853,15 @@ protected readonly unitePas = ['pas', 'pas'] as const;   // un tableau littéral
 | Entrée | Type | Défaut | Effet |
 | --- | --- | --- | --- |
 | `objectif` | `string` | requis | Écrit dans la tête : 2 lignes de 15 caractères au plus (`lignesTete`). |
-| `etapes` | `readonly EtapeArete[]` | requis | `{ nom: string; faite: boolean; detail?: string }`. |
+| `etapes` | `readonly EtapeArete[]` | requis | `{ nom: string; faite: boolean; detail?: string; sortante?: boolean }`. Une étape `sortante` (le temps de confirmer son effacement) passe en pointillés d'encre, se lit « Sort du plan » et ne se replie jamais. |
 | `repere` | `string` | `'OBJECTIF'` | Au-dessus du nom dans la tête. |
 | `interactive` | bool | `false` | Chaque arête devient un bouton (`role="button"`, `tabindex="0"`, Entrée et Espace) avec une zone de clic. |
 
 Sortie : `choisir: EtapeArete` — **l'objet passé dans `etapes`** (pas d'identifiant). Pour retrouver l'étape, passer des objets enrichis (`EtapeArete & { id: string }`) et comparer par référence ; l'arête repliée « Faites » (au-delà de 8 étapes) est un objet créé par le composant, sans `id`.
 
-Rendu : `svg.e-arete` (viewBox de hauteur 300, largeur selon le nombre d'arêtes, `max-width: 720px`, `width: 100%`) avec `role="img"` (ou `group` si interactive) et un `<title>` résumé : « Arête de l'objectif « X » : 6 étapes, 2 faites, 4 à faire » (`resumeArete`). Par étape : branche (faite : `encre` en `trait-net` ; à faire : `trame-forte`), borne carrée de 8px (faite : pleine ; à faire : vide `trame-forte`), nom tronqué à 18 caractères, détail tronqué à 22 (par défaut « Faite » ou « À faire », `detailEtape`). Une nouvelle étape se trace en s'animant. **La tête est un sceau, enregistrée au `GardienSceau`.**
+Rendu : `svg.e-arete` (viewBox de hauteur 300, largeur selon le nombre d'arêtes, `max-width: 720px`, `width: 100%`) avec `role="img"` (ou `group` si interactive) et un `<title>` résumé : « Arête de l'objectif « X » : 6 étapes, 2 faites, 4 à faire » (`resumeArete` ; une étape qui sort du plan se compte à part : « …, 1 sort du plan »). Par étape : branche (faite : `encre` en `trait-net` ; à faire : `trame-forte`), borne carrée de 8px (faite : pleine ; à faire : vide `trame-forte`), nom tronqué à 18 caractères, détail tronqué à 22 (par défaut « Faite » ou « À faire », `detailEtape`). Une nouvelle étape se trace en s'animant. **La tête est un sceau, enregistrée au `GardienSceau`.**
 
-**`ul[eLegendeArete]`** (`ELegendeArete`) — la légende : une case d'`e-pas` muette pour « Faite », une pour « À faire », en `detail` et en encre douce. Entrée `libelle` (par défaut « Légende de l'arête », son `aria-label`).
+**`ul[eLegendeArete]`** (`ELegendeArete`) — la légende : une case d'`e-pas` muette pour « Faite », une pour « À faire », en `detail` et en encre douce. Entrées `libelle` (par défaut « Légende de l'arête », son `aria-label`) et `sortante` (bool : ajoute « Sort du plan » avec une case sur le départ, pendant la validation d'une étape).
 
 **`etapesAffichees(etapes)`** : au-delà de `MAXIMUM_ARETES` (8) étapes et s'il y en a au moins une faite, les faites se replient dans `{ nom: 'Faites', faite: true, detail: '<n> étapes' }`, en tête de liste. Vérifié : 3 faites + 6 autres donnent `Faites (3 étapes)` + les 6.
 
@@ -847,6 +940,7 @@ Sorties obtenues en exécutant les fonctions installées.
 | `{ faits: 1, aFaire: 3 }, { unite: 'etape' }` | « 1 étape faite · 3 à faire » |
 | `{ faits: 0, aFaire: 3 }, { unite: 'etape' }` | « 3 étapes à faire » |
 | `{ faits: 3, aFaire: 0 }, { unite: 'etape', accompli: 'objectif accompli' }` | « 3 étapes faites · objectif accompli » |
+| `{ faits: 2, aFaire: 3, sortants: 1 }, { unite: 'etape' }` | « 2 étapes faites · 3 à faire · 1 sur le départ » |
 
 **`initiale(nom: string): string`** — la première lettre, en capitale, sans couper un caractère hors du plan de base : « élodie » donne « É », un nom vide donne une chaîne vide.
 
@@ -858,6 +952,7 @@ Sorties obtenues en exécutant les fonctions installées.
 | `{ faits: 0, aFaire: 5 }` | « 5 pas à faire » |
 | `{ faits: 7, aFaire: 0 }` | « 7 pas faits » |
 | `{ faits: 2, aFaire: 4 }, 'etape'` | « 2 étapes faites, 4 à faire » |
+| `{ faits: 2, aFaire: 3, sortants: 1 }, 'etape'` | « 2 étapes faites, 3 à faire, 1 sur le départ » |
 | `{ faits: 0, aFaire: 0 }` | « » |
 
 **`formaterAttente(depuis: Date, maintenant = new Date()): string`** — compare des jours calendaires (exemples avec maintenant = mercredi 21 octobre 2026).
@@ -875,6 +970,17 @@ Sorties obtenues en exécutant les fonctions installées.
 
 **`compter(n: number, singulier: string, pluriel = singulier + 's'): string`** — 0 et 1 au singulier : `compter(0, 'tâche')` → « 0 tâche », `compter(3, 'tâche')` → « 3 tâches », `compter(2, 'pas', 'pas')` → « 2 pas ». Donner le pluriel des mots invariables (`pas`), sinon « pass ».
 
+**La voix de l'effacement** — les mots communs à toute la suite ; ce qui est propre à Apex (« ta conversation avec Akari part avec lui », les nombres d'étapes et de pas) s'écrit dans Apex (`apps/apex-client/src/app/objective/erase-labels.ts`).
+
+| Fonction ou constante | Résultat |
+| --- | --- |
+| `VOIX_EFFACEMENT` | `effacer` « Effacer », `remettre` « Remettre », `libelleReecriture` « Pour confirmer, écris son nom », `aideReecriture` « Majuscules et accents ne comptent pas. », `reecritureJuste` « Ça correspond. », `reecritureDepasse` « Le nom s'arrête là : retire ce qui suit. », `sansRetour` « Ça ne se récupère pas. », `sortDuPlan` « Sort du plan » |
+| `DUREE_TRACE` | `6000` (ms) |
+| `libelleEffacer('Courir 8 km')` | « Effacer « Courir 8 km » » |
+| `phraseTrace('Courir 8 km')`, `phraseTrace('Réviser', { feminin: true })`, `phraseTrace()` | « « Courir 8 km » est effacé. », « « Réviser » est effacée. », « C'est effacé. » |
+| `suivreReecriture('courir un', 'Courir un semi-marathon')` | `{ correspond: false, depasse: false, grave: 'Courir un', reste: ' semi-marathon' }` |
+| `nomAReecrire('  ')`, `plierTexte('  Cœur  à l’ouvrage ')` | `undefined` (rien à réécrire), « coeur a l'ouvrage » |
+
 **`motsAEviter(texte: string): { mot: string; plutot: string }[]`** et **`LEXIQUE`** (`{ motif: RegExp; mot; plutot }[]`). Les mots surveillés : échec, raté, manqué, en retard, perdu, supprimer, il te reste, pourcentage (`\d+\s*%`), point d'exclamation, ne lâche rien, et tout ce qui donne un ordre (prochain pas, pas suivant, premier pas, étape suivante, première étape, étape 3). Résultats vérifiés :
 
 | Texte | Détecté |
@@ -882,12 +988,13 @@ Sorties obtenues en exécutant les fonctions installées.
 | « Tâche manquée » | `manqué` |
 | « En retard de 3 jours » | `en retard` |
 | « Série perdue » | `perdu` |
-| « Supprimer l'objectif » | `supprimer` |
+| « Supprimer l'objectif », « Pas supprimé » | `supprimer` (plutôt : « Effacer, si rien ne doit rester ; laisser filer, si la trace reste ») |
 | « 57 % », « 57% » | `pourcentage` |
 | « Bravo ! » | `point d'exclamation` |
 | « il te reste 3 pas » | `il te reste` |
 | « Ratée » | `raté` |
-| **« Échec », « Un échec », « échouer », « raté », « Objectif raté », « manqué », « supprimé »** | **rien** (voir § 8.6) |
+| « Un échec », « échouer » | `échec` (depuis la 0.6.0 : les mots accentués sont vus, § 8.6) |
+| « Objectif raté », « manqué » | `raté`, `manqué` |
 | « Erreur », « Une erreur est survenue » | rien : « erreur » n'est pas dans le lexique |
 
 ---
@@ -923,13 +1030,15 @@ Toutes sont réellement présentes dans les feuilles embarquées des paquets ins
 | Masque | `e-masque` (visible des seuls lecteurs d'écran) | à la main | `base.css` (toujours) |
 | Icône | `e-icone`, `e-icone-hote` | `EIcone` | `EIcone`, `EMenu`, `ESelection`, `EFeuille`, `ELienNav`, porteur navigation |
 | Surface | `e-surface`, `e-surface--marquee`, `e-corne`, `e-corne--s`, `e-corne--l`, `e-corne--sans-rabat` | `ESurface`, `ECorne` ; `e-surface` aussi par `ECarte`, `ECarteObjectif`, `EListe` (sauf `nue`), `EMatrice` (quadrants), `EPli` (feuille du pli) ; `e-corne` par `ECarte[marquee]`, `EMatrice` (courant), `EPli` | porteur surface (`ESurface`, `ECorne`), porteur liste (`EListe`), `ECarte`, `ECarteObjectif`, `ECarnet`, `EMatrice` |
-| Bouton | `e-btn`, `e-btn--sceau`, `e-btn--trait`, `e-btn--nu`, `e-btn--petit`, `e-btn--icone` | `EBouton` (et les boutons internes d'`ECarteObjectif`, `ETache`, `EMenu`, `EFiltres`, `EFeuille`) | `EBouton` |
+| Bouton | `e-btn`, `e-btn--sceau`, `e-btn--trait`, `e-btn--nu`, `e-btn--encre`, `e-btn--petit`, `e-btn--icone`, `e-btn--doux` | `EBouton` (et les boutons internes d'`ECarteObjectif`, `ETache`, `ETrace`, `EConfirmation`, `EMenu`, `EFiltres`, `EFeuille`) | `EBouton` |
 | Étiquette | `e-etiquette`, `e-etiquette--ciel`, `--aube`, `--soleil`, `--fjord` | `EEtiquette` | `EEtiquette` |
 | Carte | `e-carte`, `e-carte--marquee`, `e-carte__entete`, `e-carte__textes`, `e-carte__pied`, `e-carte__pied--fin`, `e-carte__pied--filet`, `e-carte__meta`, `e-carte__raison` | `ECarte`, `ECarteObjectif` (hôte et gabarit) ; sous-classes à la main dans une carte | `ECarte`, `ECarteObjectif` |
-| Pas | `e-progression`, `e-pas`, `e-pas__case` (`data-etat="fait"` sur une case faite), `e-pas__legende` | `EPas` | `EPas` |
+| Pas | `e-progression`, `e-pas`, `e-pas__case` (`data-etat="fait"` sur une case faite, `"sortant"` sur une case sur le départ), `e-pas__legende` | `EPas` | `EPas` |
 | Sceau | `e-sceau`, `e-sceau__repere`, `e-sceau__chiffre`, `e-sceau--grand`, `e-sceau--empreinte`, `e-sceau--pose`, `e-traits`, `e-traits__trait` (`data-etat="a-venir"`), `e-traits--pose`, `e-traits__trait--neuf` | `ESceau`, `EEmpreinte`, `ETraits` | `ESceau`, `EEmpreinte`, `ETraits` |
 | Case | `e-case` | `ECase`, `ETache` (case interne) | porteur case (`ECase`), porteur liste, `ETache` |
-| Tâche | `e-liste`, `e-tache`, `e-tache--faite`, `e-tache--attend`, `e-tache__texte`, `e-tache__titre`, `e-tache__meta`, `e-tache__actions` | `EListe`, `ETache` | porteur liste (`EListe`), `ETache` |
+| Tâche | `e-liste`, `e-tache`, `e-tache--faite`, `e-tache--attend`, `e-tache--effacable`, `e-tache__texte`, `e-tache__titre`, `e-tache__meta`, `e-tache__actions`, `e-tache__effacer` | `EListe`, `ETache` | porteur liste (`EListe`), `ETache` |
+| Trace | `e-trace`, `e-trace__texte`, `e-trace__remettre` | `ETrace` | `ETrace` |
+| Confirmation | `e-confirmation`, `e-confirmation__titre`, `e-confirmation__texte`, `e-confirmation__actions`, `e-confirmation__alternative` (la note de l'autre issue), `e-reecriture`, `e-reecriture__modele`, `e-reecriture__grave` | `EConfirmation`, `EFeuilleConfirmation`, `EReecriture` | `EConfirmation`, `EFeuilleConfirmation`, `EReecriture` |
 | Note | `e-note`, `e-note--large`, `e-note__qui`, `e-note__voix`, `e-note__actions` | `ENote`, `ENoteActions` | `ENote` |
 | Conversation | `e-conversation`, `e-conversation--prete`, `e-conversation__cadre`, `e-conversation__defilement`, `e-conversation__contenu`, `e-conversation__statut`, `e-conversation__retour`, `e-conversation__saisie`, `e-conversation__envoyer`, `e-fil`, `e-replique`, `e-replique--assistant`, `--personne`, `--en-attente`, `e-replique__qui`, `e-replique__texte`, `e-replique__prose`, `e-replique__brut`, `e-replique__actions` | `EConversation`, `EFil`, `EReplique`, `ERepliqueActions` | `EConversation`, `EReplique`, porteur conversation (`EFil`) |
 | Champ | `e-champ`, `e-champ__libelle`, `e-champ__facultatif`, `e-champ__aide`, `e-champ__message`, `e-saisie`, `e-saisie--taille-auto` | `EChamp`, `ESaisie`, `ETailleAuto` | porteur champ (`ESaisie`), `EChamp` |
@@ -945,10 +1054,10 @@ Toutes sont réellement présentes dans les feuilles embarquées des paquets ins
 | Repli | `e-repli`, `e-repli__resume`, `e-repli__detail` | `ERepli` | `ERepli` |
 | Journal | `e-journal` | `EJournal` | `EJournal`, porteur conversation |
 | Légende de l'arête | `e-legende-arete` | `ELegendeArete` | `ELegendeArete`, `EArete` |
-| Feuille | `e-feuille`, `e-feuille__entete`, `e-feuille__titre`, `e-feuille__titre--manifeste`, `e-feuille__fermer`, `e-feuille__corps`, `e-feuille__actions`, `e-feuille-fond`, `e-feuille-panneau` | `EFeuille`, `EFeuilleActions`, `Feuilles` (fond et panneau CDK) | `EFeuille` |
+| Feuille | `e-feuille`, `e-feuille__entete`, `e-feuille__titre`, `e-feuille__titre--manifeste`, `e-feuille__fermer`, `e-feuille__corps`, `e-feuille__actions`, `e-feuille__pied`, `e-feuille-fond`, `e-feuille-panneau` | `EFeuille`, `EFeuilleActions`, `EFeuillePied`, `Feuilles` (fond et panneau CDK) | `EFeuille` |
 | Carnet | `e-carnet-cadre`, `e-carnet`, `e-pli`, `e-pli--ouvert`, `e-pli__entete`, `e-pli__dos`, `e-pli__marque`, `e-pli__marque--sceau`, `e-pli__marque--pause`, `e-pli__titre`, `e-pli__date`, `e-pli__contenu`, `e-pli__feuille` | `ECarnet`, `EPli` | `ECarnet` |
 | Matrice | `e-matrice-hote`, `e-matrice`, `e-matrice__axe`, `e-matrice__axe--ligne`, `e-matrice__axe--haut`, `e-matrice__axe--bas`, `e-matrice__grille`, `e-quadrant`, `e-quadrant__titre`, `e-quadrant__compte`, `e-quadrant__liste`, `e-quadrant__liste--puces`, `e-quadrant__element` | `EMatrice` | `EMatrice` |
-| Arête | `e-arete-hote`, `e-arete` (et, sous `.e-arete` dans le SVG : `colonne`, `branche`, `branche--faite`, `borne`, `borne--faite`, `tete`, `tete-repere`, `tete-texte`, `nom`, `etat`, `etape`, `etape-cible`, `etape--neuve`) | `EArete` | `EArete` |
+| Arête | `e-arete-hote`, `e-arete` (et, sous `.e-arete` dans le SVG : `colonne`, `branche`, `branche--faite`, `branche--sortante`, `borne`, `borne--faite`, `borne--sortante`, `tete`, `tete-repere`, `tete-texte`, `nom`, `etat`, `etape`, `etape-cible`, `etape--neuve`) | `EArete` | `EArete` |
 
 ### 5.4 Quand écrire une classe du kit à la main
 
@@ -1091,12 +1200,13 @@ Inventaire des usages actuels sous `apps/apex-client/src/app` : 24 `<p-button>`,
 26. **Feuilles** : le composant ouvert hérite de l'injecteur racine → `cdk: { injector }` pour atteindre `ObjectiveStore` (fourni par la coque). `autoFocus` va sur le titre : le titre est requis. Écraser `panelClass` par `cdk` fait perdre le panneau. Une feuille est centrée (position par défaut du CDK Dialog) ; aucun style de panneau latéral n'existe.
 27. **Navigation** : sous 760px, la coque d'Apex cache le bas de la navigation (réglages, personne) et le libellé des entrées ; pour l'entrée `/`, `[routerLinkActiveOptions]="{ exact: true }"` sinon elle est active partout.
 28. **Overlays** (`e-menu`, `e-selection`) : CDK en popover natif ; dans jsdom (Vitest), le CDK repasse en overlay classique (pas de `showPopover`).
+28 bis. **Effacer** : `(expiree)` d'une trace part aussi quand elle est retirée de l'écran (une autre étape ouverte, la page quittée) ou quand la page se cache : brancher l'effacement réel dessus, et laisser le store ignorer un élément qui n'est plus là (une trace qui le redit, son étape déjà partie). L'élément effacé reste dans le store pendant sa trace (un rechargement le rendrait) : l'écran montre la trace et ne le compte plus. Après une confirmation sur place, le geste qui l'avait ouverte est souvent parti : poser le focus là où la suite se lit (le titre de l'arête, dans Apex). `[focaliser]` d'une tâche n'est lu qu'à son apparition.
 
 ### 8.5 Tests
 29. En Vitest (mode développement), `GardienSceau`, `e-pas` (> 12) et `e-icone` (nom inconnu) écrivent des `console.warn`.
 
 ### 8.6 La voix
-30. **`motsAEviter` laisse passer « échec », « Un échec », « échouer », « raté », « Objectif raté », « manqué », « supprimé »** : ses motifs utilisent `\b`, qui ne reconnaît pas une frontière avant ou après une lettre accentuée (vérifié à l'exécution). Il ne connaît pas non plus « erreur » ni les emoji, que le cahier interdit. Le test de voix d'Apex doit ajouter ses propres motifs (avec des frontières Unicode, par exemple `(?<![\p{L}])échec` avec le drapeau `u`), en plus de `motsAEviter()`.
+30. **`motsAEviter` voit les mots accentués depuis la 0.6.0** (« Un échec », « échouer », « Objectif raté », « manqué », « supprimé » : ses motifs s'appuient sur les lettres Unicode, vérifié à l'exécution). Il ne connaît toujours ni « erreur », ni « succès », ni les emoji, que le cahier interdit : le test de voix d'Apex garde ses propres motifs (`voiceIssues`, `chore/constants/messages.constante.ts`), en plus de `motsAEviter()`.
 31. **`formaterAttente`** ne sert qu'aux dates passées ; pour un horizon (« Jusqu'en mai »), formater soi-même.
 32. **`compter`** met un « s » par défaut : donner le pluriel des mots invariables (`compter(n, 'pas', 'pas')`).
 
@@ -1120,4 +1230,5 @@ Relevé en comparant les maquettes `Objectifs`, `Arete`, `Matrice`, `Akari` au c
 | Akari | ~~Pas de composant « réplique »~~ | Réglé en 0.3.0 : `e-conversation`, `ol[eFil]`, `li[eReplique]` (§ 2.10 bis). |
 | Akari (nouvel objectif) | `EArete` n'a pas de variante brouillon : la tête est toujours un sceau, comptée au gardien → avec le bouton `sceau` « Je m'y engage », deux sceaux | Ne pas afficher l'aperçu d'arête dans le brouillon (la maquette le masque déjà sur mobile) : l'écran n'a pas d'étapes, Akari les propose une fois l'objectif créé. Ou demande d'ajout à Empreinte. |
 | Akari | ~~Aucun style pour le HTML Markdown rendu~~ | Réglé en 0.3.0 : la prose d'une réplique (§ 2.10 bis) ; `.ds-prose` et `.ds-link` ont quitté Apex. |
-| Voix (toutes) | `motsAEviter` rate les mots accentués et ne connaît pas « erreur » ni les emoji (§ 8.6) | Motifs complémentaires dans le test de voix d'Apex. |
+| Voix (toutes) | ~~`motsAEviter` rate les mots accentués~~ (réglé en 0.6.0) ; il ne connaît pas « erreur » ni les emoji (§ 8.6) | Motifs complémentaires dans le test de voix d'Apex. |
+| Effacer | Laisser filer (un objectif, une étape, un pas) attend son cas d'usage dans Apex Brain | La confirmation d'un objectif s'ouvre sans `alternative` ; l'écran ne propose que d'effacer ou de garder. |

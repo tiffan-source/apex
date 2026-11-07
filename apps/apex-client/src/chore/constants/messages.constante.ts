@@ -18,6 +18,9 @@ export const SUCCESS_ANNOUNCEMENTS = {
   taskSaved: 'Ce pas est à jour.',
   taskDone: 'Un pas de plus.',
   taskUndone: 'Ce pas est de nouveau à faire.',
+  // Un pas effacé ne s'annonce pas ici : sa trace l'a déjà dit, le temps de le remettre.
+  stageErased: 'Étape effacée.',
+  objectiveErased: 'Objectif effacé.',
 } as const;
 
 /** Les signalements : ce qui n'a pas marché, et quoi faire. */
@@ -28,6 +31,11 @@ export const FAILURE_REPORTS = {
   addTask: "Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.",
   editTask: "Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.",
   toggleTask: "Je n'ai pas pu enregistrer ce pas. Vérifie ta connexion, puis réessaie.",
+  // L'effacement n'a pas abouti : ce qui était parti revient à sa place.
+  eraseTask: "Je n'ai pas pu effacer ce pas : il est revenu à sa place. Vérifie ta connexion, puis réessaie.",
+  eraseStage: "Je n'ai pas pu effacer cette étape : elle est revenue à sa place. Vérifie ta connexion, puis réessaie.",
+  eraseObjective:
+    "Je n'ai pas pu effacer cet objectif : il est revenu parmi tes objectifs. Vérifie ta connexion, puis réessaie.",
   loadObjectives: "Je n'ai pas pu charger tes objectifs. Vérifie ta connexion, puis recharge la page.",
   /** Une relecture reste sans réponse : le store continue d'essayer, la note part dès que le serveur répond. */
   reloadObjectives: "Je n'arrive pas à relire tes objectifs pour l'instant. Vérifie ta connexion, je réessaie en attendant.",
@@ -57,6 +65,9 @@ export const CREATE_OBJECTIVE_FAILURES: ReadonlySet<string> = new Set([
 /** Les actions qui peuvent ne pas aboutir. */
 export type FailedAction = Exclude<keyof typeof FAILURE_REPORTS, CodeReport>;
 
+/** Les effacements : ils n'envoient aucun texte, et un élément déjà effacé n'est pas un souci (l'API répond 404). */
+const ERASE_ACTIONS: ReadonlySet<FailedAction> = new Set<FailedAction>(['eraseTask', 'eraseStage', 'eraseObjective']);
+
 /**
  * La phrase à signaler quand une action n'aboutit pas, d'après le code d'erreur de l'API (ApiError.code).
  * Le message de l'API (technique, en anglais) n'est jamais montré : seul son code choisit la phrase.
@@ -68,10 +79,11 @@ export function failureReport(action: FailedAction, errorCode?: string): string 
       return FAILURE_REPORTS.objectiveNotFound;
     case 'TASK_NOT_FOUND':
       return FAILURE_REPORTS.taskNotFound;
-    // Les formulaires écartent un nom vide : ce que l'API refuse encore, c'est un texte trop long.
+    // Les formulaires écartent un nom vide : ce que l'API refuse encore, c'est un texte trop long. Un effacement
+    // n'envoie aucun texte : il garde sa phrase.
     case 'VALIDATION_ERROR':
     case 'PAYLOAD_TOO_LARGE':
-      return FAILURE_REPORTS.textTooLong;
+      return ERASE_ACTIONS.has(action) ? FAILURE_REPORTS[action] : FAILURE_REPORTS.textTooLong;
     case 'TOO_MANY_REQUESTS':
       return FAILURE_REPORTS.tooManyRequests;
     // Le jeton est refusé et n'a pas pu être renouvelé (une panne pendant le renouvellement remonte
@@ -85,9 +97,10 @@ export function failureReport(action: FailedAction, errorCode?: string): string 
 }
 
 /*
- * Le contrôle de la voix, pour les tests de l'application. motsAEviter() d'Empreinte ne suffit pas seul :
- * ses motifs commencent par \b, qui ne reconnaît pas une lettre accentuée en début de mot. « échec »,
- * « échoué », « raté », « manqué » ou « supprimé » lui échappent. Ces motifs-ci s'appuient sur les lettres Unicode.
+ * Le contrôle de la voix, pour les tests de l'application. motsAEviter() d'Empreinte ne suffit pas seul : il ne
+ * connaît ni « erreur », ni « succès », ni les emoji. Ces motifs-ci les ajoutent, et gardent ceux qui commencent
+ * par une lettre accentuée (« échec », « raté », « supprimé »), qu'Empreinte voit aussi depuis la 0.6.0. Ils
+ * s'appuient sur les lettres Unicode.
  */
 const OUTSIDE_THE_VOICE: readonly { word: string; pattern: RegExp }[] = [
   { word: 'échec', pattern: /(?<!\p{L})(échec|échou)/iu },

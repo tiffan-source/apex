@@ -54,6 +54,8 @@ describe('ObjectivesApi', () => {
     ['addTask', () => ['endurance', { title: 'Courir', importance: 3, urgency: 2 }], 'POST', '/v1/objectives/endurance/tasks', { title: 'Courir', importance: 3, urgency: 2 }],
     ['editTask', () => ['t1', { title: 'Courir', objectiveId: 'semi', importance: 4, urgency: 1 }], 'PATCH', '/v1/tasks/t1', { title: 'Courir', objectiveId: 'semi', importance: 4, urgency: 1 }],
     ['setTaskDone', () => ['t1', true], 'PUT', '/v1/tasks/t1/done', { done: true }],
+    ['deleteObjective', () => ['endurance'], 'DELETE', '/v1/objectives/endurance', null],
+    ['deleteTask', () => ['t1'], 'DELETE', '/v1/tasks/t1', null],
   ] as const)('%s → %s %s', async (method, args, verb, path, body) => {
     const { httpMock, objectives } = setup();
     const call = (objectives[method] as (...values: unknown[]) => Promise<unknown>).apply(objectives, [...args()]);
@@ -63,6 +65,22 @@ describe('ObjectivesApi', () => {
     expect(request.request.body).toEqual(body);
     request.flush({ ok: method });
     await expect(call).resolves.toEqual({ ok: method });
+  });
+
+  it('un effacement rend une réponse vide (204)', async () => {
+    const { httpMock, objectives } = setup();
+    const call = objectives.deleteTask('t1');
+    httpMock.expectOne(`${API}/v1/tasks/t1`).flush(null, { status: 204, statusText: 'No Content' });
+    await expect(call).resolves.toBeNull();
+  });
+
+  it('un objectif déjà effacé répond OBJECTIVE_NOT_FOUND', async () => {
+    const { httpMock, objectives } = setup();
+    const call = objectives.deleteObjective('semi');
+    httpMock
+      .expectOne(`${API}/v1/objectives/semi`)
+      .flush({ error: { code: 'OBJECTIVE_NOT_FOUND', message: 'Objective with ID semi not found' } }, { status: 404, statusText: 'Not Found' });
+    await expect(call).rejects.toMatchObject({ code: 'OBJECTIVE_NOT_FOUND', status: 404 });
   });
 
   it('encode les identifiants dans l’adresse', async () => {

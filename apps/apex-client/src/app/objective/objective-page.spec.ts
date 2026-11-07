@@ -1,9 +1,12 @@
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
+import { EFeuilleConfirmation } from '@empreinte-studio/angular/confirmation';
 import { Feuilles } from '@empreinte-studio/angular/feuille';
 import { motsAEviter } from '@empreinte-studio/angular/core';
+import { ETrace } from '@empreinte-studio/angular/trace';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { WriteQueue } from '../../chore/stores/utils/write-queue';
@@ -71,6 +74,12 @@ function createStore() {
     updateTaskDone: vi.fn(({ taskId, done }: { taskId: string; done: boolean }) =>
       tasks.update((list) => list.map((item) => (item.id === taskId ? { ...item, done } : item))),
     ),
+    // Comme le store : ce qui est effacé quitte l'état tout de suite.
+    deleteTask: vi.fn((taskId: string) => tasks.update((list) => list.filter((item) => item.id !== taskId))),
+    deleteObjective: vi.fn((objectiveId: string) => {
+      objectives.update((list) => list.filter((item) => item.id !== objectiveId && item.parentId !== objectiveId));
+      tasks.update((list) => list.filter((item) => objectives().some((objective) => objective.id === item.objectiveId)));
+    }),
   };
 }
 
@@ -339,6 +348,315 @@ describe('ObjectivePage', () => {
     it("n'a qu'un sceau : la tête de l'arête, aucun bouton sceau", () => {
       expect(element.querySelectorAll('e-arete')).toHaveLength(1);
       expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
+    });
+  });
+
+  describe('effacer', () => {
+    beforeEach(() => render('obj-1'));
+
+    const stageTaskTitles = () =>
+      [...element.querySelectorAll('ul[aria-labelledby="titre-etape"] li .e-tache__titre')].map((label) =>
+        label.textContent?.trim(),
+      );
+    const trace = () => element.querySelector<HTMLElement>('ul[aria-labelledby="titre-etape"] li.e-trace');
+    const settle = async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+    };
+    const arete = () => [...element.querySelectorAll('e-arete .etape .etat')].map((state) => state.textContent?.trim());
+    const legend = () =>
+      [...element.querySelectorAll('ul[aria-label="Légende de l\'arête"] li')].map((li) => li.textContent?.trim());
+
+    describe('un pas : il part tout de suite, et sa trace le laisse revenir', () => {
+      it('le × efface le pas : sa trace prend sa place, et il ne compte plus', async () => {
+        chooseStage(1);
+        expect(text('ul[aria-labelledby="titre-etape"] + *')).not.toContain('est effacé');
+        buttonNamed('Effacer « Courir 5 km »')?.click();
+        await settle();
+
+        expect(trace()?.textContent?.replace(/\s+/g, ' ').trim()).toBe('« Courir 5 km » est effacé. Remettre');
+        expect(stageTaskTitles()).toEqual(['Courir 3 km', 'Sortie longue de 7 km']);
+        expect(text('section.panel-flush .e-pas__legende')).toBe('1 pas fait · 1 à faire');
+        // Le pas n'est effacé pour de bon qu'à la fin de sa trace.
+        expect(store.deleteTask).not.toHaveBeenCalled();
+      });
+
+      it('« Remettre » rend le pas à sa place, avec le focus sur sa case', async () => {
+        chooseStage(1);
+        buttonNamed('Effacer « Courir 5 km »')?.click();
+        await settle();
+        buttonNamed('Remettre')?.click();
+        await settle();
+
+        expect(trace()).toBeNull();
+        expect(stageTaskTitles()).toEqual(['Courir 3 km', 'Courir 5 km', 'Sortie longue de 7 km']);
+        const back = element.querySelectorAll<HTMLInputElement>('ul[aria-labelledby="titre-etape"] input[type="checkbox"]')[1];
+        expect(document.activeElement).toBe(back);
+        expect(store.deleteTask).not.toHaveBeenCalled();
+      });
+
+      it('la trace qui s’en va efface le pas pour de bon', async () => {
+        chooseStage(1);
+        buttonNamed('Effacer « Courir 5 km »')?.click();
+        await settle();
+        (fixture.debugElement.query(By.directive(ETrace)).componentInstance as ETrace).expiree.emit();
+        await settle();
+
+        expect(store.deleteTask).toHaveBeenCalledWith('t3');
+        expect(trace()).toBeNull();
+        expect(stageTaskTitles()).toEqual(['Courir 3 km', 'Sortie longue de 7 km']);
+      });
+
+      it('une trace à la fois : un autre pas effacé fait partir pour de bon celui qui attendait', async () => {
+        chooseStage(1);
+        buttonNamed('Effacer « Courir 5 km »')?.click();
+        await settle();
+        buttonNamed('Effacer « Courir 3 km »')?.click();
+        await settle();
+
+        expect(store.deleteTask).toHaveBeenCalledWith('t3');
+        expect(element.querySelectorAll('ul[aria-labelledby="titre-etape"] li.e-trace')).toHaveLength(1);
+        expect(trace()?.textContent?.replace(/\s+/g, ' ').trim()).toBe('« Courir 3 km » est effacé. Remettre');
+        expect(stageTaskTitles()).toEqual(['Sortie longue de 7 km']);
+      });
+
+      it('ouvrir une autre étape efface pour de bon le pas dont la trace était là', async () => {
+        chooseStage(1);
+        buttonNamed('Effacer « Courir 5 km »')?.click();
+        await settle();
+        chooseStage(0);
+        await settle();
+        expect(store.deleteTask).toHaveBeenCalledWith('t3');
+      });
+
+      it('un pas qui n’est pas encore enregistré n’a pas de × : sa trace ne survivrait pas à son id définitif', () => {
+        store.tasks.update((list) => [...list, task('temp-id-9', 'Fractionné', 'stage-2')]);
+        chooseStage(1);
+        expect(buttonNamed('Effacer « Fractionné »')).toBeUndefined();
+        expect(buttonNamed('Effacer « Courir 5 km »')).toBeDefined();
+      });
+
+      it('effacer l’étape fait d’abord partir pour de bon le pas dont la trace attendait', async () => {
+        chooseStage(1);
+        buttonNamed('Effacer « Courir 5 km »')?.click();
+        await settle();
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+
+        expect(store.deleteTask).toHaveBeenCalledWith('t3');
+        expect(store.deleteTask.mock.invocationCallOrder[0]).toBeLessThan(
+          store.deleteObjective.mock.invocationCallOrder[0],
+        );
+        // Sa trace, partie avec l'étape, ne renvoie rien.
+        expect(store.deleteTask).toHaveBeenCalledTimes(1);
+      });
+
+      it('un pas sans étape s’efface aussi, avec sa trace', async () => {
+        buttonNamed('Effacer « Acheter des chaussures »')?.click();
+        await settle();
+        const looseTrace = element.querySelector('ul[aria-labelledby="titre-sans-etape"] li.e-trace');
+        expect(looseTrace?.textContent?.replace(/\s+/g, ' ').trim()).toBe('« Acheter des chaussures » est effacé. Remettre');
+      });
+    });
+
+    describe('une étape : une validation, sur place', () => {
+      it('« Effacer l’étape » est discret, au pied de l’étape ouverte', () => {
+        chooseStage(1);
+        const exit = element.querySelector<HTMLElement>('.stage-exit button');
+        expect(exit?.textContent?.trim()).toBe("Effacer l'étape");
+        expect(exit?.classList).toContain('e-btn--nu');
+        expect(exit?.classList).toContain('e-btn--doux');
+      });
+
+      it('déplie une validation qui dit ce qui part ; l’arête et sa légende le montrent', async () => {
+        chooseStage(1);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+
+        const confirmation = element.querySelector<HTMLElement>('e-confirmation');
+        expect(confirmation?.querySelector('.e-confirmation__titre')?.textContent?.trim()).toBe(
+          'Effacer cette étape de ton plan ?',
+        );
+        expect(confirmation?.querySelector('.e-confirmation__texte')?.textContent?.trim()).toBe(
+          'Elle emporte ses 3 pas, dont 1 fait. Ton arête passe de 3 à 2 étapes. Ça ne se récupère pas.',
+        );
+        expect(document.activeElement).toBe(confirmation?.querySelector('.e-confirmation__titre'));
+        expect(arete()).toEqual(['Faite', 'Sort du plan', 'À faire']);
+        expect(legend()).toEqual(['Faite', 'À faire', 'Sort du plan']);
+        expect(element.querySelector('.stage-exit')).toBeNull();
+        expect(store.deleteObjective).not.toHaveBeenCalled();
+      });
+
+      it('« Garder l’étape » replie la validation, et rien ne part', async () => {
+        chooseStage(1);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        buttonNamed("Garder l'étape")?.click();
+        await settle();
+
+        expect(element.querySelector('e-confirmation')).toBeNull();
+        expect(arete()).toEqual(['Faite', 'À faire', 'À faire']);
+        expect(legend()).toEqual(['Faite', 'À faire']);
+        expect(store.deleteObjective).not.toHaveBeenCalled();
+        // La validation avait pris la place du geste : il revient, et le focus avec lui.
+        expect(document.activeElement).toBe(element.querySelector('.stage-exit button'));
+      });
+
+      it('Échap replie la validation, et le focus revient à « Effacer l’étape »', async () => {
+        chooseStage(1);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        element
+          .querySelector('e-confirmation .e-confirmation__titre')
+          ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await settle();
+
+        expect(element.querySelector('e-confirmation')).toBeNull();
+        expect(document.activeElement).toBe(element.querySelector('.stage-exit button'));
+      });
+
+      it('la validation reste dépliée quand l’étape reçoit son id définitif', async () => {
+        store.objectives.update((list) => [...list, objective('temp-id-1', 'Mental', 'obj-1')]);
+        fixture.detectChanges();
+        chooseStage(3);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        expect(element.querySelector('e-confirmation')).not.toBeNull();
+
+        realIds.set('temp-id-1', 'stage-4');
+        store.objectives.update((list) => list.map((item) => (item.id === 'temp-id-1' ? { ...item, id: 'stage-4' } : item)));
+        await settle();
+
+        expect(element.querySelector('e-confirmation')).not.toBeNull();
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        expect(store.deleteObjective).toHaveBeenCalledWith('stage-4');
+      });
+
+      it('ouvrir une autre étape replie la validation', async () => {
+        chooseStage(1);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        chooseStage(2);
+        await settle();
+        expect(element.querySelector('e-confirmation')).toBeNull();
+        expect(arete()).toEqual(['Faite', 'À faire', 'À faire']);
+      });
+
+      it('confirmée, l’étape part, et le focus va au titre de l’arête', async () => {
+        chooseStage(1);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+
+        expect(store.deleteObjective).toHaveBeenCalledWith('stage-2');
+        expect(element.querySelector('#titre-etape')).toBeNull();
+        expect(element.textContent).toContain("Choisis une étape sur l'arête pour voir ses pas.");
+        expect(text('#titre-arete')).toBe("L'arête · 2 étapes");
+        expect(document.activeElement).toBe(element.querySelector('#titre-arete'));
+      });
+
+      it('sa dernière étape partie, le focus va au titre de l’objectif', async () => {
+        store.objectives.update((list) => list.filter((item) => item.id !== 'stage-1' && item.id !== 'stage-3'));
+        fixture.detectChanges();
+        chooseStage(0);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        expect(text('e-confirmation .e-confirmation__texte')).toContain("Ton arête n'aura plus d'étape.");
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        expect(document.activeElement).toBe(element.querySelector('h1'));
+      });
+    });
+
+    describe('un objectif : au pied de sa feuille, et son nom à réécrire', () => {
+      /** Ouvre « Modifier l'objectif », puis choisit sa sortie discrète. */
+      const askErasure = () => {
+        buttonNamed("Modifier l'objectif")?.click();
+        closed.next('erase');
+      };
+
+      it('la sortie de la feuille « Modifier l’objectif » ouvre la confirmation, sans autre issue', () => {
+        askErasure();
+        const [component, options] = feuilles.ouvrir.mock.calls.at(-1) as [unknown, { donnees: unknown; alerte: boolean }];
+        expect(component).toBe(EFeuilleConfirmation);
+        expect(options.alerte).toBe(true);
+        expect(options.donnees).toEqual({
+          titre: 'Effacer cet objectif ?',
+          texte: 'Ses 3 étapes, ses 5 pas dont 2 faits et ta conversation avec Akari partent avec lui. Ça ne se récupère pas.',
+          libelleConfirmer: "Effacer l'objectif",
+          libelleAnnuler: "Garder l'objectif",
+          aReecrire: 'Courir un semi-marathon en mai',
+        });
+      });
+
+      it('confirmé, l’objectif part une fois la liste des objectifs ouverte', async () => {
+        let open: (navigated: boolean) => void = () => undefined;
+        const navigate = vi
+          .spyOn(TestBed.inject(Router), 'navigateByUrl')
+          .mockReturnValue(new Promise<boolean>((resolve) => (open = resolve)));
+        askErasure();
+        closed.next('confirmer');
+        expect(navigate).toHaveBeenCalledWith('/');
+        await settle();
+        // Tant que la liste n'est pas ouverte, l'arête ne dit jamais « introuvable » : rien ne part.
+        expect(store.deleteObjective).not.toHaveBeenCalled();
+
+        open(true);
+        await settle();
+        expect(store.deleteObjective).toHaveBeenCalledWith('obj-1');
+      });
+
+      it('si la liste ne s’ouvre pas, l’objectif part quand même : le geste est confirmé', async () => {
+        vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockRejectedValue(new Error('chunk introuvable'));
+        askErasure();
+        closed.next('confirmer');
+        await settle();
+        expect(store.deleteObjective).toHaveBeenCalledWith('obj-1');
+      });
+
+      it('gardé (ou la feuille repliée), rien ne part', async () => {
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        askErasure();
+        closed.next(undefined);
+        await settle();
+        expect(navigate).not.toHaveBeenCalled();
+        expect(store.deleteObjective).not.toHaveBeenCalled();
+      });
+
+      it('une feuille fermée autrement ne demande rien', () => {
+        buttonNamed("Modifier l'objectif")?.click();
+        const opened = feuilles.ouvrir.mock.calls.length;
+        closed.next(undefined);
+        expect(feuilles.ouvrir.mock.calls.length).toBe(opened);
+      });
+    });
+
+    it('parle dans la voix d’Empreinte, à chaque poids', async () => {
+      const texts: string[] = [];
+      const collect = () => {
+        texts.push(element.textContent ?? '');
+        element.querySelectorAll('[aria-label]').forEach((el) => texts.push(el.getAttribute('aria-label') ?? ''));
+      };
+      chooseStage(1);
+      collect();
+      buttonNamed('Effacer « Courir 5 km »')?.click();
+      await settle();
+      collect();
+      buttonNamed("Effacer l'étape")?.click();
+      await settle();
+      collect();
+      buttonNamed("Modifier l'objectif")?.click();
+      closed.next('erase');
+      const [, options] = feuilles.ouvrir.mock.calls.at(-1) as [unknown, { donnees: Record<string, string> }];
+      texts.push(...Object.values(options.donnees));
+      for (const value of texts) {
+        expect(motsAEviter(value)).toEqual([]);
+        expect(voiceIssues(value)).toEqual([]);
+      }
     });
   });
 

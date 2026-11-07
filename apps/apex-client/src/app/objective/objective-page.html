@@ -37,12 +37,13 @@
       <div class="ds-panels ds-cols-2-1">
         <section class="ds-panel ds-gap-6" aria-labelledby="titre-arete">
           <div class="ds-title-row">
-            <h2 class="section" id="titre-arete">L'arête · {{ stageCount() }}</h2>
-            <ul eLegendeArete></ul>
+            <h2 class="section" id="titre-arete" tabindex="-1" #areteHeading>L'arête · {{ stageCount() }}</h2>
+            <!-- Pendant la validation de son effacement, l'étape ouverte sort du plan : la légende dit ses pointillés. -->
+            <ul eLegendeArete [sortante]="confirmingStageErasure()"></ul>
           </div>
           <div class="ds-scroll-x arete">
             <!-- La tête de l'arête est le sceau de l'écran : aucun bouton sceau ailleurs. -->
-            <e-arete [objectif]="d.objective.title" [etapes]="d.aretes" interactive (choisir)="chooseStage($event)" />
+            <e-arete [objectif]="d.objective.title" [etapes]="aretes()" interactive (choisir)="chooseStage($event)" />
           </div>
         </section>
 
@@ -52,6 +53,7 @@
           [attr.aria-label]="stage() ? null : 'Étape ouverte'"
         >
           @if (stage(); as s) {
+            @let progress = stageProgress();
             <div class="ds-stack ds-gap-2">
               <p class="repere ds-muted">Étape · {{ stageStateLabel(s.done) }}</p>
               <h2 class="objectif ds-break" id="titre-etape" tabindex="-1" #stageHeading>{{ stageName(s.title) }}</h2>
@@ -61,10 +63,10 @@
               @if (s.description) {
                 <p class="detail ds-muted ds-break">{{ s.description }}</p>
               }
-              @if (s.tasks.length > 0) {
-                <e-pas [faits]="s.progress.done" [aFaire]="s.progress.toDo" [accompli]="stageAccomplishment(s.done)" />
+              @if (progress && progress.total > 0) {
+                <e-pas [faits]="progress.done" [aFaire]="progress.toDo" [accompli]="stageAccomplishment(s.done)" />
               } @else {
-                <p class="detail ds-muted">{{ s.detail }}</p>
+                <p class="detail ds-muted">{{ progress?.detail ?? s.detail }}</p>
               }
             </div>
 
@@ -72,19 +74,32 @@
               <!-- ds-break : un intitulé sans espace (une adresse) passe à la ligne au lieu d'élargir la page. -->
               <ul eListe nue class="ds-break" aria-labelledby="titre-etape">
                 @for (p of s.tasks; track p.id) {
-                  <li eTache [titre]="p.title" [fait]="p.done" (faitChange)="toggleTask(p.id, $event)">
-                    <div eTacheActions>
-                      <button
-                        eBouton="nu"
-                        petit
-                        type="button"
-                        [attr.aria-label]="'Modifier « ' + p.title + ' »'"
-                        (click)="editTask(p, s.id)"
-                      >
-                        Modifier
-                      </button>
-                    </div>
-                  </li>
+                  @if (erasingTaskId() === p.id) {
+                    <!-- Le pas vient d'être effacé : sa trace le laisse revenir, puis il part pour de bon. -->
+                    <li eTrace [titre]="p.title" (remettre)="putBackTask(p.id)" (expiree)="eraseTaskForGood(p.id)"></li>
+                  } @else {
+                    <li
+                      eTache
+                      [titre]="p.title"
+                      [fait]="p.done"
+                      [effacable]="!isTemporaryId(p.id)"
+                      [focaliser]="p.id === restoredTaskId()"
+                      (faitChange)="toggleTask(p.id, $event)"
+                      (effacer)="eraseTask(p.id)"
+                    >
+                      <div eTacheActions>
+                        <button
+                          eBouton="nu"
+                          petit
+                          type="button"
+                          [attr.aria-label]="'Modifier « ' + p.title + ' »'"
+                          (click)="editTask(p, s.id)"
+                        >
+                          Modifier
+                        </button>
+                      </div>
+                    </li>
+                  }
                 }
               </ul>
             }
@@ -100,6 +115,26 @@
                 <e-icone nom="modifier" [taille]="18" />Modifier l'étape
               </button>
             </div>
+
+            <!-- Une partie du plan part après une validation sur place, qui dit ce qu'elle emporte ; le geste reste
+                 discret, sous les actions et un filet. -->
+            @if (confirmingStageErasure()) {
+              <e-confirmation
+                [titre]="stageErasure.question"
+                [libelleConfirmer]="stageErasure.confirm"
+                [libelleAnnuler]="stageErasure.keep"
+                (confirmer)="eraseStage(s.id)"
+                (annuler)="keepStage()"
+              >
+                <p>{{ stageErasureText() }}</p>
+              </e-confirmation>
+            } @else {
+              <div class="stage-exit">
+                <button #stageExit eBouton="nu" petit doux type="button" (click)="confirmingStageErasure.set(true)">
+                  {{ stageErasure.ask }}
+                </button>
+              </div>
+            }
           } @else {
             <p class="detail ds-muted">Choisis une étape sur l'arête pour voir ses pas.</p>
           }
@@ -138,19 +173,31 @@
           </div>
           <ul eListe nue class="ds-break" aria-labelledby="titre-sans-etape">
             @for (p of d.tasksWithoutStage; track p.id) {
-              <li eTache [titre]="p.title" [fait]="p.done" (faitChange)="toggleTask(p.id, $event)">
-                <div eTacheActions>
-                  <button
-                    eBouton="nu"
-                    petit
-                    type="button"
-                    [attr.aria-label]="'Modifier « ' + p.title + ' »'"
-                    (click)="editTask(p, null)"
-                  >
-                    Modifier
-                  </button>
-                </div>
-              </li>
+              @if (erasingTaskId() === p.id) {
+                <li eTrace [titre]="p.title" (remettre)="putBackTask(p.id)" (expiree)="eraseTaskForGood(p.id)"></li>
+              } @else {
+                <li
+                  eTache
+                  [titre]="p.title"
+                  [fait]="p.done"
+                  [effacable]="!isTemporaryId(p.id)"
+                  [focaliser]="p.id === restoredTaskId()"
+                  (faitChange)="toggleTask(p.id, $event)"
+                  (effacer)="eraseTask(p.id)"
+                >
+                  <div eTacheActions>
+                    <button
+                      eBouton="nu"
+                      petit
+                      type="button"
+                      [attr.aria-label]="'Modifier « ' + p.title + ' »'"
+                      (click)="editTask(p, null)"
+                    >
+                      Modifier
+                    </button>
+                  </div>
+                </li>
+              }
             }
           </ul>
         </section>
