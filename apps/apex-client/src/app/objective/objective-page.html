@@ -82,7 +82,7 @@
                       eTache
                       [titre]="p.title"
                       [fait]="p.done"
-                      effacable
+                      [effacable]="!isTemporaryId(p.id)"
                       [focaliser]="p.id === restoredTaskId()"
                       (faitChange)="toggleTask(p.id, $event)"
                       (effacer)="eraseTask(p.id)"
@@ -124,13 +124,13 @@
                 [libelleConfirmer]="stageErasure.confirm"
                 [libelleAnnuler]="stageErasure.keep"
                 (confirmer)="eraseStage(s.id)"
-                (annuler)="confirmingStageErasure.set(false)"
+                (annuler)="keepStage()"
               >
                 <p>{{ stageErasureText() }}</p>
               </e-confirmation>
             } @else {
               <div class="stage-exit">
-                <button eBouton="nu" petit doux type="button" (click)="confirmingStageErasure.set(true)">
+                <button #stageExit eBouton="nu" petit doux type="button" (click)="confirmingStageErasure.set(true)">
                   {{ stageErasure.ask }}
                 </button>
               </div>
@@ -180,7 +180,7 @@
                   eTache
                   [titre]="p.title"
                   [fait]="p.done"
-                  effacable
+                  [effacable]="!isTemporaryId(p.id)"
                   [focaliser]="p.id === restoredTaskId()"
                   (faitChange)="toggleTask(p.id, $event)"
                   (effacer)="eraseTask(p.id)"

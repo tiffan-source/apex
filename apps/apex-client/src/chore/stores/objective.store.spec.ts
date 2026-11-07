@@ -683,14 +683,35 @@ describe('ObjectiveStore', () => {
       expect(s.annonces.signalement()).toBeNull();
     });
 
-    it('un pas qui n’est pas effacé revient à sa place, et c’est signalé', async () => {
+    it('un pas qui n’est pas effacé revient à sa place, c’est signalé, et la base est relue', async () => {
       s.api.deleteTask.mockRejectedValue(ko('NETWORK_ERROR'));
       const reads = s.api.list.mock.calls.length;
       s.store.deleteTask('t1');
       await settle();
       expect(ids().tasks).toEqual(['t1', 't2']);
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.eraseTask);
-      expect(s.api.list.mock.calls.length).toBe(reads);
+      // L'API dit ce qui est vrai : sa réponse a pu se perdre après l'effacement.
+      expect(s.api.list.mock.calls.length).toBe(reads + 1);
+    });
+
+    it('un pas refusé dont l’étape est partie entre-temps ne revient pas, et ne dit rien : il part avec elle', async () => {
+      s.api.deleteTask.mockRejectedValue(ko('NETWORK_ERROR'));
+      s.api.deleteObjective.mockResolvedValue(null);
+      s.store.deleteTask('t1');
+      s.store.deleteObjective('endurance');
+      await settle();
+      expect(ids()).toEqual({ objectives: ['semi'], tasks: [] });
+      expect(s.annonces.signalement()).toBeNull();
+    });
+
+    it('une étape refusée ne ramène pas un pas dont l’ajout n’a pas abouti', async () => {
+      s.api.addTask.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
+      s.api.deleteObjective.mockRejectedValue(ko('NETWORK_ERROR'));
+      s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Fractionné', importance: 3, urgency: 3 } });
+      s.store.deleteObjective('endurance');
+      await settle();
+      expect(ids()).toEqual({ objectives: ['semi', 'endurance'], tasks: ['t1', 't2'] });
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.eraseStage);
     });
 
     it('un pas qui n’est plus là est ignoré : une trace peut le redire, son étape a pu partir avant lui', async () => {
@@ -920,10 +941,15 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
       s.store.editTask({ taskId: 't1', input: { title: 'Courir 10 km', importance: 4, urgency: 1, objectiveId: 'endurance' } });
       s.store.updateTaskDone({ taskId: 't1', done: true });
       s.store.updateTaskDone({ taskId: 't2', done: false });
-      // Les effacements en dernier : un pas, puis son étape, puis l'objectif.
+      // Les effacements en dernier, chacun réglé avant le suivant : un pas, puis son étape, puis l'objectif. (Un pas
+      // refusé pendant que son étape part ne dit rien : c'est elle qui parle.)
+      await settle();
       s.store.deleteTask('t2');
+      await settle();
       s.store.deleteObjective('endurance');
+      await settle();
       s.store.deleteObjective('semi');
+      await settle();
       if (outcome === 'throw') {
         s.api.list.mockRejectedValueOnce(new Error(DOMAIN_MESSAGE));
         s.store.loadObjectives();

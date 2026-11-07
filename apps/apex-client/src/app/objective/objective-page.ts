@@ -100,12 +100,16 @@ export class ObjectivePage {
   protected readonly hasReport = this.annonces.aUnSignalement;
   protected readonly stageName = stageName;
   protected readonly stageErasure = STAGE_ERASURE;
+  /** Un pas qui n'est pas encore enregistré n'a pas de × : sa trace ne survivrait pas à son id définitif. */
+  protected readonly isTemporaryId = isTemporaryId;
 
   /** Les titres où poser le focus quand le bouton qui a ouvert une feuille a disparu. */
   private readonly pageHeading = viewChild<ElementRef<HTMLElement>>('pageHeading');
   private readonly stageHeading = viewChild<ElementRef<HTMLElement>>('stageHeading');
   /** Le titre de l'arête, où la suite se lit quand une étape vient de partir. */
   private readonly areteHeading = viewChild<ElementRef<HTMLElement>>('areteHeading');
+  /** « Effacer l'étape » : la validation gardée, le focus y revient (la validation l'avait remplacé). */
+  private readonly stageExit = viewChild('stageExit', { read: ElementRef<HTMLButtonElement> });
 
   /**
    * L'objectif affiché. Seulement un objectif racine : objectiveDetail accepte aussi l'id d'une
@@ -161,8 +165,18 @@ export class ObjectivePage {
   /** Le dernier pas remis à sa place par sa trace : il reprend le focus en revenant. */
   protected readonly restoredTaskId = signal<string | null>(null);
 
-  /** La validation de l'effacement de l'étape ouverte est dépliée ; elle se replie quand une autre étape s'ouvre. */
-  protected readonly confirmingStageErasure = linkedSignal({ source: this.openStageId, computation: () => false });
+  /**
+   * La validation de l'effacement de l'étape ouverte est dépliée. Elle se replie quand une autre étape s'ouvre, pas
+   * quand l'étape reçoit son id définitif (son enregistrement aboutit pendant la validation).
+   */
+  protected readonly confirmingStageErasure = linkedSignal<string | null, boolean>({
+    source: this.openStageId,
+    computation: (stageId, previous) =>
+      !!previous?.value &&
+      previous.source !== null &&
+      stageId !== null &&
+      this.writes.resolve(previous.source) === stageId,
+  });
 
   /** Les étapes de l'arête ; pendant la validation, l'étape ouverte sort du plan, en pointillés. */
   protected readonly aretes = computed(() => {
@@ -247,11 +261,25 @@ export class ObjectivePage {
 
   /**
    * La trace s'en va (son délai est passé, une autre étape s'ouvre, la page est quittée ou cachée) : le pas est
-   * effacé pour de bon. Le store ignore un pas qui n'est plus là (une trace qui le redit, une étape déjà partie).
+   * effacé pour de bon. Une trace remplacée le redit en partant : son pas est déjà parti, rien n'est renvoyé. Le
+   * store ignore aussi un pas qui n'est plus là (une étape déjà partie).
    */
   protected eraseTaskForGood(taskId: string): void {
-    if (this.erasingTaskId() === taskId) this.erasingTaskId.set(null);
+    if (this.erasingTaskId() !== taskId) return;
+    this.erasingTaskId.set(null);
     this.store.deleteTask(taskId);
+  }
+
+  /** Un autre effacement commence (l'étape, l'objectif) : le pas qui attendait part d'abord, pour de bon. */
+  private eraseWaitingTask(): void {
+    const waiting = this.erasingTaskId();
+    if (waiting !== null) this.eraseTaskForGood(waiting);
+  }
+
+  /** « Garder l'étape », ou Échap : la validation se replie, et le focus revient au geste qui l'avait ouverte. */
+  protected keepStage(): void {
+    this.confirmingStageErasure.set(false);
+    afterNextRender(() => this.stageExit()?.nativeElement.focus(), { injector: this.injector });
   }
 
   /**
@@ -259,6 +287,7 @@ export class ObjectivePage {
    * lit : le titre de l'arête, sinon celui de l'objectif (sa dernière étape est partie).
    */
   protected eraseStage(stageId: string): void {
+    this.eraseWaitingTask();
     this.openStageId.set(null);
     this.store.deleteObjective(stageId);
     afterNextRender(() => (this.areteHeading() ?? this.pageHeading())?.nativeElement.focus(), {
@@ -312,7 +341,13 @@ export class ObjectivePage {
       .closed.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'confirmer') {
-          void this.router.navigateByUrl('/').finally(() => this.store.deleteObjective(id));
+          this.eraseWaitingTask();
+          // Si la liste ne s'ouvre pas (hors connexion, son code n'est pas chargé), l'objectif part quand même : le
+          // geste est confirmé, et l'arête dira qu'il n'est plus là.
+          void this.router
+            .navigateByUrl('/')
+            .catch(() => false)
+            .then(() => this.store.deleteObjective(id));
           return;
         }
         afterNextRender(() => this.recoverFocus(), { injector: this.injector });

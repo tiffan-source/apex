@@ -429,6 +429,30 @@ describe('ObjectivePage', () => {
         expect(store.deleteTask).toHaveBeenCalledWith('t3');
       });
 
+      it('un pas qui n’est pas encore enregistré n’a pas de × : sa trace ne survivrait pas à son id définitif', () => {
+        store.tasks.update((list) => [...list, task('temp-id-9', 'Fractionné', 'stage-2')]);
+        chooseStage(1);
+        expect(buttonNamed('Effacer « Fractionné »')).toBeUndefined();
+        expect(buttonNamed('Effacer « Courir 5 km »')).toBeDefined();
+      });
+
+      it('effacer l’étape fait d’abord partir pour de bon le pas dont la trace attendait', async () => {
+        chooseStage(1);
+        buttonNamed('Effacer « Courir 5 km »')?.click();
+        await settle();
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+
+        expect(store.deleteTask).toHaveBeenCalledWith('t3');
+        expect(store.deleteTask.mock.invocationCallOrder[0]).toBeLessThan(
+          store.deleteObjective.mock.invocationCallOrder[0],
+        );
+        // Sa trace, partie avec l'étape, ne renvoie rien.
+        expect(store.deleteTask).toHaveBeenCalledTimes(1);
+      });
+
       it('un pas sans étape s’efface aussi, avec sa trace', async () => {
         buttonNamed('Effacer « Acheter des chaussures »')?.click();
         await settle();
@@ -476,6 +500,39 @@ describe('ObjectivePage', () => {
         expect(arete()).toEqual(['Faite', 'À faire', 'À faire']);
         expect(legend()).toEqual(['Faite', 'À faire']);
         expect(store.deleteObjective).not.toHaveBeenCalled();
+        // La validation avait pris la place du geste : il revient, et le focus avec lui.
+        expect(document.activeElement).toBe(element.querySelector('.stage-exit button'));
+      });
+
+      it('Échap replie la validation, et le focus revient à « Effacer l’étape »', async () => {
+        chooseStage(1);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        element
+          .querySelector('e-confirmation .e-confirmation__titre')
+          ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await settle();
+
+        expect(element.querySelector('e-confirmation')).toBeNull();
+        expect(document.activeElement).toBe(element.querySelector('.stage-exit button'));
+      });
+
+      it('la validation reste dépliée quand l’étape reçoit son id définitif', async () => {
+        store.objectives.update((list) => [...list, objective('temp-id-1', 'Mental', 'obj-1')]);
+        fixture.detectChanges();
+        chooseStage(3);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        expect(element.querySelector('e-confirmation')).not.toBeNull();
+
+        realIds.set('temp-id-1', 'stage-4');
+        store.objectives.update((list) => list.map((item) => (item.id === 'temp-id-1' ? { ...item, id: 'stage-4' } : item)));
+        await settle();
+
+        expect(element.querySelector('e-confirmation')).not.toBeNull();
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        expect(store.deleteObjective).toHaveBeenCalledWith('stage-4');
       });
 
       it('ouvrir une autre étape replie la validation', async () => {
@@ -537,10 +594,26 @@ describe('ObjectivePage', () => {
       });
 
       it('confirmé, l’objectif part une fois la liste des objectifs ouverte', async () => {
-        const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        let open: (navigated: boolean) => void = () => undefined;
+        const navigate = vi
+          .spyOn(TestBed.inject(Router), 'navigateByUrl')
+          .mockReturnValue(new Promise<boolean>((resolve) => (open = resolve)));
         askErasure();
         closed.next('confirmer');
         expect(navigate).toHaveBeenCalledWith('/');
+        await settle();
+        // Tant que la liste n'est pas ouverte, l'arête ne dit jamais « introuvable » : rien ne part.
+        expect(store.deleteObjective).not.toHaveBeenCalled();
+
+        open(true);
+        await settle();
+        expect(store.deleteObjective).toHaveBeenCalledWith('obj-1');
+      });
+
+      it('si la liste ne s’ouvre pas, l’objectif part quand même : le geste est confirmé', async () => {
+        vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockRejectedValue(new Error('chunk introuvable'));
+        askErasure();
+        closed.next('confirmer');
         await settle();
         expect(store.deleteObjective).toHaveBeenCalledWith('obj-1');
       });

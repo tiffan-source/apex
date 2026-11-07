@@ -57,17 +57,26 @@ export function withDeleteTask() {
                 },
                 error: (error) => {
                   console.error('Pas non effacé :', error);
-                  annonces.signaler(failureReport('eraseTask', errorCodeOf(error)));
-                  // Il revient à sa place, sauf si son étape est partie entre-temps : il n'aurait plus où aller.
+                  // Il revient à sa place, sauf si son étape est partie entre-temps (il part avec elle, et c'est
+                  // elle qui parlera) ou si son ajout n'a pas abouti (il n'a jamais été en base).
                   const objectiveIds = new Set(store.objectives().map((objective) => objective.id));
-                  const back = removed.filter(({ item }) => objectiveIds.has(writes.resolve(item.objectiveId)));
-                  patchState(store, {
-                    tasks: restoreRemoved(store.tasks(), back, (task) => ({
-                      ...task,
-                      id: writes.resolve(task.id),
-                      objectiveId: writes.resolve(task.objectiveId),
-                    })),
-                  });
+                  const back = removed.filter(
+                    ({ item }) =>
+                      !isTemporaryId(writes.resolve(item.id)) && objectiveIds.has(writes.resolve(item.objectiveId)),
+                  );
+                  if (back.length > 0) {
+                    annonces.signaler(failureReport('eraseTask', errorCodeOf(error)));
+                    patchState(store, {
+                      tasks: restoreRemoved(store.tasks(), back, (task) => ({
+                        ...task,
+                        id: writes.resolve(task.id),
+                        objectiveId: writes.resolve(task.objectiveId),
+                      })),
+                    });
+                  }
+                  // L'API dit ce qui est vrai : sa réponse a pu se perdre après l'effacement, un geste a pu être
+                  // refusé entre-temps.
+                  store.loadObjectives();
                 },
               })
             )

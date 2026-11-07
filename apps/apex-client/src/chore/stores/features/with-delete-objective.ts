@@ -11,7 +11,7 @@ import { AnnoncesStore } from "../annonces.store";
 import { whenSignedIn } from "../utils/filter-auth-operation";
 import { isTemporaryId } from "../utils/map-optimistique-id";
 import { WriteQueue } from "../utils/write-queue";
-import { removeWhere, restoreRemoved } from "../utils/removed-items";
+import { removeWhere, restoreRemoved, type RemovedItem } from "../utils/removed-items";
 import { subtreeIds } from "../../mapper/objective-view.mapper";
 import { SUCCESS_ANNOUNCEMENTS, failureReport } from "../../constants/messages.constante";
 
@@ -70,22 +70,29 @@ export function withDeleteObjective() {
                 },
                 error: (error) => {
                   console.error(isStage ? 'Étape non effacée :' : 'Objectif non effacé :', error);
-                  annonces.signaler(failureReport(isStage ? 'eraseStage' : 'eraseObjective', errorCodeOf(error)));
-                  // Tout revient à sa place, sauf une étape dont l'objectif est parti entre-temps.
+                  // Tout revient à sa place, sauf une étape dont l'objectif est parti entre-temps (elle part avec
+                  // lui, et c'est lui qui parlera), et ce dont la création n'a pas abouti (jamais en base).
                   const parentId = target.parentId === null ? null : writes.resolve(target.parentId);
-                  if (parentId !== null && !store.objectives().some((objective) => objective.id === parentId)) return;
-                  patchState(store, {
-                    objectives: restoreRemoved(store.objectives(), objectives.removed, (objective) => ({
-                      ...objective,
-                      id: writes.resolve(objective.id),
-                      parentId: objective.parentId === null ? null : writes.resolve(objective.parentId),
-                    })),
-                    tasks: restoreRemoved(store.tasks(), tasks.removed, (task) => ({
-                      ...task,
-                      id: writes.resolve(task.id),
-                      objectiveId: writes.resolve(task.objectiveId),
-                    })),
-                  });
+                  if (parentId === null || store.objectives().some((objective) => objective.id === parentId)) {
+                    annonces.signaler(failureReport(isStage ? 'eraseStage' : 'eraseObjective', errorCodeOf(error)));
+                    const saved = <T extends { id: string }>(removed: readonly RemovedItem<T>[]) =>
+                      removed.filter(({ item }) => !isTemporaryId(writes.resolve(item.id)));
+                    patchState(store, {
+                      objectives: restoreRemoved(store.objectives(), saved(objectives.removed), (objective) => ({
+                        ...objective,
+                        id: writes.resolve(objective.id),
+                        parentId: objective.parentId === null ? null : writes.resolve(objective.parentId),
+                      })),
+                      tasks: restoreRemoved(store.tasks(), saved(tasks.removed), (task) => ({
+                        ...task,
+                        id: writes.resolve(task.id),
+                        objectiveId: writes.resolve(task.objectiveId),
+                      })),
+                    });
+                  }
+                  // L'API dit ce qui est vrai : sa réponse a pu se perdre après l'effacement, un geste a pu être
+                  // refusé entre-temps.
+                  store.loadObjectives();
                 },
               })
             );
