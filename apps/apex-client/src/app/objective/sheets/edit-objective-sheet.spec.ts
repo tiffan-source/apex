@@ -132,6 +132,19 @@ describe('EditObjectiveSheet', () => {
     expect(store.editObjective).not.toHaveBeenCalled();
   });
 
+  it("garde l'effacement à son pied, discret, sous un filet : il ferme la feuille sans rien enregistrer", () => {
+    const pied = element.querySelector<HTMLElement>('.e-feuille__pied');
+    expect(pied?.textContent?.replace(/\s+/g, ' ').trim()).toBe("Cet objectif n'a plus sa place ? Effacer l'objectif");
+    const erase = pied?.querySelector<HTMLButtonElement>('button');
+    // Un mot nu et doux : rien ne pousse à effacer, et ce n'est jamais l'encre ni le sceau.
+    expect(erase?.classList).toContain('e-btn--nu');
+    expect(erase?.classList).toContain('e-btn--doux');
+    expect(element.querySelectorAll('.e-btn--encre')).toHaveLength(0);
+    erase?.click();
+    expect(ref.close).toHaveBeenCalledWith('erase');
+    expect(store.editObjective).not.toHaveBeenCalled();
+  });
+
   it("n'a pas de sceau et parle dans la voix d'Empreinte", () => {
     expect(element.querySelectorAll('.e-btn--sceau')).toHaveLength(0);
     for (const value of [element.textContent ?? '', OBJECTIVE_TITLE_REQUIRED, OBJECTIVE_HORIZON_KEPT]) {

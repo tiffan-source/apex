@@ -65,6 +65,8 @@ function createApiMock(loaded: ObjectivesResponse) {
     edit: vi.fn(),
     editTask: vi.fn(),
     setTaskDone: vi.fn(),
+    deleteObjective: vi.fn(),
+    deleteTask: vi.fn(),
   };
 }
 
@@ -650,6 +652,148 @@ describe('ObjectiveStore', () => {
     });
   });
 
+  describe('effacer', () => {
+    const ids = () => ({
+      objectives: s.store.objectives().map((item) => item.id),
+      tasks: s.store.tasks().map((item) => item.id),
+    });
+
+    it('un pas quitte l’état tout de suite, part par DELETE, puis la base est relue', async () => {
+      s.api.deleteTask.mockResolvedValue(null);
+      const reads = s.api.list.mock.calls.length;
+      const announced = s.announce.mock.calls.length;
+
+      s.store.deleteTask('t1');
+      expect(task('t1')).toBeUndefined();
+      await settle();
+
+      expect(s.api.deleteTask).toHaveBeenCalledWith('t1');
+      // Sans ce pas, son étape peut être faite : c'est l'API qui le dit.
+      expect(s.api.list.mock.calls.length).toBe(reads + 1);
+      expect(ids().tasks).toEqual(['t2']);
+      // Sa trace l'a déjà dit à l'écran : rien de plus à annoncer.
+      expect(s.announce.mock.calls.length).toBe(announced);
+    });
+
+    it('un pas déjà effacé côté serveur (404) l’est : rien à signaler', async () => {
+      s.api.deleteTask.mockRejectedValue(ko('TASK_NOT_FOUND'));
+      s.store.deleteTask('t1');
+      await settle();
+      expect(ids().tasks).toEqual(['t2']);
+      expect(s.annonces.signalement()).toBeNull();
+    });
+
+    it('un pas qui n’est pas effacé revient à sa place, et c’est signalé', async () => {
+      s.api.deleteTask.mockRejectedValue(ko('NETWORK_ERROR'));
+      const reads = s.api.list.mock.calls.length;
+      s.store.deleteTask('t1');
+      await settle();
+      expect(ids().tasks).toEqual(['t1', 't2']);
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.eraseTask);
+      expect(s.api.list.mock.calls.length).toBe(reads);
+    });
+
+    it('un pas qui n’est plus là est ignoré : une trace peut le redire, son étape a pu partir avant lui', async () => {
+      s.api.deleteTask.mockResolvedValue(null);
+      s.api.deleteObjective.mockResolvedValue(null);
+      s.store.deleteTask('t1');
+      s.store.deleteTask('t1');
+      s.store.deleteObjective('endurance');
+      s.store.deleteTask('t2');
+      await settle();
+      expect(s.api.deleteTask).toHaveBeenCalledTimes(1);
+      expect(s.api.deleteObjective).toHaveBeenCalledTimes(1);
+    });
+
+    it('une étape part avec ses pas, s’annonce, puis la base est relue', async () => {
+      s.api.deleteObjective.mockResolvedValue(null);
+      const reads = s.api.list.mock.calls.length;
+
+      s.store.deleteObjective('endurance');
+      expect(ids()).toEqual({ objectives: ['semi'], tasks: [] });
+      await settle();
+
+      expect(s.api.deleteObjective).toHaveBeenCalledWith('endurance');
+      // L'API emporte les pas avec l'étape : aucun n'est effacé un par un.
+      expect(s.api.deleteTask).not.toHaveBeenCalled();
+      expect(s.announce).toHaveBeenCalledWith(SUCCESS_ANNOUNCEMENTS.stageErased, 'polite');
+      expect(s.api.list.mock.calls.length).toBe(reads + 1);
+      expect(ids()).toEqual({ objectives: ['semi'], tasks: [] });
+    });
+
+    it('un objectif part avec ses étapes et leurs pas, et s’annonce', async () => {
+      s.api.deleteObjective.mockResolvedValue(null);
+      s.store.deleteObjective('semi');
+      expect(ids()).toEqual({ objectives: [], tasks: [] });
+      await settle();
+      expect(s.api.deleteObjective).toHaveBeenCalledTimes(1);
+      expect(s.api.deleteObjective).toHaveBeenCalledWith('semi');
+      expect(s.announce).toHaveBeenCalledWith(SUCCESS_ANNOUNCEMENTS.objectiveErased, 'polite');
+      expect(s.store.objectiveCards()).toEqual([]);
+    });
+
+    it('un objectif déjà effacé côté serveur (404) l’est : rien à signaler', async () => {
+      s.api.deleteObjective.mockRejectedValue(ko('OBJECTIVE_NOT_FOUND'));
+      s.store.deleteObjective('semi');
+      await settle();
+      expect(ids()).toEqual({ objectives: [], tasks: [] });
+      expect(s.annonces.signalement()).toBeNull();
+      expect(s.announce).toHaveBeenCalledWith(SUCCESS_ANNOUNCEMENTS.objectiveErased, 'polite');
+    });
+
+    it('une étape qui n’est pas effacée revient à sa place, avec ses pas, et c’est signalé', async () => {
+      s.api.deleteObjective.mockRejectedValue(ko('FAIL_TO_SAVE_OBJECTIVE'));
+      const before = { objectives: s.store.objectives(), tasks: s.store.tasks() };
+      s.store.deleteObjective('endurance');
+      await settle();
+      expect(s.store.objectives()).toEqual(before.objectives);
+      expect(s.store.tasks()).toEqual(before.tasks);
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.eraseStage);
+    });
+
+    it('un objectif qui n’est pas effacé revient parmi les objectifs, et c’est signalé', async () => {
+      s.api.deleteObjective.mockRejectedValue(ko('NETWORK_ERROR'));
+      s.store.deleteObjective('semi');
+      await settle();
+      expect(ids()).toEqual({ objectives: ['semi', 'endurance'], tasks: ['t1', 't2'] });
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.eraseObjective);
+    });
+
+    it('un refus qui n’a rien à voir avec un texte garde la phrase de l’effacement', async () => {
+      s.api.deleteTask.mockRejectedValue(ko('VALIDATION_ERROR'));
+      s.store.deleteTask('t1');
+      await settle();
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.eraseTask);
+    });
+
+    it('une étape encore en création part avec son id définitif, et ne revient pas', async () => {
+      const created = deferred<{ id: string; title: string }>();
+      s.api.addSubObjective.mockReturnValue(created.promise);
+      s.api.deleteObjective.mockResolvedValue(null);
+
+      s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Sommeil' });
+      const temporary = s.store.objectives().find((item) => item.title === 'Sommeil')?.id ?? '';
+      expect(isTemporaryId(temporary)).toBe(true);
+      s.store.deleteObjective(temporary);
+      expect(s.store.objectives().some((item) => item.title === 'Sommeil')).toBe(false);
+
+      created.resolve({ id: 'sommeil', title: 'Sommeil' });
+      await settle();
+      expect(s.api.deleteObjective).toHaveBeenCalledWith('sommeil');
+      expect(s.store.objectives().some((item) => item.title === 'Sommeil')).toBe(false);
+    });
+
+    it('un pas dont l’ajout n’a pas abouti ne part pas en DELETE', async () => {
+      s.api.addTask.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
+      s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Fractionné', importance: 3, urgency: 3 } });
+      const temporary = s.store.tasks().find((item) => item.title === 'Fractionné')?.id ?? '';
+      s.store.deleteTask(temporary);
+      await settle();
+      expect(s.api.deleteTask).not.toHaveBeenCalled();
+      expect(s.store.tasks().some((item) => item.title === 'Fractionné')).toBe(false);
+    });
+  });
+
   describe('les annonces', () => {
     it('annonce chaque réussite', async () => {
       s.api.setTaskDone.mockResolvedValue({});
@@ -766,6 +910,8 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
       answer(s.api.edit, outcome, { id: 'semi', title: 'Semi en mai' });
       answer(s.api.editTask, outcome, { id: 't1', title: 'Courir 10 km', objectiveId: 'endurance', importance: 4, urgency: 1 });
       answer(s.api.setTaskDone, outcome, { id: 't1', title: 'Courir 8 km', done: true });
+      answer(s.api.deleteTask, outcome, null);
+      answer(s.api.deleteObjective, outcome, null);
 
       s.store.createObjective({ title: 'Guitare' });
       s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Accords' });
@@ -774,6 +920,10 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
       s.store.editTask({ taskId: 't1', input: { title: 'Courir 10 km', importance: 4, urgency: 1, objectiveId: 'endurance' } });
       s.store.updateTaskDone({ taskId: 't1', done: true });
       s.store.updateTaskDone({ taskId: 't2', done: false });
+      // Les effacements en dernier : un pas, puis son étape, puis l'objectif.
+      s.store.deleteTask('t2');
+      s.store.deleteObjective('endurance');
+      s.store.deleteObjective('semi');
       if (outcome === 'throw') {
         s.api.list.mockRejectedValueOnce(new Error(DOMAIN_MESSAGE));
         s.store.loadObjectives();

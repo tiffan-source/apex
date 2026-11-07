@@ -11,6 +11,8 @@ import { withAddTaskToObjective } from "./features/with-add-task-to-objective";
 import { withUpdateTaskDone } from "./features/with-update-task-done";
 import { withEditObjective } from "./features/with-edit-objective";
 import { withTaskEdit } from "./features/with-task-edit";
+import { withDeleteTask } from "./features/with-delete-task";
+import { withDeleteObjective } from "./features/with-delete-objective";
 import { withObjectiveViews } from "./features/with-objective-views";
 
 export type ObjectiveState = {
@@ -39,6 +41,8 @@ export const ObjectiveStore = signalStore(
   withEditObjective(),
   withUpdateTaskDone(),
   withTaskEdit(),
+  withDeleteTask(),
+  withDeleteObjective(),
   withObjectiveViews(),
   withHooks((store, session = inject(SessionStore)) =>({
     onInit() {

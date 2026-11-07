@@ -10,33 +10,37 @@ import {
   inject,
   input,
   linkedSignal,
+  signal,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import type { ComponentType } from '@angular/cdk/portal';
 import { compter } from '@empreinte-studio/angular/core';
 import { EArete, ELegendeArete, type EtapeArete } from '@empreinte-studio/angular/arete';
 import { EBouton } from '@empreinte-studio/angular/bouton';
+import { Confirmations, EConfirmation } from '@empreinte-studio/angular/confirmation';
 import { Feuilles } from '@empreinte-studio/angular/feuille';
 import { EIcone } from '@empreinte-studio/angular/icone';
 import { EFilAriane } from '@empreinte-studio/angular/navigation';
 import { ENote, ENoteActions } from '@empreinte-studio/angular/note';
 import { EPas } from '@empreinte-studio/angular/pas';
 import { EListe, ETache, ETacheActions } from '@empreinte-studio/angular/tache';
+import { ETrace } from '@empreinte-studio/angular/trace';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
-import { stageIdFromArete } from '../../chore/mapper/objective-view.mapper';
+import { stageDetail, stageIdFromArete } from '../../chore/mapper/objective-view.mapper';
 import { CRUMB_TITLE_MAX, shortTitle } from '../../chore/mapper/title.mapper';
 import { isTemporaryId } from '../../chore/stores/utils/map-optimistique-id';
 import { WriteQueue } from '../../chore/stores/utils/write-queue';
 import type { StageTaskViewModel, StageViewModel } from '../../chore/models/objective-detail.viewmodel';
 import { AddStageSheet, type AddStageSheetData } from './sheets/add-stage-sheet';
 import { AddTaskSheet, type AddTaskSheetData } from './sheets/add-task-sheet';
-import { EditObjectiveSheet, type EditObjectiveSheetData } from './sheets/edit-objective-sheet';
+import { EditObjectiveSheet, type EditObjectiveSheetData, type EditObjectiveSheetResult } from './sheets/edit-objective-sheet';
 import { EditStageSheet, type EditStageSheetData } from './sheets/edit-stage-sheet';
 import { EditTaskSheet, type EditTaskSheetData } from './sheets/edit-task-sheet';
 import { stageAccomplishment, stageName, stageStateLabel } from './stage-labels';
+import { OBJECTIVE_ERASURE, STAGE_ERASURE, objectiveErasureText, stageErasureText } from './erase-labels';
 
 /** Ce que l'étape ouverte suit : l'objectif et ses étapes. */
 type OpenStageSource = {
@@ -49,6 +53,10 @@ type OpenStageSource = {
  * À gauche l'arête de ses étapes, dont la tête est le sceau de l'écran ; à droite l'étape que la personne
  * choisit, et ses pas : aucun ordre entre les étapes, l'écran n'en ouvre aucune de lui-même. Les modifications passent par des feuilles, ouvertes avec l'injecteur de l'écran pour
  * atteindre ObjectiveStore (fourni par la coque) ; toutes les actions du store sont optimistes.
+ *
+ * Effacer a trois poids (maquette « Effacer ») : un pas part tout de suite et laisse sa trace le temps de le
+ * remettre ; une étape part après une validation sur place ; l'objectif part depuis le pied de la feuille qui le
+ * modifie, quand on a réécrit son nom.
  */
 @Component({
   selector: 'app-objective-page',
@@ -56,6 +64,7 @@ type OpenStageSource = {
     RouterLink,
     EArete,
     EBouton,
+    EConfirmation,
     EFilAriane,
     EIcone,
     ELegendeArete,
@@ -65,6 +74,7 @@ type OpenStageSource = {
     EPas,
     ETache,
     ETacheActions,
+    ETrace,
   ],
   templateUrl: './objective-page.html',
   styleUrl: './objective-page.css',
@@ -78,6 +88,8 @@ export class ObjectivePage {
   private readonly annonces = inject(AnnoncesStore);
   private readonly writes = inject(WriteQueue);
   private readonly feuilles = inject(Feuilles);
+  private readonly confirmations = inject(Confirmations);
+  private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
@@ -87,10 +99,13 @@ export class ObjectivePage {
   /** La coque affiche un signalement (une note d'Akari) : l'écran n'en pose pas une seconde. */
   protected readonly hasReport = this.annonces.aUnSignalement;
   protected readonly stageName = stageName;
+  protected readonly stageErasure = STAGE_ERASURE;
 
   /** Les titres où poser le focus quand le bouton qui a ouvert une feuille a disparu. */
   private readonly pageHeading = viewChild<ElementRef<HTMLElement>>('pageHeading');
   private readonly stageHeading = viewChild<ElementRef<HTMLElement>>('stageHeading');
+  /** Le titre de l'arête, où la suite se lit quand une étape vient de partir. */
+  private readonly areteHeading = viewChild<ElementRef<HTMLElement>>('areteHeading');
 
   /**
    * L'objectif affiché. Seulement un objectif racine : objectiveDetail accepte aussi l'id d'une
@@ -137,6 +152,42 @@ export class ObjectivePage {
     return this.detail()?.stages.find((stage) => stage.id === id);
   });
 
+  /**
+   * Les pas dont la trace est à l'écran : effacés pour la personne, pas encore pour l'API. Ils restent dans le
+   * store (un rechargement les rendrait) : c'est l'écran qui montre leur trace à leur place, et ne les compte plus.
+   */
+  protected readonly erasingTaskIds = signal<ReadonlySet<string>>(new Set());
+  /** Le dernier pas remis à sa place par sa trace : il reprend le focus en revenant. */
+  protected readonly restoredTaskId = signal<string | null>(null);
+
+  /** La validation de l'effacement de l'étape ouverte est dépliée ; elle se replie quand une autre étape s'ouvre. */
+  protected readonly confirmingStageErasure = linkedSignal({ source: this.openStageId, computation: () => false });
+
+  /** Les étapes de l'arête ; pendant la validation, l'étape ouverte sort du plan, en pointillés. */
+  protected readonly aretes = computed(() => {
+    const aretes = this.detail()?.aretes ?? [];
+    const leaving = this.confirmingStageErasure() ? this.openStageId() : null;
+    return leaving === null ? aretes : aretes.map((arete) => (arete.id === leaving ? { ...arete, sortante: true } : arete));
+  });
+
+  /** Ce que l'étape ouverte compte, sans les pas qui viennent d'être effacés (leur trace est à l'écran). */
+  protected readonly stageProgress = computed(() => {
+    const stage = this.stage();
+    if (!stage) return null;
+    const erasing = this.erasingTaskIds();
+    const kept = stage.tasks.filter((task) => !erasing.has(task.id));
+    const done = kept.filter((task) => task.done).length;
+    const progress = { done, toDo: kept.length - done };
+    return { ...progress, total: kept.length, detail: stageDetail(progress) };
+  });
+
+  /** Ce que l'effacement de l'étape ouverte emporte, pour sa validation. */
+  protected readonly stageErasureText = computed(() => {
+    const progress = this.stageProgress();
+    const stageCount = this.detail()?.stages.length ?? 0;
+    return progress ? stageErasureText({ done: progress.done, total: progress.total }, stageCount) : '';
+  });
+
   /** La demande à Akari prépare l'étape ouverte ; jamais un id temporaire dans une URL. */
   protected readonly akariQuery = computed(() => {
     const stage = this.stage();
@@ -176,18 +227,91 @@ export class ObjectivePage {
     this.store.updateTaskDone({ taskId, done });
   }
 
+  /** Le × d'un pas : il part tout de suite, et sa trace laisse le temps de le remettre. */
+  protected eraseTask(taskId: string): void {
+    this.restoredTaskId.set(null);
+    this.erasingTaskIds.update((ids) => new Set(ids).add(taskId));
+  }
+
+  /** « Remettre » : le pas revient à sa place, avec le focus. */
+  protected putBackTask(taskId: string): void {
+    this.restoredTaskId.set(taskId);
+    this.erasingTaskIds.update((ids) => withoutId(ids, taskId));
+  }
+
+  /**
+   * La trace s'en va (son délai est passé, une autre étape s'ouvre, la page est quittée ou cachée) : le pas est
+   * effacé pour de bon. Le store ignore un pas qui n'est plus là (une trace qui le redit, une étape déjà partie).
+   */
+  protected eraseTaskForGood(taskId: string): void {
+    this.erasingTaskIds.update((ids) => withoutId(ids, taskId));
+    this.store.deleteTask(taskId);
+  }
+
+  /**
+   * La validation est confirmée : l'étape part avec ses pas. Son panneau se referme, et le focus va où la suite se
+   * lit : le titre de l'arête, sinon celui de l'objectif (sa dernière étape est partie).
+   */
+  protected eraseStage(stageId: string): void {
+    this.openStageId.set(null);
+    this.store.deleteObjective(stageId);
+    afterNextRender(() => (this.areteHeading() ?? this.pageHeading())?.nativeElement.focus(), {
+      injector: this.injector,
+    });
+  }
+
   protected editObjective(): void {
     const objective = this.detail()?.objective;
     if (!objective) return;
-    this.open<EditObjectiveSheet, EditObjectiveSheetData>(EditObjectiveSheet, {
-      objective: {
-        id: objective.id,
-        title: objective.title,
-        description: objective.description,
-        why: objective.why,
-        dueDate: objective.dueDate,
+    this.open<EditObjectiveSheet, EditObjectiveSheetData, EditObjectiveSheetResult>(
+      EditObjectiveSheet,
+      {
+        objective: {
+          id: objective.id,
+          title: objective.title,
+          description: objective.description,
+          why: objective.why,
+          dueDate: objective.dueDate,
+        },
       },
-    });
+      // La sortie discrète de la feuille : effacer l'objectif, après sa confirmation.
+      (result) => result === 'erase' && this.askObjectiveErasure(),
+    );
+  }
+
+  /**
+   * La feuille de confirmation de l'effacement de l'objectif : ce qu'il emporte, et son nom à réécrire. Confirmé,
+   * l'objectif part une fois la liste des objectifs ouverte : l'arête ne dit jamais « introuvable » entre-temps.
+   * Gardé, le focus revient au bouton « Modifier l'objectif » (le CDK l'y rend).
+   */
+  private askObjectiveErasure(): boolean {
+    const detail = this.detail();
+    if (!detail) return false;
+    const { id, title } = detail.objective;
+    const erasing = this.erasingTaskIds();
+    const tasks = [...detail.stages.flatMap((stage) => stage.tasks), ...detail.tasksWithoutStage].filter(
+      (task) => !erasing.has(task.id),
+    );
+    this.confirmations
+      .demander({
+        titre: OBJECTIVE_ERASURE.question,
+        texte: objectiveErasureText(detail.stages.length, {
+          done: tasks.filter((task) => task.done).length,
+          total: tasks.length,
+        }),
+        libelleConfirmer: OBJECTIVE_ERASURE.confirm,
+        libelleAnnuler: OBJECTIVE_ERASURE.keep,
+        aReecrire: title,
+      })
+      .closed.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((choice) => {
+        if (choice === 'confirmer') {
+          void this.router.navigateByUrl('/').finally(() => this.store.deleteObjective(id));
+          return;
+        }
+        afterNextRender(() => this.recoverFocus(), { injector: this.injector });
+      });
+    return true;
   }
 
   protected addStage(): void {
@@ -211,13 +335,21 @@ export class ObjectivePage {
 
   /**
    * Ouvre une feuille avec l'injecteur de l'écran : sans lui, ObjectiveStore (fourni par la coque) est
-   * introuvable. À la fermeture, le CDK rend le focus au bouton qui l'a ouverte.
+   * introuvable. À la fermeture, le CDK rend le focus au bouton qui l'a ouverte. `onClosed` reçoit ce que la feuille
+   * rend ; s'il ouvre une autre feuille (il rend vrai), c'est elle qui s'occupe du focus.
    */
-  private open<C, D>(component: ComponentType<C>, donnees: D): void {
+  private open<C, D, R = unknown>(
+    component: ComponentType<C>,
+    donnees: D,
+    onClosed?: (result: R | undefined) => boolean,
+  ): void {
     this.feuilles
-      .ouvrir<C, D>(component, { donnees, cdk: { injector: this.injector } })
+      .ouvrir<C, D, R>(component, { donnees, cdk: { injector: this.injector } })
       .closed.pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => afterNextRender(() => this.recoverFocus(), { injector: this.injector }));
+      .subscribe((result) => {
+        if (onClosed?.(result)) return;
+        afterNextRender(() => this.recoverFocus(), { injector: this.injector });
+      });
   }
 
   /**
@@ -230,4 +362,12 @@ export class ObjectivePage {
     if (active && active !== this.document.body && active.isConnected) return;
     (this.stageHeading() ?? this.pageHeading())?.nativeElement.focus();
   }
+}
+
+/** Les ids, sans celui-ci. */
+function withoutId(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
+  if (!ids.has(id)) return ids;
+  const next = new Set(ids);
+  next.delete(id);
+  return next;
 }

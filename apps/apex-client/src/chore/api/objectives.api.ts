@@ -68,4 +68,18 @@ export class ObjectivesApi {
   setTaskDone(taskId: string, done: boolean): Promise<TaskDoneResponse> {
     return request(this.http.put<TaskDoneResponse>(`${this.task(taskId)}/done`, { done }));
   }
+
+  /**
+   * DELETE /v1/objectives/{objectiveId} : un objectif ou une étape, avec tout ce qui en dépend (ses étapes, leurs
+   * pas et, pour un objectif, sa conversation avec Akari). Définitif : l'API n'a pas de corbeille. Un objectif déjà
+   * effacé répond OBJECTIVE_NOT_FOUND.
+   */
+  deleteObjective(objectiveId: string): Promise<void> {
+    return request(this.http.delete<void>(this.objective(objectiveId)));
+  }
+
+  /** DELETE /v1/tasks/{taskId} : un pas, pour de bon. Un pas déjà effacé répond TASK_NOT_FOUND. */
+  deleteTask(taskId: string): Promise<void> {
+    return request(this.http.delete<void>(this.task(taskId)));
+  }
 }
