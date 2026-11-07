@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { ObjectivesApi } from '../api/objectives.api';
 import { ApiError } from '../api/api-error';
-import type { ObjectivesResponse } from '../api/api.models';
+import type { ObjectiveEntity, ObjectiveTreeNode, ObjectiveTreeResponse, TaskEntity } from '../api/api.models';
 import { SessionStore } from './session.store';
 import { AnnoncesStore } from './annonces.store';
 import { ObjectiveStore } from './objective.store';
@@ -30,16 +30,52 @@ const STATUS_OF: Record<string, number> = {
   NETWORK_ERROR: 0,
 };
 
-const LOADED: ObjectivesResponse = {
-  objectives: [
-    { id: 'semi', title: 'Semi-marathon', description: '', why: '', dueDate: null, parentObjective: null, done: false },
-    { id: 'endurance', title: 'Endurance', description: '', why: '', dueDate: null, parentObjective: 'semi', done: false },
-  ],
-  tasks: [
-    { id: 't1', title: 'Courir 8 km', importance: 4, urgency: 1, done: false, objectiveId: 'endurance' },
-    { id: 't2', title: 'Sortie longue', importance: 1, urgency: 1, done: true, objectiveId: 'endurance' },
-  ],
+/** Ce que la personne possède, à plat : `tree()` le rend tel que GET /v2/bff/objective-tree le sert. */
+type Saved = { objectives: ObjectiveEntity[]; tasks: TaskEntity[] };
+
+/** Un objectif ou une étape tel que le rend une commande. */
+const objective = (id: string, title: string, parentObjectiveId: string | null = null, extra: Partial<ObjectiveEntity> = {}): ObjectiveEntity => ({
+  id,
+  title,
+  description: '',
+  why: '',
+  dueDate: null,
+  parentObjectiveId,
+  done: false,
+  ...extra,
+});
+
+/** Un pas tel que le rend une commande. */
+const taskEntity = (id: string, title: string, objectiveId: string, importance = 3, urgency = 3, done = false): TaskEntity => ({
+  id,
+  title,
+  importance,
+  urgency,
+  done,
+  objectiveId,
+});
+
+const LOADED: Saved = {
+  objectives: [objective('semi', 'Semi-marathon'), objective('endurance', 'Endurance', 'semi')],
+  tasks: [taskEntity('t1', 'Courir 8 km', 'endurance', 4, 1), taskEntity('t2', 'Sortie longue', 'endurance', 1, 1, true)],
 };
+
+/** L'arbre de GET /v2/bff/objective-tree : chaque objectif avec ses pas et ses étapes. */
+function tree(saved: Saved): ObjectiveTreeResponse {
+  const node = (item: ObjectiveEntity): ObjectiveTreeNode => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    why: item.why,
+    dueDate: item.dueDate,
+    done: item.done,
+    tasks: saved.tasks
+      .filter((task) => task.objectiveId === item.id)
+      .map((task) => ({ id: task.id, title: task.title, importance: task.importance, urgency: task.urgency, done: task.done })),
+    subObjectives: saved.objectives.filter((child) => child.parentObjectiveId === item.id).map(node),
+  });
+  return { objectives: saved.objectives.filter((item) => item.parentObjectiveId === null).map(node) };
+}
 
 /** Ce que l'API rejette : une ApiError avec son code et son statut. */
 const ko = (code: string) => new ApiError(code, STATUS_OF[code] ?? 500, DOMAIN_MESSAGE);
@@ -56,16 +92,22 @@ function deferred<T>() {
 }
 
 /** L'API simulée : une fonction par route qu'ObjectiveStore appelle. */
-function createApiMock(loaded: ObjectivesResponse) {
+function createApiMock(loaded: Saved) {
   return {
-    list: vi.fn().mockResolvedValue(structuredClone(loaded)),
-    create: vi.fn(),
+    objectiveTree: vi.fn().mockResolvedValue(tree(structuredClone(loaded))),
+    createObjective: vi.fn(),
     addSubObjective: vi.fn(),
-    addTask: vi.fn(),
-    edit: vi.fn(),
-    editTask: vi.fn(),
-    setTaskDone: vi.fn(),
+    addTaskToObjective: vi.fn(),
+    renameObjective: vi.fn(),
+    clarifyObjective: vi.fn(),
+    setObjectiveDeadline: vi.fn(),
+    removeObjectiveDeadline: vi.fn(),
     deleteObjective: vi.fn(),
+    renameTask: vi.fn(),
+    reprioritizeTask: vi.fn(),
+    moveTask: vi.fn(),
+    completeTask: vi.fn(),
+    reopenTask: vi.fn(),
     deleteTask: vi.fn(),
   };
 }
@@ -75,12 +117,12 @@ function createApiMock(loaded: ObjectivesResponse) {
  * Avec `firstLoad`, le premier chargement attend cette promesse (et `loaded` sert aux suivants).
  */
 async function setup(
-  loaded: ObjectivesResponse = LOADED,
-  firstLoad?: Promise<ObjectivesResponse>,
+  loaded: Saved = LOADED,
+  firstLoad?: Promise<ObjectiveTreeResponse>,
   session = { currentUserId: signal<string | null>('lea'), isAuthenticated: signal(true) },
 ) {
   const api = createApiMock(loaded);
-  if (firstLoad) api.list.mockReturnValueOnce(firstLoad);
+  if (firstLoad) api.objectiveTree.mockReturnValueOnce(firstLoad);
   const announce = vi.fn().mockResolvedValue(undefined);
   TestBed.configureTestingModule({
     providers: [
@@ -95,12 +137,31 @@ async function setup(
   TestBed.tick();
   await settle();
   // Après le premier chargement, la base rend ce qui est enregistré : ici, ce que l'écran montre.
-  api.list.mockImplementation(async () => savedState(store));
+  api.objectiveTree.mockImplementation(async () => tree(savedState(store)));
+  // Une commande acceptée rend l'élément changé, comme l'écran le montre.
+  const savedTask = (id: string): TaskEntity => {
+    const found = store.tasks().find((item) => item.id === id);
+    if (!found) throw ko('TASK_NOT_FOUND');
+    return { ...found };
+  };
+  const savedObjective = (id: string): ObjectiveEntity => {
+    const found = savedState(store).objectives.find((item) => item.id === id);
+    if (!found) throw ko('OBJECTIVE_NOT_FOUND');
+    return found;
+  };
+  api.renameTask.mockImplementation(async (id: string, title: string) => ({ ...savedTask(id), title }));
+  api.reprioritizeTask.mockImplementation(async (id: string, importance: number, urgency: number) => ({ ...savedTask(id), importance, urgency }));
+  api.moveTask.mockImplementation(async (id: string, objectiveId: string) => ({ ...savedTask(id), objectiveId }));
+  api.completeTask.mockImplementation(async (id: string) => ({ ...savedTask(id), done: true }));
+  api.reopenTask.mockImplementation(async (id: string) => ({ ...savedTask(id), done: false }));
+  api.renameObjective.mockImplementation(async (id: string, title: string) => ({ ...savedObjective(id), title }));
+  api.clarifyObjective.mockImplementation(async (id: string, body: { description?: string; why?: string }) => ({ ...savedObjective(id), ...body }));
+  api.setObjectiveDeadline.mockImplementation(async (id: string, dueDate: string) => ({ ...savedObjective(id), dueDate }));
   return { store, annonces, announce, api, session };
 }
 
-/** Ce que GET /v1/objectives rendrait : l'état du store, sans ce qui n'est pas encore enregistré. */
-function savedState(store: InstanceType<typeof ObjectiveStore>): ObjectivesResponse {
+/** Ce que la base contient : l'état du store, sans ce qui n'est pas encore enregistré. */
+function savedState(store: InstanceType<typeof ObjectiveStore>): Saved {
   return {
     objectives: store
       .objectives()
@@ -111,7 +172,7 @@ function savedState(store: InstanceType<typeof ObjectiveStore>): ObjectivesRespo
         description,
         why,
         dueDate: dueDate || null,
-        parentObjective: parentId,
+        parentObjectiveId: parentId,
         done,
       })),
     tasks: store.tasks().filter((item) => !isTemporaryId(item.id)),
@@ -131,42 +192,75 @@ describe('ObjectiveStore', () => {
   beforeEach(async () => (s = await setup()));
 
   const task = (id: string) => s.store.tasks().find((item) => item.id === id);
+  const objectiveOf = (id: string) => s.store.objectives().find((item) => item.id === id);
   const temporaryIds = () => temporaryIdsOf(s.store);
+  const reads = () => s.api.objectiveTree.mock.calls.length;
 
-  it('charge les objectifs de la personne connectée', () => {
-    expect(s.api.list).toHaveBeenCalledTimes(1);
-    expect(s.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance']);
+  it('charge l’arbre des objectifs de la personne connectée, à plat', () => {
+    expect(s.api.objectiveTree).toHaveBeenCalledTimes(1);
+    expect(s.store.objectives().map((item) => [item.id, item.parentId])).toEqual([['semi', null], ['endurance', 'semi']]);
+    expect(s.store.tasks().map((item) => [item.id, item.objectiveId])).toEqual([['t1', 'endurance'], ['t2', 'endurance']]);
     expect(s.store.objectiveCards().map((card) => card.id)).toEqual(['semi']);
   });
 
   describe('ce qui part vers l’API', () => {
-    it('chaque geste appelle sa route avec le corps du contrat, sans l’id de la personne (l’API la reconnaît à son jeton)', async () => {
-      s.api.create.mockResolvedValue({ id: 'guitare', title: 'Guitare' });
-      s.api.addSubObjective.mockResolvedValue({ id: 'accords', title: 'Accords' });
-      s.api.addTask.mockResolvedValue({ id: 'p1', title: 'Do, ré, mi', importance: 3, urgency: 2 });
-      s.api.edit.mockResolvedValue({ id: 'semi', title: 'Semi en mai' });
-      s.api.editTask.mockResolvedValue({ id: 't1', title: 'Courir 10 km', objectiveId: 'endurance', importance: 4, urgency: 1 });
-      s.api.setTaskDone.mockResolvedValue({ id: 't2', title: 'Sortie longue', done: false });
+    it('chaque geste envoie ses commandes, sans l’id de la personne (l’API la reconnaît à son jeton)', async () => {
+      s.api.createObjective.mockResolvedValue(objective('guitare', 'Guitare'));
+      s.api.addSubObjective.mockResolvedValue(objective('accords', 'Accords', 'semi'));
+      s.api.addTaskToObjective.mockResolvedValue(taskEntity('p1', 'Do, ré, mi', 'endurance', 3, 2));
       const dueDate = new Date(2027, 4, 1);
 
       s.store.createObjective({ title: 'Guitare', why: 'Jouer pour ma sœur', dueDate });
       s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Accords' });
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Do, ré, mi', importance: 3, urgency: 2 } });
-      s.store.editObjective({ id: 'semi', title: 'Semi en mai', description: '', dueDate });
+      s.store.editObjective({ id: 'semi', title: 'Semi en mai', description: 'Le 4 mai', dueDate });
       s.store.editTask({ taskId: 't1', input: { title: 'Courir 10 km', importance: 4, urgency: 1, objectiveId: 'endurance' } });
       s.store.updateTaskDone({ taskId: 't2', done: false });
       await settle();
 
-      expect(s.api.create).toHaveBeenCalledWith({ title: 'Guitare', description: undefined, why: 'Jouer pour ma sœur', dueDate: dueDate.toISOString() });
+      expect(s.api.createObjective).toHaveBeenCalledWith({ title: 'Guitare', description: undefined, why: 'Jouer pour ma sœur', dueDate: dueDate.toISOString() });
       expect(s.api.addSubObjective).toHaveBeenCalledWith('semi', { title: 'Accords' });
-      expect(s.api.addTask).toHaveBeenCalledWith('endurance', { title: 'Do, ré, mi', importance: 3, urgency: 2 });
-      // Une description vidée part vide (effacée) ; un pourquoi absent reste inchangé.
-      expect(s.api.edit).toHaveBeenCalledWith('semi', { title: 'Semi en mai', description: '', why: undefined, dueDate: dueDate.toISOString() });
-      expect(s.api.editTask).toHaveBeenCalledWith('t1', { title: 'Courir 10 km', objectiveId: 'endurance', importance: 4, urgency: 1 });
-      expect(s.api.setTaskDone).toHaveBeenCalledWith('t2', false);
+      expect(s.api.addTaskToObjective).toHaveBeenCalledWith('endurance', { title: 'Do, ré, mi', importance: 3, urgency: 2 });
+      // Seulement ce qui a changé : le pourquoi, absent, ne part pas.
+      expect(s.api.renameObjective).toHaveBeenCalledWith('semi', 'Semi en mai');
+      expect(s.api.clarifyObjective).toHaveBeenCalledWith('semi', { description: 'Le 4 mai' });
+      expect(s.api.setObjectiveDeadline).toHaveBeenCalledWith('semi', dueDate.toISOString());
+      expect(s.api.renameTask).toHaveBeenCalledWith('t1', 'Courir 10 km');
+      expect(s.api.reprioritizeTask).not.toHaveBeenCalled();
+      expect(s.api.moveTask).not.toHaveBeenCalled();
+      expect(s.api.reopenTask).toHaveBeenCalledWith('t2');
       const sent = JSON.stringify(Object.values(s.api).flatMap((route) => route.mock.calls));
       expect(sent).not.toContain('lea');
       expect(sent).not.toContain('ownerId');
+    });
+
+    it('une description vidée part vide dans clarifyObjective ; rien d’inchangé ne part', async () => {
+      TestBed.resetTestingModule();
+      const loaded = structuredClone(LOADED);
+      loaded.objectives[0] = { ...loaded.objectives[0], description: 'Le 4 mai', why: 'Finir' };
+      const t = await setup(loaded);
+
+      t.store.editObjective({ id: 'semi', title: 'Semi-marathon', description: '', why: 'Finir' });
+      t.store.editObjective({ id: 'endurance', title: 'Endurance' });
+      await settle();
+
+      expect(t.api.clarifyObjective.mock.calls).toEqual([['semi', { description: '' }]]);
+      expect(t.api.renameObjective).not.toHaveBeenCalled();
+      expect(t.api.setObjectiveDeadline).not.toHaveBeenCalled();
+    });
+
+    it('un pas modifié de tout : renommer, reprioriser, puis déplacer, dans cet ordre', async () => {
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 10 km', importance: 2, urgency: 5, objectiveId: 'semi' } });
+      await settle();
+
+      expect(s.api.renameTask).toHaveBeenCalledWith('t1', 'Courir 10 km');
+      expect(s.api.reprioritizeTask).toHaveBeenCalledWith('t1', 2, 5);
+      expect(s.api.moveTask).toHaveBeenCalledWith('t1', 'semi');
+      expect(s.api.renameTask.mock.invocationCallOrder[0]).toBeLessThan(s.api.reprioritizeTask.mock.invocationCallOrder[0]);
+      expect(s.api.reprioritizeTask.mock.invocationCallOrder[0]).toBeLessThan(s.api.moveTask.mock.invocationCallOrder[0]);
+      expect(task('t1')).toMatchObject({ title: 'Courir 10 km', importance: 2, urgency: 5, objectiveId: 'semi' });
+      expect(s.announce).toHaveBeenCalledWith(SUCCESS_ANNOUNCEMENTS.taskSaved, 'polite');
+      expect(s.announce).toHaveBeenCalledTimes(1);
     });
 
     it('sans session, aucun geste ne part et rien ne reste en attente', async () => {
@@ -180,15 +274,15 @@ describe('ObjectiveStore', () => {
       t.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 4, urgency: 3, objectiveId: 'endurance' } });
       await settle();
 
-      expect(t.api.create).not.toHaveBeenCalled();
-      expect(t.api.addTask).not.toHaveBeenCalled();
-      expect(t.api.editTask).not.toHaveBeenCalled();
+      expect(t.api.createObjective).not.toHaveBeenCalled();
+      expect(t.api.addTaskToObjective).not.toHaveBeenCalled();
+      expect(t.api.reprioritizeTask).not.toHaveBeenCalled();
       expect(temporaryIdsOf(t.store)).toEqual([]);
       expect(t.store.isPending()).toBe(false);
     });
 
     it('un texte refusé par l’API (trop long) est signalé comme tel, et l’ajout optimiste est retiré', async () => {
-      s.api.addTask.mockRejectedValueOnce(ko('VALIDATION_ERROR'));
+      s.api.addTaskToObjective.mockRejectedValueOnce(ko('VALIDATION_ERROR'));
 
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'x'.repeat(201), importance: 3, urgency: 3 } });
       await settle();
@@ -202,7 +296,9 @@ describe('ObjectiveStore', () => {
       const loaded = structuredClone(LOADED);
       loaded.objectives[1] = { ...loaded.objectives[1], description: 'Tenir une heure', why: 'Finir le semi', dueDate: '2027-04-01T00:00:00.000Z' };
       const t = await setup(loaded);
-      t.api.edit.mockReturnValue(new Promise(() => undefined)); // la réponse n'arrive pas : on regarde l'écran optimiste
+      // Les réponses n'arrivent pas : on regarde l'écran optimiste
+      t.api.renameObjective.mockReturnValue(new Promise(() => undefined));
+      t.api.clarifyObjective.mockReturnValue(new Promise(() => undefined));
 
       // La feuille d'une étape ne touche pas au pourquoi ; sans date, l'échéance reste.
       t.store.editObjective({ id: 'endurance', title: 'Fond', description: '' });
@@ -214,14 +310,142 @@ describe('ObjectiveStore', () => {
         why: 'Finir le semi',
         dueDate: '2027-04-01T00:00:00.000Z',
       });
+      expect(t.api.setObjectiveDeadline).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ce que l’API rend remplace l’élément, sans relire l’arbre', () => {
+    it('un pas ajouté, renommé, coché, et un objectif modifié prennent ce que l’API rend', async () => {
+      s.api.addTaskToObjective.mockResolvedValue(taskEntity('p1', 'Fractionné', 'endurance', 3, 2));
+      s.api.renameTask.mockResolvedValue(taskEntity('t1', 'Courir 9 km', 'endurance', 4, 1));
+      s.api.renameObjective.mockResolvedValue(objective('semi', 'Semi de mai'));
+      const before = reads();
+
+      s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Fractionné ', importance: 3, urgency: 2 } });
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 9 km ', objectiveId: 'endurance', importance: 4, urgency: 1 } });
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      s.store.editObjective({ id: 'semi', title: 'Semi en mai' });
+      await settle();
+
+      expect(task('p1')?.title).toBe('Fractionné');
+      expect(task('t1')).toMatchObject({ title: 'Courir 9 km', done: true });
+      expect(objectiveOf('semi')?.title).toBe('Semi de mai');
+      expect(reads()).toBe(before);
+    });
+
+    it('une étape et un objectif créés prennent ce que l’API rend', async () => {
+      s.api.addSubObjective.mockResolvedValue(objective('accords', 'Accords', 'semi'));
+      s.api.createObjective.mockResolvedValue(objective('guitare', 'Guitare', null, { dueDate: '2027-05-01T00:00:00.000Z' }));
+      const before = reads();
+
+      s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Accords ' });
+      s.store.createObjective({ title: 'Guitare', dueDate: new Date('2027-05-01T00:00:00.000Z') });
+      await settle();
+
+      expect(objectiveOf('accords')).toMatchObject({ title: 'Accords', parentId: 'semi' });
+      expect(objectiveOf('guitare')).toMatchObject({ title: 'Guitare', dueDate: '2027-05-01T00:00:00.000Z', parentId: null });
+      expect(reads()).toBe(before);
+    });
+
+    it('un geste plus récent n’est pas écrasé par la réponse d’un plus ancien', async () => {
+      const renamed = deferred<TaskEntity>();
+      s.api.renameTask.mockReturnValueOnce(renamed.promise);
+
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 9 km', objectiveId: 'endurance', importance: 4, urgency: 1 } });
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 12 km', objectiveId: 'endurance', importance: 4, urgency: 1 } });
+      renamed.resolve(taskEntity('t1', 'Courir 9 km', 'endurance', 4, 1));
+      await settle();
+
+      expect(task('t1')?.title).toBe('Courir 12 km');
+    });
+  });
+
+  describe('une commande refusée revient en arrière seule', () => {
+    it('un déplacement refusé ramène le pas dans son étape, son nouveau nom reste', async () => {
+      s.api.moveTask.mockRejectedValueOnce(ko('TOO_MANY_REQUESTS'));
+
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 10 km', importance: 4, urgency: 1, objectiveId: 'semi' } });
+      await settle();
+
+      expect(task('t1')).toMatchObject({ title: 'Courir 10 km', objectiveId: 'endurance' });
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.tooManyRequests);
+      expect(s.announce).not.toHaveBeenCalledWith(SUCCESS_ANNOUNCEMENTS.taskSaved, 'polite');
+    });
+
+    it('une échéance refusée revient, le nouveau nom reste', async () => {
+      s.api.setObjectiveDeadline.mockRejectedValueOnce(ko('VALIDATION_ERROR'));
+
+      s.store.editObjective({ id: 'semi', title: 'Semi en mai', dueDate: new Date('2027-05-04T00:00:00.000Z') });
+      await settle();
+
+      expect(objectiveOf('semi')).toMatchObject({ title: 'Semi en mai', dueDate: '' });
+      expect(s.store.error()).toBe(FAILURE_REPORTS.textTooLong);
+    });
+
+    it('un refus net ne relit rien', async () => {
+      s.api.completeTask.mockRejectedValue(ko('TOO_MANY_REQUESTS'));
+      const before = reads();
+
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      await settle();
+
+      expect(reads()).toBe(before);
+      expect(task('t1')?.done).toBe(false);
+    });
+
+    it('sans réponse claire, l’API a pu faire le geste : l’arbre est relu', async () => {
+      s.api.completeTask.mockRejectedValue(ko('NETWORK_ERROR'));
+      const before = reads();
+
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      await settle();
+
+      expect(reads()).toBe(before + 1);
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.toggleTask);
+    });
+
+    it('un pas que l’API ne connaît plus (404) quitte l’écran, sans relecture', async () => {
+      s.api.completeTask.mockRejectedValue(ko('TASK_NOT_FOUND'));
+      const before = reads();
+
+      s.store.updateTaskDone({ taskId: 't1', done: true });
+      await settle();
+
+      expect(task('t1')).toBeUndefined();
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.taskNotFound);
+      expect(reads()).toBe(before);
+    });
+
+    it('une étape que l’API ne connaît plus (404) quitte l’écran avec ses pas', async () => {
+      s.api.renameObjective.mockRejectedValue(ko('OBJECTIVE_NOT_FOUND'));
+
+      s.store.editObjective({ id: 'endurance', title: 'Fond' });
+      await settle();
+
+      expect(s.store.objectives().map((item) => item.id)).toEqual(['semi']);
+      expect(s.store.tasks()).toEqual([]);
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.objectiveNotFound);
+    });
+
+    it('un pas déplacé vers une étape qui n’existe plus reste où il était, et l’étape quitte l’écran', async () => {
+      s.api.addSubObjective.mockResolvedValueOnce(objective('portfolio', 'Portfolio', 'semi'));
+      s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Portfolio' });
+      await settle();
+      s.api.moveTask.mockRejectedValueOnce(ko('OBJECTIVE_NOT_FOUND'));
+
+      s.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 4, urgency: 1, objectiveId: 'portfolio' } });
+      await settle();
+
+      expect(task('t1')?.objectiveId).toBe('endurance');
+      expect(objectiveOf('portfolio')).toBeUndefined();
     });
   });
 
   describe('gestes rapprochés : aucune réponse ne se perd', () => {
     it('deux pas ajoutés coup sur coup reçoivent tous deux leur id définitif', async () => {
-      s.api.addTask
-        .mockResolvedValueOnce({ id: 'p1', title: 'Un', importance: 3, urgency: 3 })
-        .mockResolvedValueOnce({ id: 'p2', title: 'Deux', importance: 3, urgency: 3 });
+      s.api.addTaskToObjective
+        .mockResolvedValueOnce(taskEntity('p1', 'Un', 'endurance'))
+        .mockResolvedValueOnce(taskEntity('p2', 'Deux', 'endurance'));
 
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 3 } });
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Deux', importance: 3, urgency: 3 } });
@@ -233,7 +457,9 @@ describe('ObjectiveStore', () => {
     });
 
     it('deux étapes ajoutées coup sur coup reçoivent toutes deux leur id définitif', async () => {
-      s.api.addSubObjective.mockResolvedValueOnce({ id: 'e1', title: 'Une' }).mockResolvedValueOnce({ id: 'e2', title: 'Deux' });
+      s.api.addSubObjective
+        .mockResolvedValueOnce(objective('e1', 'Une', 'semi'))
+        .mockResolvedValueOnce(objective('e2', 'Deux', 'semi'));
 
       s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Une' });
       s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Deux' });
@@ -244,7 +470,7 @@ describe('ObjectiveStore', () => {
     });
 
     it('deux objectifs créés coup sur coup reçoivent tous deux leur id définitif', async () => {
-      s.api.create.mockResolvedValueOnce({ id: 'o1', title: 'Un' }).mockResolvedValueOnce({ id: 'o2', title: 'Deux' });
+      s.api.createObjective.mockResolvedValueOnce(objective('o1', 'Un')).mockResolvedValueOnce(objective('o2', 'Deux'));
 
       s.store.createObjective({ title: 'Un' });
       s.store.createObjective({ title: 'Deux' });
@@ -256,7 +482,7 @@ describe('ObjectiveStore', () => {
     });
 
     it('le retour en arrière d’un pas modifié a lieu même si un autre pas est modifié juste après', async () => {
-      s.api.editTask.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK')).mockResolvedValueOnce({});
+      s.api.renameTask.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK'));
 
       s.store.editTask({ taskId: 't1', input: { title: 'Courir 10 km', importance: 4, urgency: 1, objectiveId: 'endurance' } });
       s.store.editTask({ taskId: 't2', input: { title: 'Sortie de 2 h', importance: 1, urgency: 1, objectiveId: 'endurance' } });
@@ -268,7 +494,7 @@ describe('ObjectiveStore', () => {
     });
 
     it('le retour en arrière d’un objectif modifié a lieu même si un autre est modifié juste après', async () => {
-      s.api.edit.mockRejectedValueOnce(ko('FAIL_TO_SAVE_OBJECTIVE')).mockResolvedValueOnce({});
+      s.api.renameObjective.mockRejectedValueOnce(ko('FAIL_TO_SAVE_OBJECTIVE'));
 
       s.store.editObjective({ id: 'semi', title: 'Semi en mai' });
       s.store.editObjective({ id: 'endurance', title: 'Fond' });
@@ -281,25 +507,24 @@ describe('ObjectiveStore', () => {
 
   describe('les écritures partent une par une, dans l’ordre des gestes', () => {
     it('le second geste attend la réponse du premier', async () => {
-      const first = deferred<unknown>();
-      s.api.setTaskDone.mockReturnValueOnce(first.promise).mockResolvedValueOnce({});
+      const first = deferred<TaskEntity>();
+      s.api.completeTask.mockReturnValueOnce(first.promise);
 
       s.store.updateTaskDone({ taskId: 't1', done: true });
       s.store.updateTaskDone({ taskId: 't1', done: false });
       await settle();
-      expect(s.api.setTaskDone).toHaveBeenCalledTimes(1);
+      expect(s.api.completeTask).toHaveBeenCalledTimes(1);
+      expect(s.api.reopenTask).not.toHaveBeenCalled();
       expect(task('t1')?.done).toBe(false);
 
-      first.resolve({});
+      first.resolve(taskEntity('t1', 'Courir 8 km', 'endurance', 4, 1, true));
       await settle();
-      expect(s.api.setTaskDone.mock.calls).toEqual([
-        ['t1', true],
-        ['t1', false],
-      ]);
+      expect(s.api.reopenTask).toHaveBeenCalledWith('t1');
+      expect(task('t1')?.done).toBe(false);
     });
 
     it('un retour en arrière n’écrase pas un geste plus récent', async () => {
-      s.api.editTask.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK')).mockResolvedValueOnce({});
+      s.api.reprioritizeTask.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK'));
 
       s.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 4, urgency: 3, objectiveId: 'endurance' } });
       s.store.editTask({ taskId: 't1', input: { title: 'Courir 8 km', importance: 2, urgency: 3, objectiveId: 'endurance' } });
@@ -309,7 +534,7 @@ describe('ObjectiveStore', () => {
     });
 
     it('un pas recoché après un échec reste coché', async () => {
-      s.api.setTaskDone.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK')).mockResolvedValueOnce({});
+      s.api.reopenTask.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK'));
 
       s.store.updateTaskDone({ taskId: 't2', done: false });
       s.store.updateTaskDone({ taskId: 't2', done: true });
@@ -319,27 +544,27 @@ describe('ObjectiveStore', () => {
     });
 
     it('un geste en attente ne part pas si une autre personne s’est connectée entre-temps (un autre onglet)', async () => {
-      const first = deferred<unknown>();
-      s.api.setTaskDone.mockReturnValueOnce(first.promise);
-      s.api.addTask.mockResolvedValue({ id: 'p9', title: 'Un', importance: 3, urgency: 3 });
+      const first = deferred<TaskEntity>();
+      s.api.completeTask.mockReturnValueOnce(first.promise);
+      s.api.addTaskToObjective.mockResolvedValue(taskEntity('p9', 'Un', 'endurance'));
 
       s.store.updateTaskDone({ taskId: 't1', done: true });
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 3 } });
       await settle();
       s.session.currentUserId.set('noe');
-      first.resolve({});
+      first.resolve(taskEntity('t1', 'Courir 8 km', 'endurance', 4, 1, true));
       await settle();
 
       // Le pas de Léa n'est pas écrit dans le compte de Noé.
-      expect(s.api.addTask).not.toHaveBeenCalled();
+      expect(s.api.addTaskToObjective).not.toHaveBeenCalled();
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.sessionEnded);
     });
   });
 
   describe('gestes sur un élément encore optimiste', () => {
     it('un pas ajouté à une étape pas encore enregistrée part avec l’id définitif de l’étape', async () => {
-      s.api.addSubObjective.mockResolvedValueOnce({ id: 'portfolio', title: 'Portfolio' });
-      s.api.addTask.mockResolvedValueOnce({ id: 'p1', title: 'Trois projets', importance: 3, urgency: 2 });
+      s.api.addSubObjective.mockResolvedValueOnce(objective('portfolio', 'Portfolio', 'semi'));
+      s.api.addTaskToObjective.mockResolvedValueOnce(taskEntity('p1', 'Trois projets', 'portfolio', 3, 2));
 
       s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Portfolio' });
       const stageId = s.store.stageOptions('semi')[1].valeur;
@@ -347,15 +572,15 @@ describe('ObjectiveStore', () => {
       s.store.addTaskToObjective({ objectiveId: stageId, task: { title: 'Trois projets', importance: 3, urgency: 2 } });
       await settle();
 
-      expect(s.api.addTask).toHaveBeenCalledWith('portfolio', expect.objectContaining({ title: 'Trois projets' }));
+      expect(s.api.addTaskToObjective).toHaveBeenCalledWith('portfolio', expect.objectContaining({ title: 'Trois projets' }));
       expect(task('p1')?.objectiveId).toBe('portfolio');
       expect(s.store.objectiveDetail('semi')?.stages[1].tasks.map((item) => item.id)).toEqual(['p1']);
       expect(temporaryIds()).toEqual([]);
     });
 
     it('un pas ajouté avec l’id temporaire d’une étape enregistrée entre-temps va dans cette étape, à l’écran aussi', async () => {
-      s.api.addSubObjective.mockResolvedValueOnce({ id: 'portfolio', title: 'Portfolio' });
-      s.api.addTask.mockResolvedValueOnce({ id: 'p1', title: 'Trois projets', importance: 3, urgency: 2 });
+      s.api.addSubObjective.mockResolvedValueOnce(objective('portfolio', 'Portfolio', 'semi'));
+      s.api.addTaskToObjective.mockResolvedValueOnce(taskEntity('p1', 'Trois projets', 'portfolio', 3, 2));
 
       // La feuille « Ajouter un pas » s'ouvre sur l'étape encore optimiste ; l'étape est enregistrée pendant qu'on écrit.
       s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Portfolio' });
@@ -369,14 +594,13 @@ describe('ObjectiveStore', () => {
       expect(s.store.objectiveDetail('semi')?.stages[1].tasks.map((item) => item.title)).toEqual(['Trois projets']);
       await settle();
 
-      expect(s.api.addTask).toHaveBeenCalledWith('portfolio', expect.objectContaining({ title: 'Trois projets' }));
+      expect(s.api.addTaskToObjective).toHaveBeenCalledWith('portfolio', expect.objectContaining({ title: 'Trois projets' }));
       expect(task('p1')?.objectiveId).toBe('portfolio');
       expect(s.store.objectiveDetail('semi')?.stages[1].tasks.map((item) => item.id)).toEqual(['p1']);
     });
 
     it('un pas rangé dans une étape enregistrée pendant que la feuille était ouverte la rejoint à l’écran', async () => {
-      s.api.addSubObjective.mockResolvedValueOnce({ id: 'portfolio', title: 'Portfolio' });
-      s.api.editTask.mockResolvedValueOnce({});
+      s.api.addSubObjective.mockResolvedValueOnce(objective('portfolio', 'Portfolio', 'semi'));
 
       s.store.addSubObjective({ objectiveId: 'semi', subObjectiveTitle: 'Portfolio' });
       const temporaryStageId = s.store.stageOptions('semi')[1].valeur;
@@ -387,13 +611,13 @@ describe('ObjectiveStore', () => {
       expect(task('t1')?.objectiveId).toBe('portfolio');
       await settle();
 
-      expect(s.api.editTask).toHaveBeenCalledWith('t1', expect.objectContaining({ objectiveId: 'portfolio' }));
+      expect(s.api.moveTask).toHaveBeenCalledWith('t1', 'portfolio');
       expect(s.store.objectiveDetail('semi')?.stages.map((stage) => stage.tasks.map((item) => item.id))).toEqual([['t2'], ['t1']]);
     });
 
     it('une étape ajoutée à un objectif pas encore enregistré part avec son id définitif', async () => {
-      s.api.create.mockResolvedValueOnce({ id: 'guitare', title: 'Guitare' });
-      s.api.addSubObjective.mockResolvedValueOnce({ id: 'accords', title: 'Accords' });
+      s.api.createObjective.mockResolvedValueOnce(objective('guitare', 'Guitare'));
+      s.api.addSubObjective.mockResolvedValueOnce(objective('accords', 'Accords', 'guitare'));
 
       s.store.createObjective({ title: 'Guitare' });
       const objectiveId = s.store.objectiveOptions()[1].valeur;
@@ -405,20 +629,19 @@ describe('ObjectiveStore', () => {
     });
 
     it('un pas coché avant d’être enregistré est enregistré coché, avec son id définitif', async () => {
-      s.api.addTask.mockResolvedValueOnce({ id: 'p1', title: 'Un', importance: 3, urgency: 3 });
-      s.api.setTaskDone.mockResolvedValueOnce({});
+      s.api.addTaskToObjective.mockResolvedValueOnce(taskEntity('p1', 'Un', 'endurance'));
 
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 3 } });
       const temporaryId = s.store.tasks()[2].id;
       s.store.updateTaskDone({ taskId: temporaryId, done: true });
       await settle();
 
-      expect(s.api.setTaskDone).toHaveBeenCalledWith('p1', true);
+      expect(s.api.completeTask).toHaveBeenCalledWith('p1');
       expect(task('p1')?.done).toBe(true);
     });
 
     it('un geste sur un pas dont l’ajout n’a pas abouti ne part pas, et ne masque pas le premier signalement', async () => {
-      s.api.addTask.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK'));
+      s.api.addTaskToObjective.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK'));
 
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 3 } });
       const temporaryId = s.store.tasks()[2].id;
@@ -426,14 +649,14 @@ describe('ObjectiveStore', () => {
       s.store.editTask({ taskId: temporaryId, input: { title: 'Un', importance: 1, urgency: 1, objectiveId: 'endurance' } });
       await settle();
 
-      expect(s.api.setTaskDone).not.toHaveBeenCalled();
-      expect(s.api.editTask).not.toHaveBeenCalled();
+      expect(s.api.completeTask).not.toHaveBeenCalled();
+      expect(s.api.reprioritizeTask).not.toHaveBeenCalled();
       expect(s.store.tasks().map((item) => item.id)).toEqual(['t1', 't2']);
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.addTask);
     });
 
     it('une étape posée sur un objectif dont la création n’a pas abouti disparaît avec lui', async () => {
-      s.api.create.mockRejectedValueOnce(ko('FAIL_TO_SAVE_OBJECTIVE'));
+      s.api.createObjective.mockRejectedValueOnce(ko('FAIL_TO_SAVE_OBJECTIVE'));
 
       s.store.createObjective({ title: 'Guitare' });
       const objectiveId = s.store.objectiveOptions()[1].valeur;
@@ -450,29 +673,29 @@ describe('ObjectiveStore', () => {
   describe('objectivesLoaded : la mémoire du chargement', () => {
     it('vrai une fois chargé, et il le reste quand une écriture passe par requestStatus', async () => {
       expect(s.store.objectivesLoaded()).toBe(true);
-      s.api.create.mockRejectedValueOnce(ko('FAIL_TO_SAVE_OBJECTIVE'));
+      s.api.createObjective.mockRejectedValueOnce(ko('VALIDATION_ERROR'));
       s.store.createObjective({ title: 'Guitare' });
       expect(s.store.isPending()).toBe(true);
       expect(s.store.objectivesLoaded()).toBe(true);
       await settle();
-      expect(s.store.error()).toBe(FAILURE_REPORTS.createObjective);
+      expect(s.store.error()).toBe(FAILURE_REPORTS.textTooLong);
       expect(s.store.objectivesLoaded()).toBe(true);
     });
 
     it('faux pendant le premier chargement, et après un chargement qui n’aboutit pas', async () => {
       TestBed.resetTestingModule();
-      const load = deferred<ObjectivesResponse>();
+      const load = deferred<ObjectiveTreeResponse>();
       const t = await setup(LOADED, load.promise);
       expect(t.store.isPending()).toBe(true);
       expect(t.store.objectivesLoaded()).toBe(false);
 
-      load.resolve(structuredClone(LOADED));
+      load.resolve(tree(LOADED));
       await settle();
       expect(t.store.objectivesLoaded()).toBe(true);
 
       t.store.clearObjectives(); // déconnexion
       expect(t.store.objectivesLoaded()).toBe(false);
-      t.api.list.mockRejectedValueOnce(new Error('réseau'));
+      t.api.objectiveTree.mockRejectedValueOnce(new Error('réseau'));
       t.store.loadObjectives();
       await settle();
       expect(t.store.objectivesLoaded()).toBe(false);
@@ -483,12 +706,12 @@ describe('ObjectiveStore', () => {
   describe('le chargement garde les créations en vol', () => {
     it('le premier chargement garde l’objectif, l’étape et le pas encore optimistes', async () => {
       TestBed.resetTestingModule();
-      const load = deferred<ObjectivesResponse>();
+      const load = deferred<ObjectiveTreeResponse>();
       const t = await setup(LOADED, load.promise);
-      const created = deferred<unknown>();
-      t.api.create.mockReturnValueOnce(created.promise);
-      t.api.addSubObjective.mockResolvedValueOnce({ id: 'accords', title: 'Accords' });
-      t.api.addTask.mockResolvedValueOnce({ id: 'p1', title: 'Do, ré, mi', importance: 3, urgency: 2 });
+      const created = deferred<ObjectiveEntity>();
+      t.api.createObjective.mockReturnValueOnce(created.promise);
+      t.api.addSubObjective.mockResolvedValueOnce(objective('accords', 'Accords', 'guitare'));
+      t.api.addTaskToObjective.mockResolvedValueOnce(taskEntity('p1', 'Do, ré, mi', 'accords', 3, 2));
 
       // « Je m'y engage » avant la fin du premier chargement, puis une étape et un pas sur cet objectif
       t.store.createObjective({ title: 'Guitare' });
@@ -498,17 +721,17 @@ describe('ObjectiveStore', () => {
       t.store.addTaskToObjective({ objectiveId: stageId, task: { title: 'Do, ré, mi', importance: 3, urgency: 2 } });
       await settle();
       // Les écritures attendent le chargement : elles partent après sa lecture de la base
-      expect(t.api.create).not.toHaveBeenCalled();
+      expect(t.api.createObjective).not.toHaveBeenCalled();
 
-      load.resolve(structuredClone(LOADED));
+      load.resolve(tree(LOADED));
       await settle();
       // Le chargement a remplacé l'état : les éléments optimistes sont toujours là, après les éléments chargés
       expect(t.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance', objectiveId, stageId]);
       expect(t.store.tasks().map((item) => item.title)).toEqual(['Courir 8 km', 'Sortie longue', 'Do, ré, mi']);
       expect(t.store.tasks()[2]).toMatchObject({ objectiveId: stageId, done: false });
-      expect(t.api.create).toHaveBeenCalledTimes(1);
+      expect(t.api.createObjective).toHaveBeenCalledTimes(1);
 
-      created.resolve({ id: 'guitare', title: 'Guitare' });
+      created.resolve(objective('guitare', 'Guitare'));
       await settle();
       expect(temporaryIdsOf(t.store)).toEqual([]);
       expect(t.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance', 'guitare', 'accords']);
@@ -519,40 +742,35 @@ describe('ObjectiveStore', () => {
 
     it('un objectif créé juste avant un rechargement n’est ni perdu ni en double', async () => {
       let saved = false;
-      s.api.create.mockImplementationOnce(async () => {
+      s.api.createObjective.mockImplementationOnce(async () => {
         saved = true;
-        return { id: 'guitare', title: 'Guitare' };
+        return objective('guitare', 'Guitare');
       });
       // La base, lue après l'écriture, contient le nouvel objectif
-      s.api.list.mockImplementationOnce(async () => ({
-        objectives: [
-          ...LOADED.objectives,
-          ...(saved ? [{ id: 'guitare', title: 'Guitare', description: '', why: '', dueDate: null, parentObjective: null, done: false }] : []),
-        ],
-        tasks: LOADED.tasks,
-      }));
+      s.api.objectiveTree.mockImplementationOnce(async () =>
+        tree({ objectives: [...LOADED.objectives, ...(saved ? [objective('guitare', 'Guitare')] : [])], tasks: LOADED.tasks }),
+      );
 
       s.store.createObjective({ title: 'Guitare' });
       s.store.loadObjectives();
       await settle();
 
       expect(s.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance', 'guitare']);
-      expect(s.api.create.mock.invocationCallOrder[0]).toBeLessThan(s.api.list.mock.invocationCallOrder[1]);
+      expect(s.api.createObjective.mock.invocationCallOrder[0]).toBeLessThan(s.api.objectiveTree.mock.invocationCallOrder[1]);
     });
 
     it('un pas coché pendant un rechargement reste coché : la base est relue après son écriture', async () => {
       // Une base simulée : ce que la coche enregistre, la lecture suivante le rend.
       let t1DoneInDb = false;
-      s.api.setTaskDone.mockImplementation(async (_taskId: string, done: boolean) => {
-        t1DoneInDb = done;
-        return {};
+      s.api.completeTask.mockImplementation(async () => {
+        t1DoneInDb = true;
+        return taskEntity('t1', 'Courir 8 km', 'endurance', 4, 1, true);
       });
-      s.api.list.mockImplementation(async () => ({
-        ...structuredClone(LOADED),
-        tasks: LOADED.tasks.map((item) => (item.id === 't1' ? { ...item, done: t1DoneInDb } : item)),
-      }));
-      const reload = deferred<ObjectivesResponse>();
-      s.api.list.mockReturnValueOnce(reload.promise);
+      s.api.objectiveTree.mockImplementation(async () =>
+        tree({ ...LOADED, tasks: LOADED.tasks.map((item) => (item.id === 't1' ? { ...item, done: t1DoneInDb } : item)) }),
+      );
+      const reload = deferred<ObjectiveTreeResponse>();
+      s.api.objectiveTree.mockReturnValueOnce(reload.promise);
 
       // Le rechargement de fin de tour d'Akari lit la base ; la personne coche t1 pendant ce temps.
       s.store.loadObjectives();
@@ -561,14 +779,14 @@ describe('ObjectiveStore', () => {
       expect(task('t1')?.done).toBe(true);
 
       // La lecture, faite avant l'écriture de la coche, rend t1 à faire : elle n'efface pas la coche.
-      reload.resolve(structuredClone(LOADED));
+      reload.resolve(tree(LOADED));
       await settle();
 
-      expect(s.api.setTaskDone).toHaveBeenCalledWith('t1', true);
+      expect(s.api.completeTask).toHaveBeenCalledWith('t1');
       expect(t1DoneInDb).toBe(true);
       expect(task('t1')?.done).toBe(true);
-      // Le premier chargement, le rechargement, sa relecture, puis la lecture qui suit la coche.
-      expect(s.api.list).toHaveBeenCalledTimes(4);
+      // Le premier chargement, le rechargement et sa relecture ; la coche acceptée ne relit rien.
+      expect(s.api.objectiveTree).toHaveBeenCalledTimes(3);
       expect(s.store.isPending()).toBe(false);
       expect(s.store.error()).toBeNull();
     });
@@ -576,79 +794,61 @@ describe('ObjectiveStore', () => {
     it('un rechargement sans geste pendant sa lecture ne relit pas la base', async () => {
       s.store.loadObjectives();
       await settle();
-      expect(s.api.list).toHaveBeenCalledTimes(2);
+      expect(s.api.objectiveTree).toHaveBeenCalledTimes(2);
     });
 
     it('un pas dont l’ajout n’aboutit pas après le chargement disparaît quand même', async () => {
       TestBed.resetTestingModule();
-      const load = deferred<ObjectivesResponse>();
+      const load = deferred<ObjectiveTreeResponse>();
       const t = await setup(LOADED, load.promise);
-      t.api.addTask.mockRejectedValueOnce(ko('FAIL_TO_SAVE_TASK'));
+      t.api.addTaskToObjective.mockRejectedValueOnce(ko('VALIDATION_ERROR'));
 
-      load.resolve(structuredClone(LOADED));
+      load.resolve(tree(LOADED));
       t.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Un', importance: 3, urgency: 2 } });
       await settle();
 
       expect(t.store.tasks().map((item) => item.id)).toEqual(['t1', 't2']);
-      expect(t.annonces.signalement()).toBe(FAILURE_REPORTS.addTask);
+      expect(t.annonces.signalement()).toBe(FAILURE_REPORTS.textTooLong);
     });
   });
 
   describe('fait ou non fait : c’est l’API qui le dit', () => {
     const stageDone = () => s.store.objectiveDetail('semi')?.stages[0].done;
-    /** La base après l'écriture : l'étape et l'objectif sont faits. */
-    const allDone = (): ObjectivesResponse => ({
-      objectives: LOADED.objectives.map((item) => ({ ...item, done: true })),
-      tasks: LOADED.tasks.map((item) => ({ ...item, done: true })),
-    });
 
-    it('un pas coché change tout de suite, et l’étape quand l’API la dit faite', async () => {
-      s.api.setTaskDone.mockResolvedValue({ id: 't1', title: 'Courir 8 km', done: true });
-      s.api.list.mockImplementation(async () => allDone());
+    it('un pas coché change tout de suite, et l’étape reste comme l’API l’a dite : rien n’est relu ni déduit', async () => {
+      const before = reads();
 
       s.store.updateTaskDone({ taskId: 't1', done: true });
       expect(task('t1')?.done).toBe(true);
-      expect(stageDone()).toBe(false);
-
       await settle();
+
+      expect(s.store.tasks().every((item) => item.done)).toBe(true);
+      expect(stageDone()).toBe(false);
+      expect(reads()).toBe(before);
+    });
+
+    it('une étape est faite quand l’arbre la rend faite', async () => {
+      s.api.objectiveTree.mockResolvedValueOnce(
+        tree({ objectives: LOADED.objectives.map((item) => ({ ...item, done: true })), tasks: LOADED.tasks }),
+      );
+
+      s.store.loadObjectives();
+      await settle();
+
       expect(stageDone()).toBe(true);
       expect(s.store.objectiveCards()).toEqual([]);
       expect(s.store.accomplishedObjectives().map((card) => card.id)).toEqual(['semi']);
     });
 
-    it('l’état ne se déduit jamais des pas : tous cochés, l’étape reste à faire si l’API le dit', async () => {
-      s.api.setTaskDone.mockResolvedValue({ id: 't1', title: 'Courir 8 km', done: true });
-
-      s.store.updateTaskDone({ taskId: 't1', done: true });
-      await settle();
-
-      expect(s.store.tasks().every((item) => item.done)).toBe(true);
-      expect(stageDone()).toBe(false);
-    });
-
-    it('relit après un pas ajouté, et après un pas modifié', async () => {
-      s.api.addTask.mockResolvedValue({ id: 'p1', title: 'Fractionné', importance: 3, urgency: 2 });
-      s.api.editTask.mockResolvedValue({ id: 't1', title: 'Courir 9 km', objectiveId: 'endurance', importance: 4, urgency: 1 });
-      const reads = s.api.list.mock.calls.length;
+    it('ne relit pas après un pas ajouté, ni après un pas modifié', async () => {
+      s.api.addTaskToObjective.mockResolvedValue(taskEntity('p1', 'Fractionné', 'endurance', 3, 2));
+      const before = reads();
 
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Fractionné', importance: 3, urgency: 2 } });
-      await settle();
-      expect(s.api.list.mock.calls.length).toBe(reads + 1);
-
       s.store.editTask({ taskId: 't1', input: { title: 'Courir 9 km', objectiveId: 'endurance', importance: 4, urgency: 1 } });
       await settle();
-      expect(s.api.list.mock.calls.length).toBe(reads + 2);
-    });
 
-    it('ne relit rien quand l’écriture est refusée', async () => {
-      s.api.setTaskDone.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
-      const reads = s.api.list.mock.calls.length;
-
-      s.store.updateTaskDone({ taskId: 't1', done: true });
-      await settle();
-
-      expect(s.api.list.mock.calls.length).toBe(reads);
-      expect(task('t1')?.done).toBe(false);
+      expect(reads()).toBe(before);
     });
   });
 
@@ -658,9 +858,9 @@ describe('ObjectiveStore', () => {
       tasks: s.store.tasks().map((item) => item.id),
     });
 
-    it('un pas quitte l’état tout de suite, part par DELETE, puis la base est relue', async () => {
+    it('un pas quitte l’état tout de suite et part par DELETE, sans relecture', async () => {
       s.api.deleteTask.mockResolvedValue(null);
-      const reads = s.api.list.mock.calls.length;
+      const before = reads();
       const announced = s.announce.mock.calls.length;
 
       s.store.deleteTask('t1');
@@ -668,8 +868,7 @@ describe('ObjectiveStore', () => {
       await settle();
 
       expect(s.api.deleteTask).toHaveBeenCalledWith('t1');
-      // Sans ce pas, son étape peut être faite : c'est l'API qui le dit.
-      expect(s.api.list.mock.calls.length).toBe(reads + 1);
+      expect(reads()).toBe(before);
       expect(ids().tasks).toEqual(['t2']);
       // Sa trace l'a déjà dit à l'écran : rien de plus à annoncer.
       expect(s.announce.mock.calls.length).toBe(announced);
@@ -683,15 +882,24 @@ describe('ObjectiveStore', () => {
       expect(s.annonces.signalement()).toBeNull();
     });
 
-    it('un pas qui n’est pas effacé revient à sa place, c’est signalé, et la base est relue', async () => {
+    it('un pas qui n’est pas effacé faute de réponse revient à sa place, c’est signalé, et la base est relue', async () => {
       s.api.deleteTask.mockRejectedValue(ko('NETWORK_ERROR'));
-      const reads = s.api.list.mock.calls.length;
+      const before = reads();
       s.store.deleteTask('t1');
       await settle();
       expect(ids().tasks).toEqual(['t1', 't2']);
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.eraseTask);
       // L'API dit ce qui est vrai : sa réponse a pu se perdre après l'effacement.
-      expect(s.api.list.mock.calls.length).toBe(reads + 1);
+      expect(reads()).toBe(before + 1);
+    });
+
+    it('un pas dont l’effacement est refusé revient, sans relecture', async () => {
+      s.api.deleteTask.mockRejectedValue(ko('TOO_MANY_REQUESTS'));
+      const before = reads();
+      s.store.deleteTask('t1');
+      await settle();
+      expect(ids().tasks).toEqual(['t1', 't2']);
+      expect(reads()).toBe(before);
     });
 
     it('un pas refusé dont l’étape est partie entre-temps ne revient pas, et ne dit rien : il part avec elle', async () => {
@@ -705,7 +913,7 @@ describe('ObjectiveStore', () => {
     });
 
     it('une étape refusée ne ramène pas un pas dont l’ajout n’a pas abouti', async () => {
-      s.api.addTask.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
+      s.api.addTaskToObjective.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
       s.api.deleteObjective.mockRejectedValue(ko('NETWORK_ERROR'));
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Fractionné', importance: 3, urgency: 3 } });
       s.store.deleteObjective('endurance');
@@ -726,9 +934,9 @@ describe('ObjectiveStore', () => {
       expect(s.api.deleteObjective).toHaveBeenCalledTimes(1);
     });
 
-    it('une étape part avec ses pas, s’annonce, puis la base est relue', async () => {
+    it('une étape part avec ses pas et s’annonce, sans relecture', async () => {
       s.api.deleteObjective.mockResolvedValue(null);
-      const reads = s.api.list.mock.calls.length;
+      const before = reads();
 
       s.store.deleteObjective('endurance');
       expect(ids()).toEqual({ objectives: ['semi'], tasks: [] });
@@ -738,7 +946,7 @@ describe('ObjectiveStore', () => {
       // L'API emporte les pas avec l'étape : aucun n'est effacé un par un.
       expect(s.api.deleteTask).not.toHaveBeenCalled();
       expect(s.announce).toHaveBeenCalledWith(SUCCESS_ANNOUNCEMENTS.stageErased, 'polite');
-      expect(s.api.list.mock.calls.length).toBe(reads + 1);
+      expect(reads()).toBe(before);
       expect(ids()).toEqual({ objectives: ['semi'], tasks: [] });
     });
 
@@ -788,7 +996,7 @@ describe('ObjectiveStore', () => {
     });
 
     it('une étape encore en création part avec son id définitif, et ne revient pas', async () => {
-      const created = deferred<{ id: string; title: string }>();
+      const created = deferred<ObjectiveEntity>();
       s.api.addSubObjective.mockReturnValue(created.promise);
       s.api.deleteObjective.mockResolvedValue(null);
 
@@ -798,14 +1006,14 @@ describe('ObjectiveStore', () => {
       s.store.deleteObjective(temporary);
       expect(s.store.objectives().some((item) => item.title === 'Sommeil')).toBe(false);
 
-      created.resolve({ id: 'sommeil', title: 'Sommeil' });
+      created.resolve(objective('sommeil', 'Sommeil', 'semi'));
       await settle();
       expect(s.api.deleteObjective).toHaveBeenCalledWith('sommeil');
       expect(s.store.objectives().some((item) => item.title === 'Sommeil')).toBe(false);
     });
 
     it('un pas dont l’ajout n’a pas abouti ne part pas en DELETE', async () => {
-      s.api.addTask.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
+      s.api.addTaskToObjective.mockRejectedValue(ko('FAIL_TO_SAVE_TASK'));
       s.store.addTaskToObjective({ objectiveId: 'endurance', task: { title: 'Fractionné', importance: 3, urgency: 3 } });
       const temporary = s.store.tasks().find((item) => item.title === 'Fractionné')?.id ?? '';
       s.store.deleteTask(temporary);
@@ -817,7 +1025,6 @@ describe('ObjectiveStore', () => {
 
   describe('les annonces', () => {
     it('annonce chaque réussite', async () => {
-      s.api.setTaskDone.mockResolvedValue({});
       s.store.updateTaskDone({ taskId: 't1', done: true });
       s.store.updateTaskDone({ taskId: 't2', done: false });
       await settle();
@@ -828,7 +1035,7 @@ describe('ObjectiveStore', () => {
     });
 
     it('signale un chargement qui n’aboutit pas', async () => {
-      s.api.list.mockRejectedValueOnce(new Error('réseau'));
+      s.api.objectiveTree.mockRejectedValueOnce(new Error('réseau'));
       s.store.loadObjectives();
       await settle();
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.loadObjectives);
@@ -839,8 +1046,8 @@ describe('ObjectiveStore', () => {
   describe('une relecture sans réponse', () => {
     beforeEach(() => {
       vi.useFakeTimers();
-      s.api.list.mockClear();
-      s.api.list.mockRejectedValue(ko('NETWORK_ERROR'));
+      s.api.objectiveTree.mockClear();
+      s.api.objectiveTree.mockRejectedValue(ko('NETWORK_ERROR'));
     });
 
     afterEach(() => {
@@ -850,17 +1057,15 @@ describe('ObjectiveStore', () => {
     it('insiste, le dit au bout de quelques essais, et s’en va dès que le serveur répond', async () => {
       s.store.loadObjectives();
       await vi.advanceTimersByTimeAsync(0);
-      expect(s.api.list).toHaveBeenCalledTimes(1);
+      expect(s.api.objectiveTree).toHaveBeenCalledTimes(1);
       expect(s.annonces.signalement()).toBeNull();
 
       await vi.advanceTimersByTimeAsync(7000); // 1 s, 2 s, 4 s : le quatrième nouvel essai le dit.
-      expect(s.api.list).toHaveBeenCalledTimes(4);
+      expect(s.api.objectiveTree).toHaveBeenCalledTimes(4);
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.reloadObjectives);
       expect(s.store.error()).toBeNull();
 
-      const answered: ObjectivesResponse = structuredClone(LOADED);
-      answered.objectives[1].done = true;
-      s.api.list.mockResolvedValue(answered);
+      s.api.objectiveTree.mockResolvedValue(tree(LOADED));
       await vi.advanceTimersByTimeAsync(8000);
       expect(s.annonces.signalement()).toBeNull();
       expect(s.store.isFulfilled()).toBe(true);
@@ -872,18 +1077,18 @@ describe('ObjectiveStore', () => {
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.reloadObjectives);
 
       s.store.clearObjectives();
-      s.api.list.mockClear();
+      s.api.objectiveTree.mockClear();
       await vi.advanceTimersByTimeAsync(60_000);
-      expect(s.api.list).not.toHaveBeenCalled();
+      expect(s.api.objectiveTree).not.toHaveBeenCalled();
       expect(s.annonces.signalement()).toBeNull();
       expect(s.store.isPending()).toBe(false);
     });
 
     it('s’arrête sur un refus, qui est signalé', async () => {
-      s.api.list.mockRejectedValue(ko('UNAUTHENTICATED'));
+      s.api.objectiveTree.mockRejectedValue(ko('UNAUTHENTICATED'));
       s.store.loadObjectives();
       await vi.advanceTimersByTimeAsync(60_000);
-      expect(s.api.list).toHaveBeenCalledTimes(1);
+      expect(s.api.objectiveTree).toHaveBeenCalledTimes(1);
       expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.sessionEnded);
     });
   });
@@ -925,12 +1130,13 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
     for (const outcome of OUTCOMES) {
       TestBed.resetTestingModule();
       const s = await setup();
-      answer(s.api.create, outcome, { id: 'o1', title: 'Guitare' });
-      answer(s.api.addSubObjective, outcome, { id: 'e1', title: 'Accords' });
-      answer(s.api.addTask, outcome, { id: 'p1', title: 'Un', importance: 3, urgency: 3 });
-      answer(s.api.edit, outcome, { id: 'semi', title: 'Semi en mai' });
-      answer(s.api.editTask, outcome, { id: 't1', title: 'Courir 10 km', objectiveId: 'endurance', importance: 4, urgency: 1 });
-      answer(s.api.setTaskDone, outcome, { id: 't1', title: 'Courir 8 km', done: true });
+      answer(s.api.createObjective, outcome, objective('o1', 'Guitare'));
+      answer(s.api.addSubObjective, outcome, objective('e1', 'Accords', 'semi'));
+      answer(s.api.addTaskToObjective, outcome, taskEntity('p1', 'Un', 'endurance'));
+      answer(s.api.renameObjective, outcome, objective('semi', 'Semi en mai'));
+      answer(s.api.renameTask, outcome, taskEntity('t1', 'Courir 10 km', 'endurance', 4, 1));
+      answer(s.api.completeTask, outcome, taskEntity('t1', 'Courir 8 km', 'endurance', 4, 1, true));
+      answer(s.api.reopenTask, outcome, taskEntity('t2', 'Sortie longue', 'endurance', 1, 1));
       answer(s.api.deleteTask, outcome, null);
       answer(s.api.deleteObjective, outcome, null);
 
@@ -951,7 +1157,7 @@ describe('la voix : tout ce qui est passé à annoncer() et signaler()', () => {
       s.store.deleteObjective('semi');
       await settle();
       if (outcome === 'throw') {
-        s.api.list.mockRejectedValueOnce(new Error(DOMAIN_MESSAGE));
+        s.api.objectiveTree.mockRejectedValueOnce(new Error(DOMAIN_MESSAGE));
         s.store.loadObjectives();
       }
       await settle();

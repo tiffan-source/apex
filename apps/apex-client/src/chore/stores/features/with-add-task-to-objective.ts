@@ -5,9 +5,12 @@ import { inject } from "@angular/core";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";
 import { ObjectivesApi } from "../../api/objectives.api";
-import { errorCodeOf } from "../../api/api-error";
+import { errorCodeOf, isUnknownOutcome } from "../../api/api-error";
+import { ObjectiveMapper } from "../../mapper/objective.mapper";
+import { replaceFieldsIfShown } from "../utils/command-fields";
+import { forgetObjective } from "../utils/forget";
 import { rxMethod } from "@ngrx/signals/rxjs-interop";
-import { from, mergeMap, pipe, tap } from "rxjs";
+import { from, map, mergeMap, pipe, tap } from "rxjs";
 import { whenSignedIn } from "../utils/filter-auth-operation";
 import { isTemporaryId, swapTaskId, withOptimistiqueId } from "../utils/map-optimistique-id";
 import { WriteQueue } from "../utils/write-queue";
@@ -30,7 +33,7 @@ export function withAddTaskToObjective() {
       annonces = inject(AnnoncesStore),
       writes = inject(WriteQueue)
     )=>({
-      /** Ajoute un pas à un objectif ou à une étape (objectiveId), d'abord dans l'état puis par l'API. */
+      /** Ajoute un pas à un objectif ou à une étape (objectiveId), d'abord dans l'état puis par l'API (addTaskToObjective), qui rend le pas. */
       addTaskToObjective: rxMethod<{ objectiveId: string; task: TaskQuery }>(
         pipe(
           whenSignedIn(sessionStore.isAuthenticated),
@@ -54,12 +57,13 @@ export function withAddTaskToObjective() {
               tasks: [...store.tasks(), newTask],
             });
           }),
-          mergeMap(({ objectiveId, task, tempId }) =>
+          map((data) => ({ ...data, shown: { title: data.task.title, importance: data.task.importance, urgency: data.task.urgency, done: false } })),
+          mergeMap(({ objectiveId, task, tempId, shown }) =>
             from(writes.run(async () => {
               // L'étape a pu être enregistrée entre-temps : son id définitif est connu ici
               const targetId = writes.resolve(objectiveId);
               if (isTemporaryId(targetId)) return null; // sa création n'a pas abouti (déjà signalé)
-              return objectivesApi.addTask(targetId, { title: task.title, importance: task.importance, urgency: task.urgency });
+              return objectivesApi.addTaskToObjective(targetId, { title: task.title, importance: task.importance, urgency: task.urgency });
             })).pipe(
               tapResponse({
                 next: (created) => {
@@ -68,15 +72,19 @@ export function withAddTaskToObjective() {
                     return;
                   }
                   writes.link(tempId, created.id);
+                  // Le pas prend ce que l'API rend, sauf ce qu'un geste plus récent a changé (coché, renommé…) :
+                  // ce geste-là part ensuite dans la file.
                   patchState(store, {
-                    // Le pas garde son état optimiste (coché, déplacé…) : ces gestes partent ensuite dans la file
-                    tasks: swapTaskId(store.tasks(), tempId, created.id),
+                    tasks: replaceFieldsIfShown(
+                      swapTaskId(store.tasks(), tempId, created.id),
+                      created.id,
+                      shown,
+                      ObjectiveMapper.toTaskViewModel(created),
+                    ),
                     requestStatus: 'fulfilled'
                   });
 
                   annonces.annoncer(SUCCESS_ANNOUNCEMENTS.taskAdded);
-                  // Fait ou non fait, pour l'étape et l'objectif : c'est l'API qui le dit.
-                  store.loadObjectives();
                 },
                 error: (error) => {
                   console.error(error);
@@ -86,6 +94,13 @@ export function withAddTaskToObjective() {
                     tasks: store.tasks().filter((t) => t.id !== tempId),
                     requestStatus: { error: report }
                   });
+                  if (errorCodeOf(error) === 'OBJECTIVE_NOT_FOUND') {
+                    // L'objectif ou l'étape n'existe plus : il quitte l'écran.
+                    patchState(store, forgetObjective({ objectives: store.objectives(), tasks: store.tasks() }, writes.resolve(objectiveId)));
+                  } else if (isUnknownOutcome(error)) {
+                    // L'API a pu l'enregistrer avant que sa réponse se perde : elle dit ce qui est vrai.
+                    store.loadObjectives();
+                  }
                 },
               })
             )

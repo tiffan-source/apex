@@ -5,7 +5,7 @@ import { inject } from "@angular/core";
 import { filter, from, map, mergeMap, pipe, tap } from "rxjs";
 import { ObjectiveState } from "../objective.store";
 import { ObjectivesApi } from "../../api/objectives.api";
-import { errorCodeOf } from "../../api/api-error";
+import { errorCodeOf, isUnknownOutcome } from "../../api/api-error";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";
 import { whenSignedIn } from "../utils/filter-auth-operation";
@@ -65,8 +65,6 @@ export function withDeleteObjective() {
                 next: (deleted) => {
                   if (deleted === null) return;
                   annonces.annoncer(isStage ? SUCCESS_ANNOUNCEMENTS.stageErased : SUCCESS_ANNOUNCEMENTS.objectiveErased);
-                  // Sans cette étape, son objectif peut être fait : c'est l'API qui le dit.
-                  if (isStage) store.loadObjectives();
                 },
                 error: (error) => {
                   console.error(isStage ? 'Étape non effacée :' : 'Objectif non effacé :', error);
@@ -90,9 +88,8 @@ export function withDeleteObjective() {
                       })),
                     });
                   }
-                  // L'API dit ce qui est vrai : sa réponse a pu se perdre après l'effacement, un geste a pu être
-                  // refusé entre-temps.
-                  store.loadObjectives();
+                  // Sans réponse claire, l'API a pu l'effacer avant que sa réponse se perde : elle dit ce qui est vrai.
+                  if (isUnknownOutcome(error)) store.loadObjectives();
                 },
               })
             );

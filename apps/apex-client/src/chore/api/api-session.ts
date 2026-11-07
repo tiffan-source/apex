@@ -81,7 +81,7 @@ export function expiresSoon(expiresAt: string, now = Date.now()): boolean {
  */
 @Injectable({ providedIn: 'root' })
 export class ApiSession {
-  private readonly refreshUrl = `${inject(API_URL)}/v1/auth/refresh`;
+  private readonly refreshUrl = `${inject(API_URL)}/v2/auth/refresh`;
   /** Sans intercepteur : le renouvellement ne repasse pas par celui qui l'a demandé. */
   private readonly http = new HttpClient(inject(HttpBackend));
   private readonly state = signal<StoredSession | null>(readStoredSession());

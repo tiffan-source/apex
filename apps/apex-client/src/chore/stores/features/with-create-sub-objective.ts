@@ -6,7 +6,10 @@ import { inject } from "@angular/core";
 import { SessionStore } from "../session.store";
 import { AnnoncesStore } from "../annonces.store";
 import { ObjectivesApi } from "../../api/objectives.api";
-import { errorCodeOf } from "../../api/api-error";
+import { errorCodeOf, isUnknownOutcome } from "../../api/api-error";
+import { ObjectiveMapper } from "../../mapper/objective.mapper";
+import { replaceFieldsIfShown } from "../utils/command-fields";
+import { forgetObjective } from "../utils/forget";
 import { isTemporaryId, swapObjectiveId, withOptimistiqueId } from "../utils/map-optimistique-id";
 import { tapResponse } from "@ngrx/operators";
 import { RequestStatusState } from "../utils/loading-feature";
@@ -17,7 +20,7 @@ import { SUCCESS_ANNOUNCEMENTS, failureReport } from "../../constants/messages.c
 
 export function withCreateSubObjective() {
   return signalStoreFeature(
-    { state: type<ObjectiveState & RequestStatusState>() },
+    { state: type<ObjectiveState & RequestStatusState>(), methods: type<{ loadObjectives: () => unknown }>() },
     withMethods((store,
       sessionStore = inject(SessionStore),
       annonces = inject(AnnoncesStore),
@@ -67,8 +70,16 @@ export function withCreateSubObjective() {
                     return;
                   }
                   writes.link(tempId, created.id);
+                  const swapped = swapObjectiveId({ objectives: store.objectives(), tasks: store.tasks() }, tempId, created.id);
                   patchState(store, {
-                    ...swapObjectiveId({ objectives: store.objectives(), tasks: store.tasks() }, tempId, created.id),
+                    // L'étape prend ce que l'API rend, sauf ce qu'un geste plus récent a changé.
+                    objectives: replaceFieldsIfShown(
+                      swapped.objectives,
+                      created.id,
+                      { title: subObjectiveTitle, description: "", why: "", dueDate: "", done: false },
+                      ObjectiveMapper.toObjectiveViewModel(created),
+                    ),
+                    tasks: swapped.tasks,
                     requestStatus: 'fulfilled'
                   });
 
@@ -80,6 +91,13 @@ export function withCreateSubObjective() {
                   annonces.signaler(report);
                   removeTemporary(tempId);
                   patchState(store, { requestStatus: { error: report } });
+                  if (errorCodeOf(error) === 'OBJECTIVE_NOT_FOUND') {
+                    // L'objectif qui devait la porter n'existe plus : il quitte l'écran.
+                    patchState(store, forgetObjective({ objectives: store.objectives(), tasks: store.tasks() }, writes.resolve(objectiveId)));
+                  } else if (isUnknownOutcome(error)) {
+                    // L'API a pu l'enregistrer avant que sa réponse se perde : elle dit ce qui est vrai.
+                    store.loadObjectives();
+                  }
                 },
               })
             )

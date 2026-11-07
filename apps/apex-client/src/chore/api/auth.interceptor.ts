@@ -5,7 +5,7 @@ import { API_URL, isApiRequest } from './api.config';
 import { ApiSession } from './api-session';
 
 /** Les routes de l'API qui ouvrent ou renouvellent une session : elles ne demandent pas de jeton. */
-const PUBLIC_ROUTES: ReadonlySet<string> = new Set(['/v1/auth/register', '/v1/auth/login', '/v1/auth/refresh']);
+const PUBLIC_ROUTES: ReadonlySet<string> = new Set(['/v2/auth/register', '/v2/auth/login', '/v2/auth/refresh']);
 
 const withBearer = (request: HttpRequest<unknown>, token: string | null) =>
   token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;

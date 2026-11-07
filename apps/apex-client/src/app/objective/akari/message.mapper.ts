@@ -11,7 +11,7 @@ export class MessageMapper {
     return sender === AI_SENDER ? "assistant" : "user";
   }
 
-  /** La conversation rendue par l'API (GET /v1/objectives/{id}/conversation), prête pour l'écran. */
+  /** La conversation rendue par l'API (GET /v2/objectives/{id}/conversation), prête pour l'écran. */
   static fromConversationToMessages(conversation: ConversationResponse): MessageViewModel[] {
     return conversation.messages.map<MessageViewModel>(message => ({
       id: message.id,

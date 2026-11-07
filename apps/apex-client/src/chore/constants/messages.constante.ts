@@ -39,8 +39,9 @@ export const FAILURE_REPORTS = {
   loadObjectives: "Je n'ai pas pu charger tes objectifs. Vérifie ta connexion, puis recharge la page.",
   /** Une relecture reste sans réponse : le store continue d'essayer, la note part dès que le serveur répond. */
   reloadObjectives: "Je n'arrive pas à relire tes objectifs pour l'instant. Vérifie ta connexion, je réessaie en attendant.",
-  objectiveNotFound: 'Je ne retrouve plus cet objectif. Recharge la page, puis réessaie.',
-  taskNotFound: 'Je ne retrouve plus ce pas. Recharge la page, puis réessaie.',
+  // Une commande répond 404 : l'élément a été effacé ailleurs (un autre onglet, Akari), l'écran le retire.
+  objectiveNotFound: "Je ne retrouve plus cet objectif : il a été effacé ailleurs, je l'ai retiré. Recrée-le si tu en as encore besoin.",
+  taskNotFound: "Je ne retrouve plus ce pas : il a été effacé ailleurs, je l'ai retiré. Recrée-le si tu en as encore besoin.",
   // L'API borne les textes (200 caractères pour un nom, 5 000 pour une description ou un pourquoi).
   textTooLong: 'Ce texte est trop long pour être enregistré. Raccourcis-le, puis réessaie.',
   tooManyRequests: 'Beaucoup de gestes à la suite. Attends une minute, puis réessaie.',

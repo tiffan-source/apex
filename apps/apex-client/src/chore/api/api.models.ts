@@ -28,13 +28,13 @@ export type Credentials = {
   password: string;
 };
 
-/** POST /v1/auth/login et POST /v1/auth/refresh. */
+/** POST /v2/auth/login et POST /v2/auth/refresh. */
 export type SignedInResponse = {
   user: ApiUser;
   session: ApiSessionTokens;
 };
 
-/** POST /v1/auth/register : `session` vaut null tant que l'adresse e-mail doit être confirmée. */
+/** POST /v2/auth/register : `session` vaut null tant que l'adresse e-mail doit être confirmée. */
 export type RegisteredResponse = {
   user: ApiUser;
   session: ApiSessionTokens | null;
@@ -58,22 +58,25 @@ export const TEXT_MAX_LENGTH = {
 
 // #endregion
 
-// #region objectifs, étapes et pas
+// #region objectifs, étapes et pas (v2 : des commandes nommées, une lecture BFF)
 
-/** Un objectif (racine) ou une étape (`parentObjective` : l'objectif ou l'étape qui la porte). */
-export type ObjectiveOutput = {
+/**
+ * Un objectif (racine) ou une étape (`parentObjectiveId` : l'objectif ou l'étape qui la porte), tel que le rend
+ * une commande : entier, sans ses enfants. Un texte vide vaut `""`, une échéance absente `null`.
+ */
+export type ObjectiveEntity = {
   id: string;
   title: string;
   description: string;
   why: string;
   dueDate: string | null;
-  parentObjective: string | null;
+  parentObjectiveId: string | null;
   /** Fait ou non fait : c'est l'API qui le dit, le client l'affiche sans le calculer. */
   done: boolean;
 };
 
-/** Un pas. `importance` et `urgency` vont de 1 à 5. */
-export type TaskOutput = {
+/** Un pas, tel que le rend une commande. `importance` et `urgency` vont de 1 à 5. */
+export type TaskEntity = {
   id: string;
   title: string;
   importance: number;
@@ -82,16 +85,25 @@ export type TaskOutput = {
   objectiveId: string;
 };
 
-/**
- * GET /v1/objectives : tout ce que la personne possède, à plat. Étapes et pas n'ont aucun ordre : le tri de
- * l'API (création, puis id) garde seulement l'affichage stable d'un chargement à l'autre.
- */
-export type ObjectivesResponse = {
-  objectives: ObjectiveOutput[];
-  tasks: TaskOutput[];
+/** Un pas dans l'arbre : il est rangé sous l'objectif ou l'étape qui le porte. */
+export type ObjectiveTreeTask = Omit<TaskEntity, 'objectiveId'>;
+
+/** Un objectif ou une étape dans l'arbre, avec ses pas et ses étapes, à toute profondeur. */
+export type ObjectiveTreeNode = Omit<ObjectiveEntity, 'parentObjectiveId'> & {
+  tasks: ObjectiveTreeTask[];
+  subObjectives: ObjectiveTreeNode[];
 };
 
-/** POST /v1/objectives. `dueDate` : une date (« 2027-04-01 ») ou un instant ISO 8601. */
+/**
+ * GET /v2/bff/objective-tree : tout ce que la personne possède, en arbre ; seuls les objectifs principaux sont
+ * à la racine. Étapes et pas n'ont aucun ordre : le tri de l'API (création, puis id) garde seulement
+ * l'affichage stable d'un chargement à l'autre.
+ */
+export type ObjectiveTreeResponse = {
+  objectives: ObjectiveTreeNode[];
+};
+
+/** POST /v2/objectives (createObjective). `dueDate` : une date (« 2027-04-01 ») ou un instant ISO 8601. */
 export type CreateObjectiveBody = {
   title: string;
   description?: string;
@@ -99,64 +111,43 @@ export type CreateObjectiveBody = {
   dueDate?: string;
 };
 
-/** PATCH /v1/objectives/{id} (un objectif ou une étape) : un champ absent reste inchangé, `dueDate: null` retire l'échéance. */
-export type EditObjectiveBody = {
-  title: string;
-  description?: string;
-  why?: string;
-  dueDate?: string | null;
-};
-
-/** La réponse de POST /v1/objectives et de PATCH /v1/objectives/{id}. */
-export type ObjectiveResponse = {
-  id: string;
-  title: string;
-  description?: string;
-  why?: string;
-  dueDate?: string;
-};
-
-/** POST /v1/objectives/{id}/sub-objectives. */
+/** POST /v2/objectives/{id}/sub-objectives (addSubObjective). */
 export type AddSubObjectiveBody = {
   title: string;
 };
 
-export type SubObjectiveResponse = {
-  id: string;
-  title: string;
-};
-
-/** POST /v1/objectives/{id}/tasks. */
+/** POST /v2/objectives/{id}/tasks (addTaskToObjective). */
 export type AddTaskBody = {
   title: string;
   importance: number;
   urgency: number;
 };
 
-export type CreatedTaskResponse = {
-  id: string;
+/** PATCH /v2/objectives/{id}/rename et /v2/tasks/{id}/rename. */
+export type RenameBody = {
   title: string;
+};
+
+/** PATCH /v2/objectives/{id}/clarify : un champ absent reste inchangé, `""` le vide ; au moins un champ. */
+export type ClarifyObjectiveBody = {
+  description?: string;
+  why?: string;
+};
+
+/** PATCH /v2/objectives/{id}/set-deadline. */
+export type SetDeadlineBody = {
+  dueDate: string;
+};
+
+/** PATCH /v2/tasks/{id}/reprioritize. */
+export type ReprioritizeTaskBody = {
   importance: number;
   urgency: number;
 };
 
-/** PATCH /v1/tasks/{id} : changer `objectiveId` déplace le pas (vers une étape, un objectif, un ancêtre). */
-export type EditTaskBody = {
-  title: string;
+/** PATCH /v2/tasks/{id}/move : vers une autre étape, un objectif, un ancêtre. */
+export type MoveTaskBody = {
   objectiveId: string;
-  importance: number;
-  urgency: number;
-};
-
-export type EditedTaskResponse = CreatedTaskResponse & {
-  objectiveId: string;
-};
-
-/** PUT /v1/tasks/{id}/done. */
-export type TaskDoneResponse = {
-  id: string;
-  title: string;
-  done: boolean;
 };
 
 // #endregion
@@ -173,7 +164,7 @@ export type ConversationMessage = {
   createdAt: string;
 };
 
-/** GET /v1/objectives/{id}/conversation : les messages, dans l'ordre chronologique. */
+/** GET /v2/objectives/{id}/conversation : les messages, dans l'ordre chronologique. */
 export type ConversationResponse = {
   id: string;
   messages: ConversationMessage[];
