@@ -407,6 +407,19 @@ describe('ObjectivePage', () => {
         expect(stageTaskTitles()).toEqual(['Courir 3 km', 'Sortie longue de 7 km']);
       });
 
+      it('une trace à la fois : un autre pas effacé fait partir pour de bon celui qui attendait', async () => {
+        chooseStage(1);
+        buttonNamed('Effacer « Courir 5 km »')?.click();
+        await settle();
+        buttonNamed('Effacer « Courir 3 km »')?.click();
+        await settle();
+
+        expect(store.deleteTask).toHaveBeenCalledWith('t3');
+        expect(element.querySelectorAll('ul[aria-labelledby="titre-etape"] li.e-trace')).toHaveLength(1);
+        expect(trace()?.textContent?.replace(/\s+/g, ' ').trim()).toBe('« Courir 3 km » est effacé. Remettre');
+        expect(stageTaskTitles()).toEqual(['Sortie longue de 7 km']);
+      });
+
       it('ouvrir une autre étape efface pour de bon le pas dont la trace était là', async () => {
         chooseStage(1);
         buttonNamed('Effacer « Courir 5 km »')?.click();

@@ -74,7 +74,7 @@
               <!-- ds-break : un intitulé sans espace (une adresse) passe à la ligne au lieu d'élargir la page. -->
               <ul eListe nue class="ds-break" aria-labelledby="titre-etape">
                 @for (p of s.tasks; track p.id) {
-                  @if (erasingTaskIds().has(p.id)) {
+                  @if (erasingTaskId() === p.id) {
                     <!-- Le pas vient d'être effacé : sa trace le laisse revenir, puis il part pour de bon. -->
                     <li eTrace [titre]="p.title" (remettre)="putBackTask(p.id)" (expiree)="eraseTaskForGood(p.id)"></li>
                   } @else {
@@ -173,7 +173,7 @@
           </div>
           <ul eListe nue class="ds-break" aria-labelledby="titre-sans-etape">
             @for (p of d.tasksWithoutStage; track p.id) {
-              @if (erasingTaskIds().has(p.id)) {
+              @if (erasingTaskId() === p.id) {
                 <li eTrace [titre]="p.title" (remettre)="putBackTask(p.id)" (expiree)="eraseTaskForGood(p.id)"></li>
               } @else {
                 <li

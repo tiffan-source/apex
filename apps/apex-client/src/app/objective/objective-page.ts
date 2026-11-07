@@ -153,10 +153,11 @@ export class ObjectivePage {
   });
 
   /**
-   * Les pas dont la trace est à l'écran : effacés pour la personne, pas encore pour l'API. Ils restent dans le
-   * store (un rechargement les rendrait) : c'est l'écran qui montre leur trace à leur place, et ne les compte plus.
+   * Le pas dont la trace est à l'écran : effacé pour la personne, pas encore pour l'API. Il reste dans le store (un
+   * rechargement le rendrait) : c'est l'écran qui montre sa trace à sa place, et ne le compte plus. Une trace à la
+   * fois, comme dans la maquette.
    */
-  protected readonly erasingTaskIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly erasingTaskId = signal<string | null>(null);
   /** Le dernier pas remis à sa place par sa trace : il reprend le focus en revenant. */
   protected readonly restoredTaskId = signal<string | null>(null);
 
@@ -170,12 +171,12 @@ export class ObjectivePage {
     return leaving === null ? aretes : aretes.map((arete) => (arete.id === leaving ? { ...arete, sortante: true } : arete));
   });
 
-  /** Ce que l'étape ouverte compte, sans les pas qui viennent d'être effacés (leur trace est à l'écran). */
+  /** Ce que l'étape ouverte compte, sans le pas qui vient d'être effacé (sa trace est à l'écran). */
   protected readonly stageProgress = computed(() => {
     const stage = this.stage();
     if (!stage) return null;
-    const erasing = this.erasingTaskIds();
-    const kept = stage.tasks.filter((task) => !erasing.has(task.id));
+    const erasing = this.erasingTaskId();
+    const kept = stage.tasks.filter((task) => task.id !== erasing);
     const done = kept.filter((task) => task.done).length;
     const progress = { done, toDo: kept.length - done };
     return { ...progress, total: kept.length, detail: stageDetail(progress) };
@@ -227,16 +228,21 @@ export class ObjectivePage {
     this.store.updateTaskDone({ taskId, done });
   }
 
-  /** Le × d'un pas : il part tout de suite, et sa trace laisse le temps de le remettre. */
+  /**
+   * Le × d'un pas : il part tout de suite, et sa trace laisse le temps de le remettre. Une trace à la fois : le pas
+   * dont la trace était là part pour de bon (sa trace, retirée, le redit en partant ; le store l'ignore).
+   */
   protected eraseTask(taskId: string): void {
+    const previous = this.erasingTaskId();
     this.restoredTaskId.set(null);
-    this.erasingTaskIds.update((ids) => new Set(ids).add(taskId));
+    this.erasingTaskId.set(taskId);
+    if (previous !== null && previous !== taskId) this.store.deleteTask(previous);
   }
 
   /** « Remettre » : le pas revient à sa place, avec le focus. */
   protected putBackTask(taskId: string): void {
     this.restoredTaskId.set(taskId);
-    this.erasingTaskIds.update((ids) => withoutId(ids, taskId));
+    if (this.erasingTaskId() === taskId) this.erasingTaskId.set(null);
   }
 
   /**
@@ -244,7 +250,7 @@ export class ObjectivePage {
    * effacé pour de bon. Le store ignore un pas qui n'est plus là (une trace qui le redit, une étape déjà partie).
    */
   protected eraseTaskForGood(taskId: string): void {
-    this.erasingTaskIds.update((ids) => withoutId(ids, taskId));
+    if (this.erasingTaskId() === taskId) this.erasingTaskId.set(null);
     this.store.deleteTask(taskId);
   }
 
@@ -288,9 +294,9 @@ export class ObjectivePage {
     const detail = this.detail();
     if (!detail) return false;
     const { id, title } = detail.objective;
-    const erasing = this.erasingTaskIds();
+    const erasing = this.erasingTaskId();
     const tasks = [...detail.stages.flatMap((stage) => stage.tasks), ...detail.tasksWithoutStage].filter(
-      (task) => !erasing.has(task.id),
+      (task) => task.id !== erasing,
     );
     this.confirmations
       .demander({
@@ -362,12 +368,4 @@ export class ObjectivePage {
     if (active && active !== this.document.body && active.isConnected) return;
     (this.stageHeading() ?? this.pageHeading())?.nativeElement.focus();
   }
-}
-
-/** Les ids, sans celui-ci. */
-function withoutId(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
-  if (!ids.has(id)) return ids;
-  const next = new Set(ids);
-  next.delete(id);
-  return next;
 }
