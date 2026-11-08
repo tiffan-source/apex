@@ -16,7 +16,6 @@ import {
 } from '@empreinte-studio/angular';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
-import { isTemporaryId } from '../../chore/stores/utils/map-optimistique-id';
 import { formatToday, injectToday } from '../../chore/clock/today';
 import { toDateInputValue } from '../../chore/mapper/date-input.mapper';
 import type { ObjectiveCardViewModel } from '../../chore/models/objective-card.viewmodel';
@@ -108,7 +107,7 @@ export class Objectives {
     this.store.objectiveCards().map((card) => ({
       ...card,
       progress: cardProgress(card),
-      openable: !isTemporaryId(card.id),
+      openable: card.saved,
     })),
   );
 

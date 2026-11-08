@@ -8,6 +8,15 @@ import { UNTITLED_STAGE } from '../../chore/mapper/objective-view.mapper';
  */
 export { UNTITLED_STAGE, stageName } from '../../chore/mapper/objective-view.mapper';
 
+/**
+ * Ce que dit un élément encore en création : visible tout de suite, inactif jusqu'à ce que l'API l'enregistre (aucun
+ * geste ne le vise avant).
+ */
+export const SAVING_LABELS = {
+  stage: "J'enregistre cette étape…",
+  task: "J'enregistre ce pas…",
+} as const;
+
 /** Ce que l'API dit d'une étape, dans son repère : « Étape · à faire ». */
 export function stageStateLabel(done: boolean): string {
   return done ? 'faite' : 'à faire';

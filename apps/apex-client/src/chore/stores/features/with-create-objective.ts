@@ -22,7 +22,7 @@ export function withCreateObjective() {
   return signalStoreFeature(
     {
       state: type<ObjectiveState>(),
-      methods: type<{ _write: (gesture: Gesture) => Promise<WriteOutcome> }>(),
+      methods: type<{ _write: (gesture: Gesture) => Promise<WriteOutcome>; _saved: (temporaryId: string, realId: string) => void }>(),
     },
     withState<CreateObjectiveState>({ creatingObjective: false }),
     withMethods((store, objectivesApi = inject(ObjectivesApi), router = inject(Router)) => ({
@@ -54,10 +54,12 @@ export function withCreateObjective() {
                 why: data.why,
                 dueDate: data.dueDate?.toISOString(),
               }),
-            accept: (created: ObjectiveEntity) =>
+            accept: (created: ObjectiveEntity) => {
+              store._saved(tempId, created.id);
               patchState(store, {
                 objectives: replaceTemporary(store.objectives(), tempId, ObjectiveMapper.toObjectiveViewModel(created)),
-              }),
+              });
+            },
             rollBack: () => patchState(store, { objectives: store.objectives().filter((objective) => objective.id !== tempId) }),
           }],
           success: SUCCESS_ANNOUNCEMENTS.objectiveCreated,

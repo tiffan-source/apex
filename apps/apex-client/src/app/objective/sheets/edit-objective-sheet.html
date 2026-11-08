@@ -19,6 +19,8 @@
   </div>
   <p eFeuillePied>
     {{ erasure.exitQuestion }}
-    <button eBouton="nu" petit doux type="button" (click)="ref.close('erase')">{{ erasure.ask }}</button>
+    <button eBouton="nu" petit doux type="button" [attr.aria-disabled]="erasable() ? null : 'true'" (click)="askErasure()">
+      {{ erasure.ask }}
+    </button>
   </p>
 </e-feuille>

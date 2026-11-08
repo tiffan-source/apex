@@ -57,6 +57,9 @@
             <div class="ds-stack ds-gap-2">
               <p class="repere ds-muted">Étape · {{ stageStateLabel(s.done) }}</p>
               <h2 class="objectif ds-break" id="titre-etape" tabindex="-1" #stageHeading>{{ stageName(s.title) }}</h2>
+              @if (!s.saved) {
+                <p class="detail ds-muted" role="status">{{ savingLabels.stage }}</p>
+              }
               @if (s.horizon) {
                 <p class="detail ds-muted">{{ s.horizon }}</p>
               }
@@ -82,7 +85,9 @@
                       eTache
                       [titre]="p.title"
                       [fait]="p.done"
-                      [effacable]="!isTemporaryId(p.id)"
+                      [desactivee]="!p.saved"
+                      [meta]="p.saved ? undefined : savingLabels.task"
+                      [effacable]="p.saved"
                       [focaliser]="p.id === restoredTaskId()"
                       (faitChange)="toggleTask(p.id, $event)"
                       (effacer)="eraseTask(p.id)"
@@ -93,6 +98,7 @@
                           petit
                           type="button"
                           [attr.aria-label]="'Modifier « ' + p.title + ' »'"
+                          [attr.aria-disabled]="p.saved ? null : 'true'"
                           (click)="editTask(p, s.id)"
                         >
                           Modifier
@@ -105,13 +111,13 @@
             }
 
             <div class="ds-actions">
-              <button eBouton="trait" petit type="button" (click)="addTask(s.id)">
+              <button eBouton="trait" petit type="button" [attr.aria-disabled]="s.saved ? null : 'true'" (click)="addTask(s)">
                 <e-icone nom="plus" [taille]="18" />Ajouter un pas
               </button>
               <a eBouton="nu" petit [routerLink]="['/objectifs', d.objective.id, 'akari']" [queryParams]="akariQuery()">
                 <e-icone nom="akari" [taille]="18" />Proposer des pas avec Akari
               </a>
-              <button eBouton="nu" petit type="button" (click)="editStage(s)">
+              <button eBouton="nu" petit type="button" [attr.aria-disabled]="s.saved ? null : 'true'" (click)="editStage(s)">
                 <e-icone nom="modifier" [taille]="18" />Modifier l'étape
               </button>
             </div>
@@ -130,7 +136,15 @@
               </e-confirmation>
             } @else {
               <div class="stage-exit">
-                <button #stageExit eBouton="nu" petit doux type="button" (click)="confirmingStageErasure.set(true)">
+                <button
+                  #stageExit
+                  eBouton="nu"
+                  petit
+                  doux
+                  type="button"
+                  [attr.aria-disabled]="s.allSaved ? null : 'true'"
+                  (click)="askStageErasure(s)"
+                >
                   {{ stageErasure.ask }}
                 </button>
               </div>
@@ -180,7 +194,9 @@
                   eTache
                   [titre]="p.title"
                   [fait]="p.done"
-                  [effacable]="!isTemporaryId(p.id)"
+                  [desactivee]="!p.saved"
+                  [meta]="p.saved ? undefined : savingLabels.task"
+                  [effacable]="p.saved"
                   [focaliser]="p.id === restoredTaskId()"
                   (faitChange)="toggleTask(p.id, $event)"
                   (effacer)="eraseTask(p.id)"
@@ -191,6 +207,7 @@
                       petit
                       type="button"
                       [attr.aria-label]="'Modifier « ' + p.title + ' »'"
+                      [attr.aria-disabled]="p.saved ? null : 'true'"
                       (click)="editTask(p, null)"
                     >
                       Modifier

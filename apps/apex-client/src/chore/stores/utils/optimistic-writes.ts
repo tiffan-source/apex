@@ -77,7 +77,19 @@ export function withOptimisticWrites() {
       writes = inject(WriteQueue),
       session = inject(SessionStore),
       annonces = inject(AnnoncesStore),
+      savedIds = new Map<string, string>(),
     ) => ({
+      /** Retient l'id définitif qu'un élément créé a reçu à la place de son id temporaire. */
+      _saved(temporaryId: string, realId: string): void {
+        savedIds.set(temporaryId, realId);
+      },
+      /**
+       * L'id actuel d'un élément : l'id définitif qu'il a reçu s'il avait un id temporaire, sinon le même. Pour un
+       * écran qui garde un élément choisi (l'étape ouverte) quand son enregistrement aboutit.
+       */
+      currentId(id: string): string {
+        return savedIds.get(id) ?? id;
+      },
       async _write(gesture: Gesture): Promise<WriteOutcome> {
         if (!session.isAuthenticated()) {
           console.warn('Geste ignoré : personne n’est connecté.');

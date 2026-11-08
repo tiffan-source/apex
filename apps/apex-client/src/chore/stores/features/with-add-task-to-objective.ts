@@ -20,7 +20,7 @@ export function withAddTaskToObjective() {
   return signalStoreFeature(
     {
       state: type<ObjectiveState>(),
-      methods: type<{ _write: (gesture: Gesture) => Promise<WriteOutcome> }>(),
+      methods: type<{ _write: (gesture: Gesture) => Promise<WriteOutcome>; _saved: (temporaryId: string, realId: string) => void }>(),
     },
     withMethods((store, objectivesApi = inject(ObjectivesApi)) => ({
       /** Ajoute un pas à un objectif ou à une étape enregistrés (objectiveId), d'abord dans l'état puis par l'API. */
@@ -43,8 +43,10 @@ export function withAddTaskToObjective() {
           commands: [{
             send: () =>
               objectivesApi.addTaskToObjective(objectiveId, { title: task.title, importance: task.importance, urgency: task.urgency }),
-            accept: (created: TaskEntity) =>
-              patchState(store, { tasks: replaceTemporary(store.tasks(), tempId, ObjectiveMapper.toTaskViewModel(created)) }),
+            accept: (created: TaskEntity) => {
+              store._saved(tempId, created.id);
+              patchState(store, { tasks: replaceTemporary(store.tasks(), tempId, ObjectiveMapper.toTaskViewModel(created)) });
+            },
             rollBack: removeTemporary,
             // L'objectif ou l'étape n'existe plus : il quitte l'écran, avec le pas.
             forget: (code) => {

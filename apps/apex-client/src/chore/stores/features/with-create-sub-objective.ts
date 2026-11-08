@@ -8,16 +8,15 @@ import { ObjectiveState } from "../objective.store";
 import { forgetObjective } from "../utils/forget";
 import { replaceTemporary, temporaryId } from "../utils/map-optimistique-id";
 import type { Gesture, WriteOutcome } from "../utils/optimistic-writes";
-import { WriteQueue } from "../utils/write-queue";
 import { SUCCESS_ANNOUNCEMENTS } from "../../constants/messages.constante";
 
 export function withCreateSubObjective() {
   return signalStoreFeature(
     {
       state: type<ObjectiveState>(),
-      methods: type<{ _write: (gesture: Gesture) => Promise<WriteOutcome> }>(),
+      methods: type<{ _write: (gesture: Gesture) => Promise<WriteOutcome>; _saved: (temporaryId: string, realId: string) => void }>(),
     },
-    withMethods((store, objectivesApi = inject(ObjectivesApi), writes = inject(WriteQueue)) => ({
+    withMethods((store, objectivesApi = inject(ObjectivesApi)) => ({
       /** Ajoute une étape (sous-objectif direct) à un objectif enregistré, d'abord dans l'état puis par l'API. */
       addSubObjective({ objectiveId, subObjectiveTitle }: { objectiveId: string; subObjectiveTitle: string }): void {
         const tempId = temporaryId();
@@ -40,8 +39,8 @@ export function withCreateSubObjective() {
           commands: [{
             send: () => objectivesApi.addSubObjective(objectiveId, { title: subObjectiveTitle }),
             accept: (created: ObjectiveEntity) => {
-              // L'écran garde ouverte une étape choisie pendant son enregistrement (objective-page).
-              writes.link(tempId, created.id);
+              // L'écran garde ouverte une étape choisie pendant son enregistrement (objective-page, currentId).
+              store._saved(tempId, created.id);
               patchState(store, {
                 objectives: replaceTemporary(store.objectives(), tempId, ObjectiveMapper.toObjectiveViewModel(created)),
               });
