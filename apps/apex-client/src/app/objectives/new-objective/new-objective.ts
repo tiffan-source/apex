@@ -1,11 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormField, FormRoot, form } from '@angular/forms/signals';
 import { EBouton, EChamp, ECorne, EFil, EIcone, EReplique, ESaisie, ESurface, ETailleAuto } from '@empreinte-studio/angular';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { SessionStore } from '../../../chore/stores/session.store';
-import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
-import { CREATE_OBJECTIVE_FAILURES } from '../../../chore/constants/messages.constante';
 import { fromDateInputValue } from '../../../chore/mapper/date-input.mapper';
 import { formatHorizon } from '../../../chore/mapper/objective-view.mapper';
 import { firstName } from '../../../chore/mapper/person.mapper';
@@ -48,7 +46,6 @@ export const NEW_OBJECTIVE_TEXTS = {
 export class NewObjective {
   private readonly store = inject(ObjectiveStore);
   private readonly session = inject(SessionStore);
-  private readonly router = inject(Router);
 
   protected readonly texts = NEW_OBJECTIVE_TEXTS;
 
@@ -78,15 +75,8 @@ export class NewObjective {
   /** La date minimale du champ « Pour quand ? » : aujourd'hui. */
   protected readonly today = todayInputValue();
 
-  /**
-   * L'engagement en cours, ou null : l'id temporaire de l'objectif que ce geste a ajouté au store.
-   * Les écritures partent en file et requestStatus est partagé : seul cet id dit si l'id définitif ou le
-   * signalement qui arrive concernent bien ce geste, et pas une création ou une écriture antérieure.
-   */
-  private readonly engagement = signal<{ temporaryId: string } | null>(null);
-
-  /** Vrai pendant l'enregistrement : le sceau ne répond plus, le statut le dit. */
-  protected readonly saving = computed(() => this.engagement() !== null);
+  /** Vrai pendant l'enregistrement : le sceau ne répond plus, le statut le dit. Le store ouvre ensuite Akari. */
+  protected readonly saving = this.store.creatingObjective;
 
   /** « Je m'y engage » n'est possible qu'avec un titre (des espaces seuls ne comptent pas). */
   protected readonly hasTitle = computed(() => this.draftModel().title.trim() !== '');
@@ -108,42 +98,11 @@ export class NewObjective {
     };
   });
 
-  constructor() {
-    // Après « Je m'y engage » : l'id définitif ouvre Akari ; une création qui n'aboutit pas rend la main.
-    effect(() => {
-      const engagement = this.engagement();
-      if (!engagement) return;
-      // Tant que l'objectif optimiste de ce geste est là, son enregistrement n'a pas répondu : un id ou un
-      // signalement arrivé entre-temps vient d'une autre écriture (création précédente, pas coché…).
-      const waiting = this.store.objectiveOptions().some((option) => option.valeur === engagement.temporaryId);
-      if (waiting) return;
-      // La réponse de ce geste pose requestStatus en même temps qu'elle retire ou remplace son objectif
-      // optimiste : le signalement passe d'abord, car lastCreatedObjectiveId peut encore porter l'id d'une
-      // création précédente qui a abouti pendant que celle-ci attendait.
-      const createdId = this.store.lastCreatedObjectiveId();
-      if (CREATE_OBJECTIVE_FAILURES.has(this.store.error() ?? '')) {
-        // La coque affiche déjà le signalement (AnnoncesStore) ; le brouillon reste tel quel.
-        this.engagement.set(null);
-      } else if (createdId && !isTemporaryId(createdId)) {
-        this.engagement.set(null);
-        void this.router.navigate(['/objectifs', createdId, 'akari']);
-      }
-    });
-  }
-
-  /** Crée l'objectif à partir du brouillon (mise à jour optimiste dans le store, puis enregistrement). */
+  /** Crée l'objectif à partir du brouillon : le store le montre, l'enregistre, puis ouvre Akari sur lui. */
   private engage(): void {
     if (this.saving()) return;
     const input = toCreateObjectiveInput(this.draftModel());
     if (!input) return;
-    const known = new Set(this.store.objectiveOptions().map((option) => option.valeur));
-    this.store.createObjective(input);
-    // La mise à jour optimiste est immédiate : l'objectif que ce geste vient d'ajouter porte un id
-    // temporaire encore inconnu. Sans session, le store ignore le geste et rien n'est en cours.
-    const temporaryId = this.store
-      .objectiveOptions()
-      .map((option) => option.valeur)
-      .find((id) => isTemporaryId(id) && !known.has(id));
-    if (temporaryId) this.engagement.set({ temporaryId });
+    void this.store.createObjective(input);
   }
 }

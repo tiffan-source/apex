@@ -52,17 +52,6 @@ export const FAILURE_REPORTS = {
 /** Les phrases choisies par le code d'erreur de l'API, quelle que soit l'action. */
 type CodeReport = 'objectiveNotFound' | 'taskNotFound' | 'textTooLong' | 'tooManyRequests' | 'sessionEnded';
 
-/**
- * Les phrases qu'une création d'objectif peut signaler (failureReport) : l'écran « Nouvel objectif » y
- * reconnaît que sa création n'a pas abouti.
- */
-export const CREATE_OBJECTIVE_FAILURES: ReadonlySet<string> = new Set([
-  FAILURE_REPORTS.createObjective,
-  FAILURE_REPORTS.textTooLong,
-  FAILURE_REPORTS.tooManyRequests,
-  FAILURE_REPORTS.sessionEnded,
-]);
-
 /** Les actions qui peuvent ne pas aboutir. */
 export type FailedAction = Exclude<keyof typeof FAILURE_REPORTS, CodeReport>;
 

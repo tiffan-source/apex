@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { ObjectivesApi } from '../api/objectives.api';
 import { ApiError } from '../api/api-error';
@@ -127,6 +128,7 @@ async function setup(
   TestBed.configureTestingModule({
     providers: [
       ObjectiveStore,
+      provideRouter([{ path: '**', children: [] }]),
       { provide: ObjectivesApi, useValue: api },
       { provide: SessionStore, useValue: session },
       { provide: LiveAnnouncer, useValue: { announce } },
@@ -493,7 +495,6 @@ describe('ObjectiveStore', () => {
 
       expect(temporaryIds()).toEqual([]);
       expect(s.store.objectiveOptions().map((option) => option.valeur)).toEqual(['semi', 'o1', 'o2']);
-      expect(s.store.lastCreatedObjectiveId()).toBe('o2');
     });
 
     it('le retour en arrière d’un pas modifié a lieu même si un autre pas est modifié juste après', async () => {
@@ -654,16 +655,61 @@ describe('ObjectiveStore', () => {
     });
   });
 
+  describe('« Je m’y engage » : le store mène la suite', () => {
+    it('pendant l’enregistrement, creatingObjective est vrai ; enregistré, Akari s’ouvre sur l’objectif', async () => {
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/objectifs/nouveau');
+      const created = deferred<ObjectiveEntity>();
+      s.api.createObjective.mockReturnValueOnce(created.promise);
+
+      s.store.createObjective({ title: 'Guitare' });
+      expect(s.store.creatingObjective()).toBe(true);
+      created.resolve(objective('guitare', 'Guitare'));
+      await settle();
+
+      expect(s.store.creatingObjective()).toBe(false);
+      expect(router.url).toBe('/objectifs/guitare/akari');
+    });
+
+    it('la personne est partie ailleurs entre-temps : elle y reste', async () => {
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/objectifs/nouveau');
+      const created = deferred<ObjectiveEntity>();
+      s.api.createObjective.mockReturnValueOnce(created.promise);
+
+      s.store.createObjective({ title: 'Guitare' });
+      await router.navigateByUrl('/objectifs/semi');
+      created.resolve(objective('guitare', 'Guitare'));
+      await settle();
+
+      expect(router.url).toBe('/objectifs/semi');
+      expect(s.store.objectiveOptions().map((option) => option.valeur)).toContain('guitare');
+    });
+
+    it('pas enregistré : rien ne s’ouvre, creatingObjective revient à faux et la note le dit', async () => {
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/objectifs/nouveau');
+      s.api.createObjective.mockRejectedValueOnce(ko('FAIL_TO_SAVE_OBJECTIVE'));
+
+      s.store.createObjective({ title: 'Guitare' });
+      await settle();
+
+      expect(s.store.creatingObjective()).toBe(false);
+      expect(router.url).toBe('/objectifs/nouveau');
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.createObjective);
+    });
+  });
+
   describe('objectivesLoaded : la mémoire du chargement', () => {
-    it('vrai une fois chargé, et il le reste quand une écriture passe par requestStatus', async () => {
+    it('vrai une fois chargé ; une écriture refusée ne touche ni à lui, ni au statut du chargement', async () => {
       expect(s.store.objectivesLoaded()).toBe(true);
       s.api.createObjective.mockRejectedValueOnce(ko('VALIDATION_ERROR'));
       s.store.createObjective({ title: 'Guitare' });
-      expect(s.store.isPending()).toBe(true);
-      expect(s.store.objectivesLoaded()).toBe(true);
+      expect(s.store.isPending()).toBe(false);
       await settle();
-      expect(s.store.error()).toBe(FAILURE_REPORTS.textTooLong);
+      expect(s.store.error()).toBeNull();
       expect(s.store.objectivesLoaded()).toBe(true);
+      expect(s.annonces.signalement()).toBe(FAILURE_REPORTS.textTooLong);
     });
 
     it('faux pendant le premier chargement, et après un chargement qui n’aboutit pas', async () => {
@@ -716,7 +762,7 @@ describe('ObjectiveStore', () => {
       expect(temporaryIdsOf(t.store)).toEqual([]);
       expect(t.store.objectives().map((item) => item.id)).toEqual(['semi', 'endurance', 'guitare']);
       expect(t.store.tasks().map((item) => item.id)).toEqual(['t1', 't2', 'p1']);
-      expect(t.store.lastCreatedObjectiveId()).toBe('guitare');
+      expect(t.store.creatingObjective()).toBe(false);
     });
 
     it('un objectif créé juste avant un rechargement n’est ni perdu ni en double', async () => {
