@@ -9,7 +9,6 @@ import { motsAEviter } from '@empreinte-studio/angular/core';
 import { ETrace } from '@empreinte-studio/angular/trace';
 import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
-import { WriteQueue } from '../../chore/stores/utils/write-queue';
 import { rootObjectiveOptions, toObjectiveDetail } from '../../chore/mapper/objective-view.mapper';
 import { voiceIssues } from '../../chore/constants/messages.constante';
 import type { ObjectiveViewModel, TaskViewModel } from '../../chore/models/objective.viewmodel';
@@ -60,10 +59,12 @@ const TASKS: TaskViewModel[] = [
   task('t5', 'Acheter des chaussures', 'obj-1', false, 2, 4),
 ];
 
-function createStore() {
+function createStore(realIds: Map<string, string>) {
   const objectives = signal(OBJECTIVES);
   const tasks = signal(TASKS);
   return {
+    // Comme le store : l'id définitif qu'un élément créé a reçu.
+    currentId: (id: string) => realIds.get(id) ?? id,
     objectives,
     tasks,
     objectivesLoaded: signal(true),
@@ -89,7 +90,7 @@ describe('ObjectivePage', () => {
   let store: ReturnType<typeof createStore>;
   let feuilles: { ouvrir: ReturnType<typeof vi.fn> };
   let annonces: { annoncer: ReturnType<typeof vi.fn>; aUnSignalement: ReturnType<typeof signal<boolean>> };
-  /** Les ids définitifs que la file d'écritures connaît. */
+  /** Les ids définitifs que le store connaît (currentId). */
   let realIds: Map<string, string>;
   /** La fermeture de la dernière feuille ouverte (ref.closed). */
   let closed: Subject<unknown>;
@@ -115,7 +116,8 @@ describe('ObjectivePage', () => {
   };
 
   beforeEach(() => {
-    store = createStore();
+    realIds = new Map();
+    store = createStore(realIds);
     feuilles = {
       ouvrir: vi.fn(() => {
         closed = new Subject<unknown>();
@@ -123,7 +125,6 @@ describe('ObjectivePage', () => {
       }),
     };
     annonces = { annoncer: vi.fn(), aUnSignalement: signal(false) };
-    realIds = new Map();
     TestBed.configureTestingModule({
       imports: [ObjectivePage],
       providers: [
@@ -131,7 +132,6 @@ describe('ObjectivePage', () => {
         { provide: ObjectiveStore, useValue: store },
         { provide: AnnoncesStore, useValue: annonces },
         { provide: Feuilles, useValue: feuilles },
-        { provide: WriteQueue, useValue: { resolve: (id: string) => realIds.get(id) ?? id } },
       ],
     });
   });
@@ -517,22 +517,44 @@ describe('ObjectivePage', () => {
         expect(document.activeElement).toBe(element.querySelector('.stage-exit button'));
       });
 
-      it('la validation reste dépliée quand l’étape reçoit son id définitif', async () => {
+      it('une étape encore en création ne s’efface pas ; enregistrée, elle reste ouverte et s’efface', async () => {
         store.objectives.update((list) => [...list, objective('temp-id-1', 'Mental', 'obj-1')]);
         fixture.detectChanges();
         chooseStage(3);
+        expect(text('section.panel-flush')).toContain("J'enregistre cette étape…");
+        for (const name of ["Effacer l'étape", 'Ajouter un pas', "Modifier l'étape"]) {
+          expect(buttonNamed(name)?.getAttribute('aria-disabled'), name).toBe('true');
+        }
         buttonNamed("Effacer l'étape")?.click();
+        buttonNamed('Ajouter un pas')?.click();
         await settle();
-        expect(element.querySelector('e-confirmation')).not.toBeNull();
+        expect(element.querySelector('e-confirmation')).toBeNull();
+        expect(feuilles.ouvrir).not.toHaveBeenCalled();
 
         realIds.set('temp-id-1', 'stage-4');
         store.objectives.update((list) => list.map((item) => (item.id === 'temp-id-1' ? { ...item, id: 'stage-4' } : item)));
         await settle();
 
-        expect(element.querySelector('e-confirmation')).not.toBeNull();
+        expect(text('#titre-etape')).toBe('Mental');
+        expect(buttonNamed("Effacer l'étape")?.hasAttribute('aria-disabled')).toBe(false);
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
         buttonNamed("Effacer l'étape")?.click();
         await settle();
         expect(store.deleteObjective).toHaveBeenCalledWith('stage-4');
+      });
+
+      it('une étape dont un pas est encore en création ne s’efface pas', async () => {
+        store.tasks.update((list) => [...list, task('temp-id-2', 'Courir 6 km', 'stage-2')]);
+        chooseStage(1);
+        await settle();
+        const unsaved = [...element.querySelectorAll('li.e-tache')].find((li) => li.textContent?.includes('Courir 6 km'));
+        expect(unsaved?.textContent).toContain("J'enregistre ce pas…");
+        expect(unsaved?.querySelector('input')?.disabled).toBe(true);
+        expect(buttonNamed('Modifier « Courir 6 km »')?.getAttribute('aria-disabled')).toBe('true');
+        buttonNamed("Effacer l'étape")?.click();
+        await settle();
+        expect(element.querySelector('e-confirmation')).toBeNull();
       });
 
       it('ouvrir une autre étape replie la validation', async () => {

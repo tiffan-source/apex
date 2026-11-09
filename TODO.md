@@ -51,7 +51,7 @@ Le détail est dans `docs/features/migration-empreinte.md`, § 11.
 
 ### Client
 - [] Contrôle visuel de chaque écran dans le navigateur (Jour, Nuit, 375px, clavier, `GardienSceau`), avec une session sur Apex Brain (local ou hébergé)
-- [] Un état de réussite ou d'échec propre à chaque action d'`ObjectiveStore` (`requestStatus` est partagé)
+- [x] Un état de réussite ou d'échec propre à chaque action d'`ObjectiveStore` : `OptimisticWrites` rend l'issue de chaque geste au store, `requestStatus` ne dit que le chargement
 - [x] Un état « injoignable » dans `ChatStore` : l'interrogation continue pendant une panne, la note de la coque le dit puis s'en va
 - [] Akari : remettre dans la zone de réponse un message refusé ou qui n'est pas parvenu (`[(brouillon)]` d'`e-conversation`)
 - [] Décider du sort des 18 utilitaires `.ds-*` inutilisés (`apps/apex-client/src/styles/layout.css`)

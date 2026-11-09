@@ -78,7 +78,7 @@ There are currently three software systems:
 The clients are complete applications with their own architecture and data flow. They only consume the capabilities exposed by the API. In the web client:
 
 -   `apps/apex-client/src/chore/api/` calls the API: `api.models.ts` describes the HTTP contract, one service per context (`ObjectivesApi`, `AssistantApi`, `AuthApi`) calls its routes, and every failure becomes an `ApiError` carrying the API's error code;
--   the stores (`chore/stores/`) send the person's gestures through these services, optimistically;
+-   the stores (`chore/stores/`) send the person's gestures through these services, optimistically: one module, `OptimisticWrites` (`chore/stores/utils/optimistic-writes.ts`), runs every gesture's cycle (show it, queue its commands, accept or roll back each one, re-read once when an outcome is unknown), and no gesture targets an element the API has not saved yet (ADR 0002);
 -   the mappers (`chore/mapper/`) turn the HTTP contract into View Models.
 
 

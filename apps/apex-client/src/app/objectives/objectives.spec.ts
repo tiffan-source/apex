@@ -21,6 +21,7 @@ function card(overrides: Partial<ObjectiveCardViewModel> = {}): ObjectiveCardVie
     stageCount: 6,
     taskCount: { done: 9, total: 20 },
     accomplished: false,
+    saved: true,
     ...overrides,
   };
 }
@@ -214,7 +215,7 @@ describe('Objectives', () => {
 
     it('un objectif pas encore enregistré ne met pas son id temporaire dans une adresse', () => {
       store.objectivesLoaded.set(true);
-      store.objectiveCards.set([card({ id: 'temp-id-123' })]);
+      store.objectiveCards.set([card({ id: 'temp-id-123', saved: false })]);
       render();
 
       expect(element.querySelector('article a')).toBeNull();
@@ -365,7 +366,7 @@ describe('Objectives', () => {
         card({ id: 'c', stageCount: 0, stageProgress: { done: 0, toDo: 0 }, taskCount: { done: 0, total: 0 } }),
         card({ id: 'd', stageCount: 2, stageProgress: { done: 2, toDo: 0 }, taskCount: { done: 6, total: 8 } }),
         card({ id: 'e', stageCount: 14, stageProgress: { done: 3, toDo: 11 } }),
-        card({ id: 'temp-id-9' }),
+        card({ id: 'temp-id-9', saved: false }),
       ]);
       store.accomplishedObjectives.set([ACCOMPLISHED]);
       collect(); // plein

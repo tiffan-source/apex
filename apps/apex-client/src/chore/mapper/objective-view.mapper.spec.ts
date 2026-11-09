@@ -91,6 +91,7 @@ describe('cartes et vue détaillée', () => {
       stageCount: 3,
       taskCount: { done: 4, total: 7 },
       accomplished: false,
+      saved: true,
     });
   });
 
@@ -170,6 +171,43 @@ describe('cartes et vue détaillée', () => {
     expect(rootObjectiveOptions(objectives)).toEqual([
       { valeur: 'semi', libelle: 'Courir un semi-marathon en mai' },
       { valeur: 'guitare', libelle: 'Jouer trois morceaux' },
+    ]);
+  });
+});
+
+describe('ce qui est encore en création', () => {
+  const objectives = [
+    objective('semi', 'Semi'),
+    objective('endurance', 'Endurance', 'semi'),
+    objective('temp-id-1', 'Mental', 'semi'),
+  ];
+  const tasks: TaskViewModel[] = [
+    { id: 'p1', title: 'Courir', importance: 3, urgency: 3, done: false, objectiveId: 'endurance' },
+    { id: 'temp-id-2', title: 'Fractionné', importance: 3, urgency: 3, done: false, objectiveId: 'endurance' },
+  ];
+
+  it('chaque étape et chaque pas disent s’ils sont enregistrés, et ce qu’ils portent aussi', () => {
+    const detail = toObjectiveDetail('semi', objectives, tasks, NOW);
+    expect(detail?.stages.map(({ id, saved, allSaved }) => ({ id, saved, allSaved }))).toEqual([
+      { id: 'endurance', saved: true, allSaved: false },
+      { id: 'temp-id-1', saved: false, allSaved: false },
+    ]);
+    expect(detail?.stages[0].tasks.map((item) => item.saved)).toEqual([true, false]);
+    expect(detail?.objective.allSaved).toBe(false);
+    expect(toObjectiveDetail('semi', objectives.slice(0, 2), tasks.slice(0, 1), NOW)?.objective.allSaved).toBe(true);
+  });
+
+  it('une étape encore en création est proposée, inactive, dans les choix d’étape', () => {
+    expect(stageOptions('semi', objectives)).toEqual([
+      { valeur: 'endurance', libelle: 'Endurance' },
+      { valeur: 'temp-id-1', libelle: 'Mental', desactivee: true },
+    ]);
+  });
+
+  it('un objectif encore en création n’a pas d’adresse', () => {
+    expect(toObjectiveCards([...objectives, objective('temp-id-3', 'Guitare')], tasks, NOW).map((card) => card.saved)).toEqual([
+      true,
+      false,
     ]);
   });
 });

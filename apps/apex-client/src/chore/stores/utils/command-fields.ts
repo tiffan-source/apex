@@ -9,11 +9,6 @@
  * champ défairait un geste plus récent qui a remis une même valeur.
  */
 
-/** Compare deux valeurs d'un champ ; un id temporaire et l'id définitif qu'il a reçu sont le même. */
-export type SameValue = (field: string, a: unknown, b: unknown) => boolean;
-
-const strictlyEqual: SameValue = (_field, a, b) => a === b;
-
 /**
  * Remplace, dans l'élément `id`, les champs de `shown` par ceux de `next`, si l'élément montre encore toutes les
  * valeurs de `shown` (ce que le geste y a mis) ; sinon un geste plus récent l'a changé, et il reste tel quel.
@@ -23,11 +18,10 @@ export function replaceFieldsIfShown<T extends { id: string }>(
   id: string,
   shown: Partial<T>,
   next: Partial<T>,
-  same: SameValue = strictlyEqual,
 ): T[] {
   const fields = Object.keys(shown) as (keyof T & string)[];
   return list.map((item) => {
-    if (item.id !== id || !fields.every((field) => same(field, item[field], shown[field]))) return item;
+    if (item.id !== id || !fields.every((field) => item[field] === shown[field])) return item;
     const patch: Partial<T> = {};
     for (const field of fields) if (field in next) patch[field] = next[field];
     return { ...item, ...patch };

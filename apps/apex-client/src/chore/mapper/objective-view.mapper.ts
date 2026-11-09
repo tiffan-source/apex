@@ -2,6 +2,7 @@ import { legendeProgression } from '@empreinte-studio/angular/core';
 import type { EtapeArete } from '@empreinte-studio/angular/arete';
 import type { OptionSelection } from '@empreinte-studio/angular/selection';
 import type { ObjectiveViewModel, TaskViewModel } from '../models/objective.viewmodel';
+import { isTemporaryId } from '../stores/utils/map-optimistique-id';
 import type { ObjectiveCardViewModel, TaskCountViewModel } from '../models/objective-card.viewmodel';
 import type {
   AreteStageViewModel,
@@ -121,6 +122,7 @@ export function toObjectiveCard(
     stageCount: stages.length,
     taskCount: countTasks(tasksInSubtree(objective.id, objectives, tasks)),
     accomplished: objective.done,
+    saved: !isTemporaryId(objective.id),
   };
 }
 
@@ -141,7 +143,14 @@ function toStageTasks(tasks: readonly TaskViewModel[]): StageTaskViewModel[] {
     importance: task.importance,
     urgency: task.urgency,
     objectiveId: task.objectiveId,
+    saved: !isTemporaryId(task.id),
   }));
+}
+
+/** L'objectif (ou l'étape) et tout ce qu'il porte sont enregistrés. */
+function allSaved(objectiveId: string, objectives: readonly ObjectiveViewModel[], tasks: readonly TaskViewModel[]): boolean {
+  const ids = subtreeIds(objectiveId, objectives);
+  return ![...ids].some(isTemporaryId) && !tasks.some((task) => ids.has(task.objectiveId) && isTemporaryId(task.id));
 }
 
 /** La vue détaillée d'un objectif pour l'arête ; undefined s'il n'est pas chargé. */
@@ -164,6 +173,8 @@ export function toObjectiveDetail(
       dueDate: stage.dueDate,
       horizon: formatHorizon(stage.dueDate, now),
       done: stage.done,
+      saved: !isTemporaryId(stage.id),
+      allSaved: allSaved(stage.id, objectives, tasks),
       tasks: toStageTasks(stageTasks),
       progress,
       detail: stageDetail(progress),
@@ -178,6 +189,7 @@ export function toObjectiveDetail(
       description: objective.description,
       dueDate: objective.dueDate,
       horizon: formatHorizon(objective.dueDate, now),
+      allSaved: allSaved(objectiveId, objectives, tasks),
     },
     stages,
     tasksWithoutStage: toStageTasks(tasks.filter((task) => task.objectiveId === objectiveId)),
@@ -187,9 +199,16 @@ export function toObjectiveDetail(
   };
 }
 
-/** Les étapes d'un objectif pour e-selection : { valeur: id, libelle: titre }. */
+/**
+ * Les étapes d'un objectif pour e-selection : { valeur: id, libelle: titre }. Une étape encore en création est
+ * proposée mais inactive : aucun pas n'y va avant qu'elle soit enregistrée.
+ */
 export function stageOptions(objectiveId: string, objectives: readonly ObjectiveViewModel[]): OptionSelection<string>[] {
-  return stagesOf(objectiveId, objectives).map((stage) => ({ valeur: stage.id, libelle: stage.title }));
+  return stagesOf(objectiveId, objectives).map((stage) =>
+    isTemporaryId(stage.id)
+      ? { valeur: stage.id, libelle: stage.title, desactivee: true }
+      : { valeur: stage.id, libelle: stage.title },
+  );
 }
 
 /** Les objectifs racines pour e-selection : { valeur: id, libelle: titre }. */

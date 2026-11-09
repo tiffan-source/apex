@@ -14,6 +14,7 @@ import { withTaskEdit } from "./features/with-task-edit";
 import { withDeleteTask } from "./features/with-delete-task";
 import { withDeleteObjective } from "./features/with-delete-objective";
 import { withObjectiveViews } from "./features/with-objective-views";
+import { withOptimisticWrites } from "./utils/optimistic-writes";
 
 export type ObjectiveState = {
   objectives: ObjectiveViewModel[];
@@ -35,6 +36,7 @@ export const ObjectiveStore = signalStore(
   withRequestStatus(),
   withObjectivesLoaded(),
   withObjectiveQuery(),
+  withOptimisticWrites(),
   withCreateObjective(),
   withCreateSubObjective(),
   withAddTaskToObjective(),

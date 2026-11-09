@@ -1,103 +1,78 @@
 import { inject } from "@angular/core";
+import { Router } from "@angular/router";
 import { patchState, signalStoreFeature, type, withMethods, withState } from "@ngrx/signals";
-import { SessionStore } from "../session.store";
-import { AnnoncesStore } from "../annonces.store";
 import { ObjectivesApi } from "../../api/objectives.api";
-import { errorCodeOf, isUnknownOutcome } from "../../api/api-error";
+import type { ObjectiveEntity } from "../../api/api.models";
 import { ObjectiveMapper } from "../../mapper/objective.mapper";
-import { pickFields, replaceFieldsIfShown } from "../utils/command-fields";
-import { rxMethod } from "@ngrx/signals/rxjs-interop";
-import { from, map, mergeMap, pipe, tap } from "rxjs";
 import { ObjectiveViewModel } from "../../models/objective.viewmodel";
-import { tapResponse } from "@ngrx/operators";
 import { ObjectiveState } from "../objective.store";
-import { whenSignedIn } from "../utils/filter-auth-operation";
-import { swapObjectiveId, withOptimistiqueId } from "../utils/map-optimistique-id";
-import { RequestStatusState } from "../utils/loading-feature";
-import { WriteQueue } from "../utils/write-queue";
-import { SUCCESS_ANNOUNCEMENTS, failureReport } from "../../constants/messages.constante";
+import { replaceTemporary, temporaryId } from "../utils/map-optimistique-id";
+import type { Gesture, WriteOutcome } from "../utils/optimistic-writes";
+import { SUCCESS_ANNOUNCEMENTS } from "../../constants/messages.constante";
+
+/** L'écran de « Je m'y engage » : la création y ouvre Akari sur l'objectif, si la personne y est encore. */
+export const NEW_OBJECTIVE_PATH = '/objectifs/nouveau';
 
 export type CreateObjectiveState = {
-  /**
-   * L'identifiant définitif du dernier objectif créé, une fois enregistré ; null pendant l'enregistrement
-   * (il est remis à null à chaque nouvelle création) et si l'enregistrement n'a pas abouti.
-   * Sert à ouvrir l'objectif (/objectifs/:id/akari) après « Je m'y engage ».
-   */
-  lastCreatedObjectiveId: string | null;
+  /** Vrai pendant l'enregistrement d'un objectif créé : « Je m'y engage » ne répond plus. */
+  creatingObjective: boolean;
 };
 
 export function withCreateObjective() {
   return signalStoreFeature(
-    { state: type<ObjectiveState & RequestStatusState>(), methods: type<{ loadObjectives: () => unknown }>() },
-    withState<CreateObjectiveState>({ lastCreatedObjectiveId: null }),
-    withMethods((store,
-      objectivesApi = inject(ObjectivesApi),
-      sessionStore = inject(SessionStore),
-      annonces = inject(AnnoncesStore),
-      writes = inject(WriteQueue)
-    ) => {
-      /** Retire l'objectif optimiste et ce qui a été posé dessus entre-temps. */
-      const removeTemporary = (tempId: string) =>
-        patchState(store, {
-          objectives: store.objectives().filter((obj) => obj.id !== tempId && obj.parentId !== tempId),
+    {
+      state: type<ObjectiveState>(),
+      methods: type<{ _write: (gesture: Gesture) => Promise<WriteOutcome>; _saved: (temporaryId: string, realId: string) => void }>(),
+    },
+    withState<CreateObjectiveState>({ creatingObjective: false }),
+    withMethods((store, objectivesApi = inject(ObjectivesApi), router = inject(Router)) => ({
+      /**
+       * Crée un objectif, d'abord dans l'état (id temporaire) puis par l'API. Enregistré, il s'ouvre sur Akari
+       * (/objectifs/<id>/akari) si la personne attend encore sur l'écran de « Je m'y engage » ; partie ailleurs, elle
+       * le retrouve dans ses objectifs. S'il n'est pas enregistré, la note le dit et le brouillon reste tel quel.
+       */
+      createObjective(data: { title: string; description?: string; why?: string; dueDate?: Date }): void {
+        const tempId = temporaryId();
+        const shown: ObjectiveViewModel = {
+          id: tempId,
+          title: data.title,
+          description: data.description || "",
+          why: data.why || "",
+          dueDate: data.dueDate?.toISOString() || "",
+          parentId: null,
+          done: false,
+        };
+        void store._write({
+          action: 'createObjective',
+          targets: [],
+          apply: () => patchState(store, { objectives: [...store.objectives(), shown], creatingObjective: true }),
+          commands: [{
+            send: () =>
+              objectivesApi.createObjective({
+                title: data.title,
+                description: data.description,
+                why: data.why,
+                dueDate: data.dueDate?.toISOString(),
+              }),
+            accept: (created: ObjectiveEntity) => {
+              store._saved(tempId, created.id);
+              patchState(store, {
+                objectives: replaceTemporary(store.objectives(), tempId, ObjectiveMapper.toObjectiveViewModel(created)),
+              });
+            },
+            rollBack: () => patchState(store, { objectives: store.objectives().filter((objective) => objective.id !== tempId) }),
+          }],
+          success: SUCCESS_ANNOUNCEMENTS.objectiveCreated,
+        }).then((outcome) => {
+          if (outcome.status === 'skipped') return;
+          patchState(store, { creatingObjective: false });
+          if (outcome.status !== 'accepted') return;
+          const createdId = (outcome.saved[0] as ObjectiveEntity).id;
+          if (router.url.split(/[?#]/)[0] === NEW_OBJECTIVE_PATH) {
+            void router.navigate(['/objectifs', createdId, 'akari']);
+          }
         });
-
-      return {
-      /** Crée un objectif, d'abord dans l'état (id temporaire) puis par l'API ; lastCreatedObjectiveId donne l'id définitif. */
-      createObjective: rxMethod<{ title: string; description?: string; why?: string; dueDate?: Date }>(
-        pipe(
-          whenSignedIn(sessionStore.isAuthenticated),
-          withOptimistiqueId(),
-          map((data) => ({
-            ...data,
-            shown: {
-              id: data.tempId,
-              title: data.title,
-              description: data.description || "",
-              why: data.why || "",
-              dueDate: data.dueDate?.toISOString() || "",
-              parentId: null,
-              done: false,
-            } satisfies ObjectiveViewModel,
-          })),
-          tap(({ shown }) => {
-            patchState(store, { requestStatus: 'pending', lastCreatedObjectiveId: null });
-            patchState(store, { objectives: [...store.objectives(), shown] });
-          }),
-          // mergeMap + file d'écritures : deux créations rapprochées reçoivent chacune leur réponse
-          mergeMap(({ title, description, why, dueDate, tempId, shown }) =>
-            from(writes.run(() => objectivesApi.createObjective({ title, description, why, dueDate: dueDate?.toISOString() }))).pipe(
-              tapResponse({
-                next: (created) => {
-                  const realId = created.id;
-                  writes.link(tempId, realId);
-                  const swapped = swapObjectiveId({ objectives: store.objectives(), tasks: store.tasks() }, tempId, realId);
-                  const fields = pickFields(shown, ['title', 'description', 'why', 'dueDate', 'done']);
-                  patchState(store, {
-                    // L'objectif prend ce que l'API rend, sauf ce qu'un geste plus récent a changé.
-                    objectives: replaceFieldsIfShown(swapped.objectives, realId, fields, ObjectiveMapper.toObjectiveViewModel(created)),
-                    tasks: swapped.tasks,
-                    lastCreatedObjectiveId: realId,
-                    requestStatus: 'fulfilled'
-                  });
-
-                  annonces.annoncer(SUCCESS_ANNOUNCEMENTS.objectiveCreated);
-                },
-                error: (error) => {
-                  console.error(error);
-                  const report = failureReport('createObjective', errorCodeOf(error));
-                  annonces.signaler(report);
-                  removeTemporary(tempId);
-                  patchState(store, { requestStatus: { error: report } });
-                  // L'API a pu l'enregistrer avant que sa réponse se perde : elle dit ce qui est vrai.
-                  if (isUnknownOutcome(error)) store.loadObjectives();
-                },
-              })
-            )
-          )
-        )
-      ),
-      };
-    })
+      },
+    })),
   );
 }

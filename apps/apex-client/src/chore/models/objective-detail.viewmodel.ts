@@ -17,6 +17,8 @@ export type StageTaskViewModel = {
   urgency: number;
   /** L'objectif qui porte réellement le pas (l'étape, ou un sous-objectif plus profond) : à repasser à editTask. */
   objectiveId: string;
+  /** Enregistré par l'API ; faux pendant sa création, où aucun geste ne le vise. */
+  saved: boolean;
 };
 
 /** Ce qu'une étape compte, prêt pour e-pas : faits, à faire. */
@@ -36,6 +38,10 @@ export type StageViewModel = {
   horizon: string;
   /** Faite ou à faire, tel que l'API le dit. */
   done: boolean;
+  /** Enregistrée par l'API ; faux pendant sa création, où aucun geste ne la vise. */
+  saved: boolean;
+  /** Elle et tout ce qu'elle porte sont enregistrés : l'effacer n'emporte rien qui soit encore en création. */
+  allSaved: boolean;
   /** Ses pas, y compris ceux de ses sous-objectifs plus profonds. */
   tasks: StageTaskViewModel[];
   progress: StageTaskProgressViewModel;
@@ -58,6 +64,8 @@ export type ObjectiveDetailViewModel = {
     dueDate: string;
     /** « Jusqu'en mai », « Jusqu'en mai 2027 », ou vide. */
     horizon: string;
+    /** Lui et tout ce qu'il porte sont enregistrés : l'effacer n'emporte rien qui soit encore en création. */
+    allSaved: boolean;
   };
   stages: StageViewModel[];
   /** Les pas posés directement sur l'objectif, à ranger dans une étape. */

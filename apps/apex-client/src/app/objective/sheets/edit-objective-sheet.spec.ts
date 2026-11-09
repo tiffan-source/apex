@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { motsAEviter } from '@empreinte-studio/angular/core';
@@ -24,11 +25,14 @@ const DATA: EditObjectiveSheetData = {
 describe('EditObjectiveSheet', () => {
   let fixture: ComponentFixture<EditObjectiveSheet>;
   let element: HTMLElement;
-  let store: { editObjective: ReturnType<typeof vi.fn> };
+  let store: { editObjective: ReturnType<typeof vi.fn>; objectiveDetail: (id: string) => unknown };
+  /** Tout ce que l'objectif porte est enregistré (rien n'est en création). */
+  let allSaved: ReturnType<typeof signal<boolean>>;
   let ref: { close: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    store = { editObjective: vi.fn() };
+    allSaved = signal(true);
+    store = { editObjective: vi.fn(), objectiveDetail: () => ({ objective: { allSaved: allSaved() } }) };
     ref = { close: vi.fn() };
     TestBed.configureTestingModule({
       imports: [EditObjectiveSheet],
@@ -143,6 +147,15 @@ describe('EditObjectiveSheet', () => {
     erase?.click();
     expect(ref.close).toHaveBeenCalledWith('erase');
     expect(store.editObjective).not.toHaveBeenCalled();
+  });
+
+  it("n'ouvre pas l'effacement tant qu'une étape ou un pas de l'objectif est en création", () => {
+    allSaved.set(false);
+    fixture.detectChanges();
+    const erase = element.querySelector<HTMLButtonElement>('.e-feuille__pied button');
+    expect(erase?.getAttribute('aria-disabled')).toBe('true');
+    erase?.click();
+    expect(ref.close).not.toHaveBeenCalled();
   });
 
   it("n'a pas de sceau et parle dans la voix d'Empreinte", () => {

@@ -1,77 +1,33 @@
-import { computed, signal } from '@angular/core';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { motsAEviter } from '@empreinte-studio/angular/core';
-import type { OptionSelection } from '@empreinte-studio/angular/selection';
 import { NEW_OBJECTIVE_TEXTS, NewObjective } from './new-objective';
 import { DRAFT_MESSAGES, isBeforeToday, toCreateObjectiveInput, todayInputValue } from './new-objective.form';
 import { ObjectiveStore } from '../../../chore/stores/objective.store';
 import { SessionStore, type UserViewModel } from '../../../chore/stores/session.store';
-import { FAILURE_REPORTS, voiceIssues } from '../../../chore/constants/messages.constante';
+import { voiceIssues } from '../../../chore/constants/messages.constante';
 import { fromDateInputValue, toDateInputValue } from '../../../chore/mapper/date-input.mapper';
 import { formatHorizon } from '../../../chore/mapper/objective-view.mapper';
-import { isTemporaryId } from '../../../chore/stores/utils/map-optimistique-id';
 import { present } from '../../../testing/present';
 
-type RequestStatus = 'idle' | 'pending' | 'fulfilled' | { error: string };
-
 /**
- * Un ObjectiveStore simulé : seul ce que l'écran lit et appelle, avec le comportement du vrai store.
- * createObjective ajoute tout de suite l'objectif optimiste (id temporaire) et remet lastCreatedObjectiveId
- * à null ; la réponse, dans l'ordre de la file d'écritures, remplace l'id temporaire par l'id définitif
- * (lastCreatedObjectiveId, 'fulfilled') ou retire l'objectif optimiste et signale (requestStatus en erreur).
+ * Un ObjectiveStore simulé : seul ce que l'écran lit et appelle. createObjective passe creatingObjective à vrai
+ * (sans session, le vrai store ignore le geste) ; la réponse de l'API le remet à faux. Ouvrir Akari est l'affaire
+ * du store (objective.store.spec.ts) : l'écran ne fait que montrer l'attente.
  */
 function createStoreMock(options: { withSession?: boolean } = {}) {
-  const lastCreatedObjectiveId = signal<string | null>(null);
-  const requestStatus = signal<RequestStatus>('idle');
-  const objectiveOptions = signal<OptionSelection<string>[]>([{ valeur: 'objectif-1', libelle: 'Lire 12 livres' }]);
-  let sequence = 0;
-
-  /** Les créations encore en attente, de la plus ancienne à la plus récente. */
-  const pending = () => objectiveOptions().filter((option) => isTemporaryId(option.valeur));
-  const oldestPending = () => pending()[0]?.valeur ?? '';
-
-  /** Une création part : l'objectif optimiste arrive tout de suite, l'id définitif plus tard. */
-  const start = (title: string) => {
-    const temporaryId = `temp-id-${++sequence}`;
-    objectiveOptions.update((list) => [...list, { valeur: temporaryId, libelle: title }]);
-    requestStatus.set('pending');
-    lastCreatedObjectiveId.set(null);
-    return temporaryId;
-  };
-
-  const createObjective = vi.fn((input: { title: string }) => {
-    // Sans session, le vrai store ignore le geste (whenSignedIn) : rien ne change.
-    if (options.withSession ?? true) start(input.title);
+  const creatingObjective = signal(false);
+  const createObjective = vi.fn(() => {
+    if (options.withSession ?? true) creatingObjective.set(true);
   });
-
   return {
-    lastCreatedObjectiveId,
-    requestStatus,
-    objectiveOptions,
-    isPending: computed(() => requestStatus() === 'pending'),
-    error: computed(() => {
-      const status = requestStatus();
-      return typeof status === 'object' ? status.error : null;
-    }),
+    creatingObjective,
     createObjective,
-    /** Une création lancée ailleurs (avant d'ouvrir cet écran), encore en attente. */
-    startElsewhere: (title: string) => start(title),
-    /** La plus ancienne création en attente aboutit avec cet id. */
-    succeed(id: string, temporaryId = oldestPending()) {
-      objectiveOptions.update((list) => list.map((option) => (option.valeur === temporaryId ? { ...option, valeur: id } : option)));
-      lastCreatedObjectiveId.set(id);
-      requestStatus.set('fulfilled');
-    },
-    /** La plus ancienne création en attente n'aboutit pas (avec la phrase que le store choisit d'après le code de l'API). */
-    fail(temporaryId = oldestPending(), report: string = FAILURE_REPORTS.createObjective) {
-      objectiveOptions.update((list) => list.filter((option) => option.valeur !== temporaryId));
-      requestStatus.set({ error: report });
-    },
-    /** Une autre écriture (un pas coché juste avant…) n'aboutit pas : requestStatus est partagé. */
-    otherWriteFails(report: string) {
-      requestStatus.set({ error: report });
-    },
+    /** L'objectif est enregistré : le store ouvre Akari, l'écran n'attend plus. */
+    succeed: () => creatingObjective.set(false),
+    /** L'objectif n'est pas enregistré : la note le dit (la coque), l'écran rend la main. */
+    fail: () => creatingObjective.set(false),
   };
 }
 
@@ -85,7 +41,6 @@ describe('NewObjective', () => {
   let element: HTMLElement;
   let store: StoreMock;
   let currentUser: ReturnType<typeof signal<UserViewModel | null>>;
-  let navigate: ReturnType<typeof vi.fn>;
 
   async function setup(storeMock: StoreMock = createStoreMock()) {
     store = storeMock;
@@ -99,7 +54,6 @@ describe('NewObjective', () => {
       ],
     }).compileComponents();
 
-    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true) as unknown as ReturnType<typeof vi.fn>;
     fixture = TestBed.createComponent(NewObjective);
     element = fixture.nativeElement as HTMLElement;
     fixture.detectChanges();
@@ -292,7 +246,7 @@ describe('NewObjective', () => {
       expect(clean(status().textContent)).toBe('');
     };
 
-    it("crée l'objectif à partir du brouillon puis ouvre Akari sur l'id définitif", async () => {
+    it("crée l'objectif à partir du brouillon, et attend son enregistrement", async () => {
       await setup();
       const due = inDays(10);
       write(titleInput(), '  Courir un semi-marathon  ');
@@ -309,13 +263,10 @@ describe('NewObjective', () => {
       });
       // Pendant l'enregistrement : le sceau attend, le statut le dit.
       expectWaiting();
-      expect(navigate).not.toHaveBeenCalled();
 
-      store.succeed('objectif-42');
+      store.succeed();
       await settle();
-
-      expect(navigate).toHaveBeenCalledTimes(1);
-      expect(navigate).toHaveBeenCalledWith(['/objectifs', 'objectif-42', 'akari']);
+      expectReleased();
     });
 
     it('envoie la description quand elle est écrite', async () => {
@@ -329,33 +280,6 @@ describe('NewObjective', () => {
       });
     });
 
-    it("n'ouvre pas Akari sur une création précédente qui aboutit pendant que celle-ci attend", async () => {
-      await setup();
-      // Une création lancée avant d'ouvrir l'écran (« Plus tard » pendant l'enregistrement, puis retour).
-      store.startElsewhere('Lire 24 livres');
-      write(titleInput(), 'Nouveau départ');
-      await engage();
-
-      store.succeed('objectif-precedent');
-      await settle();
-      expect(navigate).not.toHaveBeenCalled();
-      expectWaiting();
-
-      store.succeed('objectif-nouveau');
-      await settle();
-      expect(navigate).toHaveBeenCalledTimes(1);
-      expect(navigate).toHaveBeenCalledWith(['/objectifs', 'objectif-nouveau', 'akari']);
-    });
-
-    it("n'ouvre jamais Akari sur un id temporaire", async () => {
-      await setup();
-      write(titleInput(), 'Nouveau départ');
-      await engage();
-      store.lastCreatedObjectiveId.set('temp-id-123');
-      await settle();
-      expect(navigate).not.toHaveBeenCalled();
-    });
-
     it("garde le brouillon et rend la main si l'enregistrement n'aboutit pas", async () => {
       await setup();
       write(titleInput(), 'Courir un semi-marathon');
@@ -366,7 +290,6 @@ describe('NewObjective', () => {
       store.fail();
       await settle();
 
-      expect(navigate).not.toHaveBeenCalled();
       expectReleased();
       expect(titleInput().value).toBe('Courir un semi-marathon');
       expect(whyInput().value).toBe('Pour mes 30 ans.');
@@ -376,75 +299,6 @@ describe('NewObjective', () => {
       await engage();
       expect(store.createObjective).toHaveBeenCalledTimes(2);
       expectWaiting();
-    });
-
-    it.each([FAILURE_REPORTS.textTooLong, FAILURE_REPORTS.tooManyRequests])(
-      "rend la main quand l'API refuse la création : « %s »",
-      async (report) => {
-        await setup();
-        write(titleInput(), 'Courir un semi-marathon');
-        await engage();
-        expectWaiting();
-
-        store.fail(undefined, report);
-        await settle();
-
-        expect(navigate).not.toHaveBeenCalled();
-        expectReleased();
-        expect(titleInput().value).toBe('Courir un semi-marathon');
-      },
-    );
-
-    it("garde la main si une autre écriture n'aboutit pas pendant l'enregistrement", async () => {
-      await setup();
-      write(titleInput(), 'Courir un semi-marathon');
-      await engage();
-
-      // requestStatus est partagé : un pas coché, modifié ou introuvable, juste avant, ne rend pas la main.
-      for (const report of [FAILURE_REPORTS.toggleTask, FAILURE_REPORTS.objectiveNotFound, FAILURE_REPORTS.taskNotFound]) {
-        store.otherWriteFails(report);
-        await settle();
-        expectWaiting();
-      }
-      await engage();
-      expect(store.createObjective).toHaveBeenCalledTimes(1);
-
-      store.succeed('objectif-42');
-      await settle();
-      expect(navigate).toHaveBeenCalledWith(['/objectifs', 'objectif-42', 'akari']);
-    });
-
-    it("garde la main si une création précédente n'aboutit pas pendant que celle-ci attend", async () => {
-      await setup();
-      store.startElsewhere('Lire 24 livres');
-      write(titleInput(), 'Nouveau départ');
-      await engage();
-
-      // Même phrase que pour cet objectif, mais pas pour lui : son objectif optimiste attend encore.
-      store.fail();
-      await settle();
-      expectWaiting();
-      await engage();
-      expect(store.createObjective).toHaveBeenCalledTimes(1);
-
-      store.succeed('objectif-nouveau');
-      await settle();
-      expect(navigate).toHaveBeenCalledWith(['/objectifs', 'objectif-nouveau', 'akari']);
-    });
-
-    it("rend la main sans ouvrir une création précédente quand celle-ci n'aboutit pas", async () => {
-      await setup();
-      store.startElsewhere('Lire 24 livres');
-      write(titleInput(), 'Nouveau départ');
-      await engage();
-
-      store.succeed('objectif-precedent');
-      await settle();
-      store.fail();
-      await settle();
-
-      expect(navigate).not.toHaveBeenCalled();
-      expectReleased();
     });
 
     it("ne part qu'une fois, même si on clique deux fois", async () => {

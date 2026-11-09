@@ -1,6 +1,5 @@
 import { motsAEviter } from '@empreinte-studio/angular/core';
 import {
-  CREATE_OBJECTIVE_FAILURES,
   FAILURE_REPORTS,
   SUCCESS_ANNOUNCEMENTS,
   failureReport,
@@ -52,13 +51,6 @@ describe('failureReport', () => {
     expect(failureReport('addStage', 'UNAUTHENTICATED')).toBe(FAILURE_REPORTS.sessionEnded);
     expect(failureReport('loadObjectives', 'INVALID_SESSION')).toBe(FAILURE_REPORTS.sessionEnded);
     expect(FAILURE_REPORTS.sessionEnded).not.toMatch(/connexion/);
-  });
-
-  it('CREATE_OBJECTIVE_FAILURES rassemble les phrases d’une création qui n’aboutit pas', () => {
-    const codes = [undefined, 'FAIL_TO_SAVE_OBJECTIVE', 'VALIDATION_ERROR', 'PAYLOAD_TOO_LARGE', 'TOO_MANY_REQUESTS', 'NETWORK_ERROR', 'UNAUTHENTICATED'];
-    for (const code of codes)
-      expect(CREATE_OBJECTIVE_FAILURES.has(failureReport('createObjective', code)), String(code)).toBe(true);
-    expect(CREATE_OBJECTIVE_FAILURES.has(FAILURE_REPORTS.toggleTask)).toBe(false);
   });
 });
 

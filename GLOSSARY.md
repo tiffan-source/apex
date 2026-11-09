@@ -29,7 +29,7 @@ _Avoid_ : opération, requête, appel
 ### Écriture optimiste
 
 **Écriture optimiste** :
-La façon dont un geste prend effet : l'écran le montre tout de suite, puis l'API l'enregistre. Si elle l'accepte, l'écran le garde et prend ce qu'elle lui rend ; si elle le refuse, l'écran fait un retour en arrière.
+La façon dont un geste prend effet : l'écran le montre tout de suite, puis l'API l'enregistre. Si elle l'accepte, l'écran le garde et prend ce qu'elle lui rend ; si elle le refuse, l'écran fait un retour en arrière. Un seul module la tient pour tous les gestes : `OptimisticWrites` (`chore/stores/utils/optimistic-writes.ts`). Il rend l'issue du geste au store, jamais à l'écran.
 _Avoid_ : mise à jour optimiste
 
 **Retour en arrière** :
@@ -37,7 +37,7 @@ Ce que fait l'écran quand l'API refuse un geste : il remet ce qui était là av
 _Avoid_ : annulation, rollback ; « remettre », qui est le geste de la personne depuis la trace d'un pas effacé
 
 **Id temporaire** :
-L'identité que porte un élément créé tant que l'API ne lui a pas donné la sienne. Elle ne sort jamais de l'écran : jamais dans une adresse.
+L'identité que porte un élément créé tant que l'API ne lui a pas donné la sienne. Elle ne sort jamais de l'écran : jamais dans une adresse. Aucun geste ne vise un élément qui la porte : il est visible, mais inactif, jusqu'à ce que l'API l'enregistre (ADR 0002).
 _Avoid_ : id optimiste
 
 **Relecture** :

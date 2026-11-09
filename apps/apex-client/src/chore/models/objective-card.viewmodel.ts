@@ -30,4 +30,6 @@ export type ObjectiveCardViewModel = {
   taskCount: TaskCountViewModel;
   /** L'objectif est fait, d'après l'API. */
   accomplished: boolean;
+  /** Enregistré par l'API ; faux pendant sa création : il n'a pas encore d'adresse. */
+  saved: boolean;
 };

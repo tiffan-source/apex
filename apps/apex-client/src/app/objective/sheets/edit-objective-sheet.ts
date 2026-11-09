@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { FormField, FormRoot, form } from '@angular/forms/signals';
 import { EBouton } from '@empreinte-studio/angular/bouton';
@@ -55,6 +55,16 @@ export class EditObjectiveSheet {
   private readonly store = inject(ObjectiveStore);
   protected readonly ref = inject<DialogRef<EditObjectiveSheetResult, EditObjectiveSheet>>(DialogRef);
   protected readonly erasure = OBJECTIVE_ERASURE;
+  /**
+   * L'effacement attend que tout ce que l'objectif porte soit enregistré : une étape ou un pas encore en création
+   * ne part pas avec lui.
+   */
+  protected readonly erasable = computed(() => this.store.objectiveDetail(this.data.objective.id)?.objective.allSaved ?? false);
+
+  /** « Effacer l'objectif » : la feuille se ferme, l'écran demande la confirmation. */
+  protected askErasure(): void {
+    if (this.erasable()) this.ref.close('erase');
+  }
 
   // Jamais l'ISO coupé à 10 caractères : il recule d'un jour à l'est de Greenwich
   private readonly initialDueDate = toDateInputValue(this.data.objective.dueDate);

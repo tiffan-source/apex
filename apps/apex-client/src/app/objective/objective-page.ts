@@ -31,15 +31,13 @@ import { AnnoncesStore } from '../../chore/stores/annonces.store';
 import { ObjectiveStore } from '../../chore/stores/objective.store';
 import { stageDetail, stageIdFromArete } from '../../chore/mapper/objective-view.mapper';
 import { CRUMB_TITLE_MAX, shortTitle } from '../../chore/mapper/title.mapper';
-import { isTemporaryId } from '../../chore/stores/utils/map-optimistique-id';
-import { WriteQueue } from '../../chore/stores/utils/write-queue';
 import type { StageTaskViewModel, StageViewModel } from '../../chore/models/objective-detail.viewmodel';
 import { AddStageSheet, type AddStageSheetData } from './sheets/add-stage-sheet';
 import { AddTaskSheet, type AddTaskSheetData } from './sheets/add-task-sheet';
 import { EditObjectiveSheet, type EditObjectiveSheetData, type EditObjectiveSheetResult } from './sheets/edit-objective-sheet';
 import { EditStageSheet, type EditStageSheetData } from './sheets/edit-stage-sheet';
 import { EditTaskSheet, type EditTaskSheetData } from './sheets/edit-task-sheet';
-import { stageAccomplishment, stageName, stageStateLabel } from './stage-labels';
+import { SAVING_LABELS, stageAccomplishment, stageName, stageStateLabel } from './stage-labels';
 import { OBJECTIVE_ERASURE, STAGE_ERASURE, objectiveErasureText, stageErasureText } from './erase-labels';
 
 /** Ce que l'étape ouverte suit : l'objectif et ses étapes. */
@@ -86,7 +84,6 @@ export class ObjectivePage {
 
   protected readonly store = inject(ObjectiveStore);
   private readonly annonces = inject(AnnoncesStore);
-  private readonly writes = inject(WriteQueue);
   private readonly feuilles = inject(Feuilles);
   private readonly confirmations = inject(Confirmations);
   private readonly router = inject(Router);
@@ -100,8 +97,8 @@ export class ObjectivePage {
   protected readonly hasReport = this.annonces.aUnSignalement;
   protected readonly stageName = stageName;
   protected readonly stageErasure = STAGE_ERASURE;
-  /** Un pas qui n'est pas encore enregistré n'a pas de × : sa trace ne survivrait pas à son id définitif. */
-  protected readonly isTemporaryId = isTemporaryId;
+  /** Ce que dit une étape ou un pas encore en création. */
+  protected readonly savingLabels = SAVING_LABELS;
 
   /** Les titres où poser le focus quand le bouton qui a ouvert une feuille a disparu. */
   private readonly pageHeading = viewChild<ElementRef<HTMLElement>>('pageHeading');
@@ -145,7 +142,7 @@ export class ObjectivePage {
     },
     computation: (source, previous) => {
       if (!previous?.value || previous.source.objectiveId !== source.objectiveId) return null;
-      const kept = this.writes.resolve(previous.value);
+      const kept = this.store.currentId(previous.value);
       return source.stageIds.includes(kept) ? kept : null;
     },
   });
@@ -175,7 +172,7 @@ export class ObjectivePage {
       !!previous?.value &&
       previous.source !== null &&
       stageId !== null &&
-      this.writes.resolve(previous.source) === stageId,
+      this.store.currentId(previous.source) === stageId,
   });
 
   /** Les étapes de l'arête ; pendant la validation, l'étape ouverte sort du plan, en pointillés. */
@@ -206,7 +203,7 @@ export class ObjectivePage {
   /** La demande à Akari prépare l'étape ouverte ; jamais un id temporaire dans une URL. */
   protected readonly akariQuery = computed(() => {
     const stage = this.stage();
-    return stage && !isTemporaryId(stage.id) ? { etape: stage.id } : null;
+    return stage?.saved ? { etape: stage.id } : null;
   });
 
   /** L'invitation à ranger les pas sans étape. */
@@ -276,6 +273,15 @@ export class ObjectivePage {
     if (waiting !== null) this.eraseTaskForGood(waiting);
   }
 
+  /**
+   * « Effacer l'étape » : la validation se déplie sur place. Tant que l'étape, ou un pas qu'elle porte, est encore en
+   * création, le bouton est inactif : l'effacer emporterait ce que l'API n'a pas encore enregistré.
+   */
+  protected askStageErasure(stage: StageViewModel): void {
+    if (!stage.allSaved) return;
+    this.confirmingStageErasure.set(true);
+  }
+
   /** « Garder l'étape », ou Échap : la validation se replie, et le focus revient au geste qui l'avait ouverte. */
   protected keepStage(): void {
     this.confirmingStageErasure.set(false);
@@ -341,6 +347,11 @@ export class ObjectivePage {
       .closed.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'confirmer') {
+          // Une étape ou un pas créé pendant la confirmation attend son enregistrement : l'objectif reste, avec le focus.
+          if (!this.detail()?.objective.allSaved) {
+            afterNextRender(() => this.recoverFocus(), { injector: this.injector });
+            return;
+          }
           this.eraseWaitingTask();
           // Si la liste ne s'ouvre pas (hors connexion, son code n'est pas chargé), l'objectif part quand même : le
           // geste est confirmé, et l'arête dira qu'il n'est plus là.
@@ -360,17 +371,21 @@ export class ObjectivePage {
   }
 
   protected editStage(stage: StageViewModel): void {
+    if (!stage.saved) return;
     this.open<EditStageSheet, EditStageSheetData>(EditStageSheet, {
       stage: { id: stage.id, title: stage.title, description: stage.description, dueDate: stage.dueDate },
     });
   }
 
-  protected addTask(stageId: string): void {
+  protected addTask(stage: StageViewModel): void {
+    if (!stage.saved) return;
+    const stageId = stage.id;
     this.open<AddTaskSheet, AddTaskSheetData>(AddTaskSheet, { objectiveId: this.id(), stageId });
   }
 
   /** Modifier un pas ; stageId vaut null pour un pas sans étape, que la feuille invite à ranger. */
   protected editTask(task: StageTaskViewModel, stageId: string | null): void {
+    if (!task.saved) return;
     this.open<EditTaskSheet, EditTaskSheetData>(EditTaskSheet, { objectiveId: this.id(), stageId, task });
   }
 
